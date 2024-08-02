@@ -15,3 +15,9 @@ variables:
 steps:
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
+
+- publish: '/home/vsts/work/1/s/bin/Release/net6.0'
+  artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
+  displayName: Publish BuildLogs
+  continueOnError: true
+  condition: succeededOrFailed()
