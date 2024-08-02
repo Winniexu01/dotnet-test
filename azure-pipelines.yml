@@ -17,7 +17,6 @@ steps:
   displayName: 'dotnet build $(buildConfiguration)'
 
 - script:
-  #!/bin/bash
   echo "##vso[task.logissue type=error]Something went very wrong."
   exit 1
 
