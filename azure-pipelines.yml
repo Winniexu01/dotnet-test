@@ -16,10 +16,9 @@ steps:
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
 
-- script: 
-    echo "##vso[task.logissue type=error]Something went very wrong."
-    exit 1
-  displayName: 'Error step'
+- bash: exit 1
+  displayName: Fail build if partially successful
+  condition: eq(variables['agent.jobstatus'], 'SucceededWithIssues')
 
 - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
   artifact: $(Agent.JobName)_$(AGENT_JOBSTATUS)_$(agent.jobstatus)_BuildLogs_Attempt$(System.JobAttempt)
