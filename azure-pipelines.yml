@@ -19,12 +19,12 @@ stages:
     steps:
     - script: dotnet build --configuration $(buildConfiguration)
       displayName: 'dotnet build $(buildConfiguration)'
+    - script: 
+        exit 1
+      condition: eq(variables['System.JobAttempt'], '1')
+      displayName: Fail build if partially successful
     - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
       artifact: $(Agent.JobName)_$(agent.jobstatus)_BuildLogs_Artifact
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()    
-    - script: 
-        exit 1
-      condition: eq(variables['System.JobAttempt'], '1')
-      displayName: Fail build if partially successful
