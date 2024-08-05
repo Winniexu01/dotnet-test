@@ -11,7 +11,6 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  jobapptempt: $(System.JobAttempt)
 
 stages:
 - stage: A
@@ -22,16 +21,13 @@ stages:
       displayName: 'dotnet build $(buildConfiguration)'
 
 - stage: B
-  condition: eq(variables.jobapptempt, 1)
+  condition: eq($(System.JobAttempt), 1)
   jobs:
   - job: B1
     steps:
     - script: 
         exit 1
     displayName: Fail build if partially successful
-
-- stage: C
-  jobs:
   - job: C1
     steps:
     - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
