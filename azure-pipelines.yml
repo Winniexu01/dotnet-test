@@ -11,17 +11,16 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  jobapptempt: $(System.JobAttempt)
 
 steps:
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
 
-- bash: 
-    if [ $(System.JobAttempt) == 1 ]; then
-        exit 1
-    fi
+- script: 
+  condition: eq(variables.jobapptempt, 1)
+    exit 1
   displayName: Fail build if partially successful
-  condition: eq(variables['agent.jobstatus'], 'Succeeded')
 
 - script: echo "$(Build.SourcesDirectory)"
   displayName: Test
