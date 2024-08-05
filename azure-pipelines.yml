@@ -21,7 +21,7 @@ stages:
       displayName: 'dotnet build $(buildConfiguration)'
 
 - stage: B
-  condition: eq($(System.JobAttempt), 1)
+  condition: $[eq(variables['System.JobAttempt'], '1')]
   jobs:
   - job: B1
     steps:
