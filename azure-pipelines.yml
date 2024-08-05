@@ -13,20 +13,29 @@ variables:
   buildConfiguration: 'Release'
   jobapptempt: $(System.JobAttempt)
 
-steps:
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'dotnet build $(buildConfiguration)'
+stages:
+- stage: A
+  jobs:
+  - job: A1
+    steps:
+    - script: dotnet build --configuration $(buildConfiguration)
+      displayName: 'dotnet build $(buildConfiguration)'
 
-- script: 
+- stage: B
   condition: eq(variables.jobapptempt, 1)
-    exit 1
-  displayName: Fail build if partially successful
+  jobs:
+  - job: B1
+    steps:
+    - script: 
+        exit 1
+    displayName: Fail build if partially successful
 
-- script: echo "$(Build.SourcesDirectory)"
-  displayName: Test
-
-- publish: '/home/vsts/work/1/s/bin/Release/net6.0'
-  artifact: $(Agent.JobName)_$(AGENT_JOBSTATUS)_$(agent.jobstatus)_BuildLogs_Attempt
-  displayName: Publish BuildLogs
-  continueOnError: true
-  condition: succeededOrFailed()
+- stage: C
+  jobs:
+  - job: C1
+    steps:
+    - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
+      artifact: $(Agent.JobName)_$(AGENT_JOBSTATUS)_$(agent.jobstatus)_BuildLogs_Attempt
+      displayName: Publish BuildLogs
+      continueOnError: true
+      condition: succeededOrFailed()
