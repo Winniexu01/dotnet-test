@@ -24,7 +24,7 @@ stages:
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()    
-      condition: eq(variables['System.StageAttempt'], '1')
     - script: 
         exit 1
-    displayName: Fail build if partially successful
+      condition: eq(variables['System.StageAttempt'], '1')
+      displayName: Fail build if partially successful
