@@ -19,9 +19,6 @@ stages:
     steps:
     - script: dotnet build --configuration $(buildConfiguration)
       displayName: 'dotnet build $(buildConfiguration)'
-
-- stage: C
-  jobs:
   - job: C1
     steps:
     - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
@@ -29,11 +26,8 @@ stages:
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()
-
-- stage: B
-  condition: eq(variables['System.StageAttempt'], '1')
-  jobs:
   - job: B1
+    condition: eq(variables['System.JobAttempt'], '1')
     steps:
     - script: 
         exit 1
