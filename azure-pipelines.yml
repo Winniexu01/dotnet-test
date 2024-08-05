@@ -11,6 +11,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  status: ''
 
 stages:
 - stage: A
@@ -24,13 +25,13 @@ stages:
       condition: eq(variables['System.JobAttempt'], '1')
       displayName: Fail build if partially successful
     - script:
-        status='Succeeded'
+        $(status)='Succeeded'
       condition: succeeded()
     - script:
-        status='Failed'
+        $(status)='Failed'
       condition: failed()
     - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
-      artifact: $(Agent.JobName)_$status_BuildLogs_Artifact
+      artifact: $(Agent.JobName)_$(status)_BuildLogs_Artifact
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()    
