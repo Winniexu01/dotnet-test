@@ -23,10 +23,8 @@ stages:
       artifact: $(Agent.JobName)_$(AGENT_JOBSTATUS)_$(agent.jobstatus)_BuildLogs_Attempt
       displayName: Publish BuildLogs
       continueOnError: true
-      condition: succeededOrFailed()
-  - job: B1
-    condition: eq(variables['System.JobAttempt'], '1')
-    steps:
+      condition: succeededOrFailed()    
+      condition: eq(variables['System.StageAttempt'], '1')
     - script: 
         exit 1
     displayName: Fail build if partially successful
