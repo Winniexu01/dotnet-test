@@ -30,7 +30,7 @@ stages:
         status='Failed'
       condition: failed()
     - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
-      artifact: $(Agent.JobName)_$(status)_BuildLogs_Artifact
+      artifact: $(Agent.JobName)_$status_BuildLogs_Artifact
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()    
