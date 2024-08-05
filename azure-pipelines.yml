@@ -23,8 +23,14 @@ stages:
         exit 1
       condition: eq(variables['System.JobAttempt'], '1')
       displayName: Fail build if partially successful
+    - script:
+        status='Succeeded'
+      condition: succeeded()
+    - script:
+        status='Failed'
+      condition: !succeeded()
     - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
-      artifact: $(Agent.JobName)_$(agent.jobstatus)_BuildLogs_Artifact
+      artifact: $(Agent.JobName)_$(status)_BuildLogs_Artifact
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()    
