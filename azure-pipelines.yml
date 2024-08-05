@@ -20,15 +20,6 @@ stages:
     - script: dotnet build --configuration $(buildConfiguration)
       displayName: 'dotnet build $(buildConfiguration)'
 
-- stage: B
-  condition: eq(variables['System.StageAttempt'], '1')
-  jobs:
-  - job: B1
-    steps:
-    - script: 
-        exit 1
-    displayName: Fail build if partially successful
-
 - stage: C
   jobs:
   - job: C1
@@ -38,3 +29,12 @@ stages:
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()
+
+- stage: B
+  condition: eq(variables['System.StageAttempt'], '1')
+  jobs:
+  - job: B1
+    steps:
+    - script: 
+        exit 1
+    displayName: Fail build if partially successful
