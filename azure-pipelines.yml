@@ -16,11 +16,12 @@ steps:
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
 
-- ${{ if eq($(System.JobAttempt), 1)}}:
-  - bash: 
-      exit 1
-    displayName: Fail build if partially successful
-    condition: eq(variables['agent.jobstatus'], 'Succeeded')
+- bash: 
+    if [ $(System.JobAttempt) == 1 ]; then
+        exit 1
+    fi
+  displayName: Fail build if partially successful
+  condition: eq(variables['agent.jobstatus'], 'Succeeded')
 
 - script: echo "$(Build.SourcesDirectory)"
   displayName: Test
