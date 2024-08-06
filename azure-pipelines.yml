@@ -20,8 +20,11 @@ stages:
       displayName: 'dotnet build $(buildConfiguration)'
     - bash: |
         cd '/home/vsts/work/1/s/bin/Release/net6.0'
-        rm 'appsettings.json'
         echo $(System.JobAttempt) > temp.json
+      displayName: Create new file   
+    - bash: |
+        cd '/home/vsts/work/1/s/bin/Release/net6.0'
+        rm 'appsettings.json'
         exit 1
       condition: eq(variables['System.JobAttempt'], '1')
       displayName: Fail build if partially successful   
