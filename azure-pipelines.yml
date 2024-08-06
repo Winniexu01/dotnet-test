@@ -12,8 +12,6 @@ pool:
 variables:
 - name: buildConfiguration
   value: 'Release'
-- name: status
-  value: ''
 
 stages:
 - stage: A
