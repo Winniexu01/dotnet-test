@@ -39,7 +39,7 @@ stages:
         newValue="Succeeded"
         echo "##vso[task.setvariable variable=status;]$newValue"
         echo "newVlaue: $newValue"
-        echo "sss: $(status)"
+        echo "sss: $status"
       condition: succeeded()
     - bash: |     
         newValue="Failed"
