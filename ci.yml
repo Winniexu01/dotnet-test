@@ -3,9 +3,6 @@
 # Add steps that run tests, create a NuGet package, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
-trigger:
-- main
-
 pool:
   vmImage: ubuntu-latest
 
@@ -23,7 +20,7 @@ stages:
   - job: A1
     steps:
     - script: |
-        dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
+        dotnet_dotnet_build=''
 
         if [[ -z "$dotnet_dotnet_build" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --pipeline-ids '$(DOTNET_DOTNET_CI_PIPELINE_ID)' --status completed --top 1 --query "[].id" --output tsv)
@@ -42,7 +39,7 @@ stages:
       env:
         AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
         
-    - template: ../steps/download-pipeline-artifact.yml
+    - template: steps/download-pipeline-artifact.yml
       parameters:
         pipeline: $(DOTNET_DOTNET_CI_PIPELINE_ID)
         buildId: $(DotnetDotnetBuildId)
