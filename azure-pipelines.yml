@@ -43,3 +43,4 @@ stages:
       condition: failed() 
     - bash:
         echo $(status)
+      condition: succeededOrFailed()   
