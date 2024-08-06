@@ -35,14 +35,14 @@ stages:
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()   
-    - script: |
-        newValue='Succeeded'
+    - bash: |
+        newValue="Succeeded"
         echo "##vso[task.setvariable variable=status;]$newValue"
         echo "newVlaue: $newValue"
         echo "sss: $(status)"
       condition: succeeded()
-    - script: |     
-        newValue='Failed'   
+    - bash: |     
+        newValue="Failed"
         echo "##vso[task.setvariable variable=status;]$newValue"
         echo "newVlaue: $newValue"
         echo "fff: $(status)"
