@@ -1,0 +1,50 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+- name: AZDO_PROJECT
+  value: Test
+- name: AZDO_ORG
+  value: https://dev.azure.com/v-wexu0720/
+- name: DOTNET_DOTNET_CI_PIPELINE_ID
+  value: 1
+
+stages:
+- stage: A
+  jobs:
+  - job: A1
+    steps:
+    - script: |
+        dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
+
+        if [[ -z "$dotnet_dotnet_build" ]]; then
+          dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --pipeline-ids '$(DOTNET_DOTNET_CI_PIPELINE_ID)' --status completed --top 1 --query "[].id" --output tsv)
+        fi
+
+        if [[ -z "$dotnet_dotnet_build" ]]; then
+          echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
+          exit 1
+        fi
+        
+        echo "Test build: https://dev.azure.com/v-wexu0720/Test/_build/results?buildId=$dotnet_dotnet_build&view=results"
+
+        echo "##vso[task.setvariable variable=DotnetDotnetBuildId]$dotnet_dotnet_build"
+      displayName: Find associated builds
+      name: Get_Build_Ids
+      env:
+        AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
+        
+    - template: ../steps/download-pipeline-artifact.yml
+      parameters:
+        pipeline: $(DOTNET_DOTNET_CI_PIPELINE_ID)
+        buildId: $(DotnetDotnetBuildId)
+        patterns: '**/*.json'
+        displayName: Download Files
