@@ -36,11 +36,14 @@ stages:
     - bash: |
         newValue="Succeeded"
         echo "##vso[task.setvariable variable=status;]$newValue"
+      displayName: Succeed
       condition: succeeded()
     - bash: |     
         newValue="Failed"
         echo "##vso[task.setvariable variable=status;]$newValue"
+      displayName: Fail
       condition: failed() 
     - bash:
         echo $(status)
+      displayName: 'echo $(status)'
       condition: succeededOrFailed()   
