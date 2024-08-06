@@ -16,7 +16,7 @@ stages:
   - job: A1
     steps:
     - script: |
-          tt =$(az pipelines runs artifact list --run-id 91 --org 'https://dev.azure.com/v-wexu0720/' --project 'Test' --query "[].name")
+          tt =$((az pipelines runs artifact list --run-id 91 --org 'https://dev.azure.com/v-wexu0720/' --project 'Test' --query "[].name")[1..1])
           echo $(tt)
       env:
         AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
