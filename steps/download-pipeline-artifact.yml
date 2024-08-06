@@ -23,7 +23,7 @@ steps:
   inputs:
     buildType: specific
     buildVersionToDownload: specific
-    project: internal
+    project: test
     pipeline: ${{ parameters.pipeline }}
     buildId: ${{ parameters.buildId }}
     patterns: ${{ parameters.patterns }}
