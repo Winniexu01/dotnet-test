@@ -15,9 +15,11 @@ stages:
   jobs:
   - job: A1
     steps:
-    - script: |
+    - bash: |
           tt =  az pipelines runs artifact list --run-id 91 --org 'https://dev.azure.com/v-wexu0720/' --project 'Test' --query "[].name[1]"
           echo $(tt)
+      env:
+        AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
     #     echo `date +%Y-%m-%d-%H-%M-%S`
     #     dotnet build --configuration $(buildConfiguration)
     #   displayName: 'dotnet build $(buildConfiguration)'
