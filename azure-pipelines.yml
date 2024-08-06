@@ -18,9 +18,10 @@ stages:
         echo `date +%Y-%m-%d-%H-%M-%S`
         dotnet build --configuration $(buildConfiguration)
       displayName: 'dotnet build $(buildConfiguration)'
-    - script: |
+    - bash: |
         cd '/home/vsts/work/1/s/bin/Release/net6.0'
         rm 'appsettings.json'
+        echo $(System.JobAttempt)
         $(System.JobAttempt) > temp.json
         exit 1
       condition: eq(variables['System.JobAttempt'], '1')
