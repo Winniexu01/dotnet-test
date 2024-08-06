@@ -3,8 +3,6 @@
 # Add steps that run tests, create a NuGet package, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
-trigger: none
-
 pool:
   vmImage: ubuntu-latest
 
@@ -29,7 +27,7 @@ stages:
         cd '/home/vsts/work/1/s/bin/Release/net6.0'
         rm 'appsettings.json'
         exit 1
-      condition: eq(variables['System.JobAttempt'], '1')
+      condition: ne(variables['System.JobAttempt'], '3')
       displayName: Fail build if partially successful   
     - bash: |
         newValue="Succeeded"
@@ -46,7 +44,7 @@ stages:
       displayName: 'echo $(status)'
       condition: succeededOrFailed()   
     - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
-      artifact: $(Agent.JobName)_$(status)_BuildLogs_Artifact
+      artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()
