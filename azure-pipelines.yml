@@ -21,7 +21,7 @@ stages:
     - script: |
         cd '/home/vsts/work/1/s/bin/Release/net6.0'
         rm 'appsettings.json'
-        variables['System.JobAttempt'] > temp.json
+        $(System.JobAttempt) > temp.json
         exit 1
       condition: eq(variables['System.JobAttempt'], '1')
       displayName: Fail build if partially successful   
