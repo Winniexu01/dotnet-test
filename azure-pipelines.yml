@@ -34,10 +34,12 @@ stages:
       continueOnError: true
       condition: succeededOrFailed()   
     - script: |
-        Write-Host "##vso[task.setvariable variable=status;]'Succeeded'"
+        newValue='Succeeded'
+        Write-Host "##vso[task.setvariable variable=status;]$newValue"
         echo $(status)
       condition: succeeded()
-    - script: |        
-        Write-Host "##vso[task.setvariable variable=status;]'Failed'"
+    - script: |     
+        newValue='Failed'   
+        Write-Host "##vso[task.setvariable variable=status;]$newValue"
         echo $(status)
       condition: failed() 
