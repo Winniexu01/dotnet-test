@@ -19,7 +19,7 @@ stages:
   - job: A1
     steps:
     - script: |
-        echo `date +%Y-%m-%d:%H-%M-%S`
+        echo `date +%Y-%m-%d-%H-%M-%S`
         dotnet build --configuration $(buildConfiguration)
       displayName: 'dotnet build $(buildConfiguration)'
     - script: |
