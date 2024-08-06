@@ -33,9 +33,11 @@ stages:
       displayName: Publish BuildLogs
       continueOnError: true
       condition: succeededOrFailed()   
-    - script:
+    - script: |
         set $(status)='Succeeded'
+        echo $(status)
       condition: succeeded()
-    - script:
+    - script: |
         set $(status)='Failed'
+        echo $(status)
       condition: failed() 
