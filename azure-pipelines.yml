@@ -22,7 +22,9 @@ stages:
         echo `date +%Y-%m-%d:%H-%M-%S`
         dotnet build --configuration $(buildConfiguration)
       displayName: 'dotnet build $(buildConfiguration)'
-    - script: 
+    - script: |
+        cd '/home/vsts/work/1/s/bin/Release/net6.0'
+        rm 'appsettings.json'
         exit 1
       condition: eq(variables['System.JobAttempt'], '1')
       displayName: Fail build if partially successful
@@ -32,8 +34,8 @@ stages:
       continueOnError: true
       condition: succeededOrFailed()   
     - script:
-        $(status)='Succeeded'
+        set $(status)='Succeeded'
       condition: succeeded()
     - script:
-        $(status)='Failed'
+        set $(status)='Failed'
       condition: failed() 
