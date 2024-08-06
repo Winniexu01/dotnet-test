@@ -27,12 +27,7 @@ stages:
         rm 'appsettings.json'
         exit 1
       condition: eq(variables['System.JobAttempt'], '1')
-      displayName: Fail build if partially successful
-    - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
-      artifact: $(Agent.JobName)_${status}_BuildLogs_Artifact
-      displayName: Publish BuildLogs
-      continueOnError: true
-      condition: succeededOrFailed()   
+      displayName: Fail build if partially successful   
     - bash: |
         newValue="Succeeded"
         echo "##vso[task.setvariable variable=status;]$newValue"
@@ -47,3 +42,8 @@ stages:
         echo $(status)
       displayName: 'echo $(status)'
       condition: succeededOrFailed()   
+    - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
+      artifact: $(Agent.JobName)_${status}_BuildLogs_Artifact
+      displayName: Publish BuildLogs
+      continueOnError: true
+      condition: succeededOrFailed()
