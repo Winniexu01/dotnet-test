@@ -9,6 +9,14 @@ variables:
 - name: buildConfiguration
   value: 'Release'
 
+pr: none
+
+# Always trigger a run when changes are made to the license test implementation or baselines
+trigger: 
+  branches:
+    include:
+    - main
+
 stages:
 - stage: A
   jobs:
