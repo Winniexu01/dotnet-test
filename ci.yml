@@ -3,6 +3,8 @@
 # Add steps that run tests, create a NuGet package, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
+trigger: none
+
 pool:
   vmImage: ubuntu-latest
 
@@ -44,4 +46,10 @@ stages:
         pipeline: $(DOTNET_DOTNET_CI_PIPELINE_ID)
         buildId: $(DotnetDotnetBuildId)
         patterns: '**/*.json'
-        displayName: Download Files
+        displayName: Download Files    
+     
+    - publish: '$(Pipeline.Workspace)/Artifacts'
+      artifact: $(Agent.JobName)_BuildLogs_Artifact
+      displayName: Publish BuildLogs
+      continueOnError: true
+      condition: succeededOrFailed()
