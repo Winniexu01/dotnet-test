@@ -40,8 +40,8 @@ stages:
         touch $ardir/Build.binlog
       displayName: Create new file
     - bash: |
-        sudo tdnf install -y rsync
-        sudo tdnf clean all
+        sudo apt-get install -y rsync
+        sudo apt-get clean all
       displayName: Install rsync
     - bash: |
         for dir in src/*/
