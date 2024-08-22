@@ -25,6 +25,21 @@ stages:
   - job: A1
     steps:
     - bash: |
+        adir='src/arcade/artifacts/buildLogs/log/Release'
+        mkdir -p $adir
+        touch $adir/Build.binlog
+        touch $adir/ToolsetRestore.binlog
+        touch $adir/source-inner-build.binlog
+        cdir='src/cecil/artifacts/buildLogs/log/Release'
+        mkdir -p $cdir
+        touch $cdir/Build.binlog
+        touch $cdir/ToolsetRestore.binlog
+        touch $cdir/source-inner-build.binlog
+        ardir='artifacts/log/Release'
+        mkdir -p $ardir
+        touch $ardir/Build.binlog
+      displayName: Create new file
+    - bash: |
         sudo dnf install -y rsync
         sudo dnf clean all
       displayName: Install rsync
