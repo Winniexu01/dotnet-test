@@ -25,50 +25,50 @@ stages:
   - job: A1
     steps:
     - bash: |
-        adir='src/arcade/artifacts/buildLogs/log/Release'
-        mkdir -p $adir
-        touch "$adir/Build.binlog"
-        touch "$adir/ToolsetRestore.binlog"
-        touch "$adir/source-inner-build.binlog"
+        adir=$(Build.StagingDirectory)/src/arcade/artifacts/buildLogs/log/Release
+        mkdir -p ${adir}
+        touch "${adir}/Build.binlog"
+        touch "${adir}/ToolsetRestore.binlog"
+        touch "${adir}/source-inner-build.binlog"
 
-        cdir='src/cecil/artifacts/buildLogs/log/Release'
-        mkdir -p $cdir
-        touch "$cdir/Build.binlog"
-        touch "$cdir/ToolsetRestore.binlog"
-        touch "$cdir/source-inner-build.binlog"
+        cdir=$(Build.StagingDirectory)/src/cecil/artifacts/buildLogs/log/Release
+        mkdir -p ${cdir}
+        touch "${cdir}/Build.binlog"
+        touch "${cdir}/ToolsetRestore.binlog"
+        touch "${cdir}/source-inner-build.binlog"
 
-        ardir='artifacts/log/Release'
-        mkdir -p $ardir
-        touch "$ardir/Build.binlog"
+        ardir=$(Build.StagingDirectory)/artifacts/log/Release
+        mkdir -p ${ardir}
+        touch "${ardir}/Build.binlog"
       displayName: Create new file
     - bash: |
         sudo apt-get install -y rsync
         sudo apt-get clean all
       displayName: Install rsync
     - bash: |
-        for dir in src/*/
+        for dir in $(Build.StagingDirectory)/src/*/
         do
           echo "dir: ${dir}"
-          repoName=$(basename $dir)
+          repoName=$(basename ${dir})
           echo "repo: ${repoName}"
-          sdir="src/$repoName/artifacts/buildLogs/log/Release"
+          sdir=/src/${repoName}/artifacts/buildLogs/log/Release/
           echo "srcdir: ${sdir}"
-          tdir="artifacts/log/Release/$repoName"
+          tdir=/artifacts/log/Release/${repoName}/
           echo "artdir: ${tdir}"
-          mkdir -p $tdir
-          echo "find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;"
-          find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
+          mkdir -p ${tdir}
+          echo "find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;"
+          find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;
         done
 
         find artifacts/ -type f -name "*.binlog"
-        targetfolder=BuildLogs/
+        targetfolder=$(Build.StagingDirectory)/BuildLogs/
         mkdir -p ${targetfolder}
         echo "targetfolder: ${targetfolder}"
 
         find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
         find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
       displayName: Copy binlog files  
-    - publish: 'BuildLogs'
-      artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
+    - publish: $(Build.StagingDirectory)/BuildLogs
+      artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
       displayName: Publish Artifacts
       continueOnError: true
