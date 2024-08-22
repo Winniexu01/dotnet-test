@@ -27,17 +27,17 @@ stages:
     - bash: |
         adir='src/arcade/artifacts/buildLogs/log/Release'
         mkdir -p $adir
-        touch $adir/Build.binlog
-        touch $adir/ToolsetRestore.binlog
-        touch $adir/source-inner-build.binlog
+        touch "$adir/Build.binlog"
+        touch "$adir/ToolsetRestore.binlog"
+        touch "$adir/source-inner-build.binlog"
         cdir='src/cecil/artifacts/buildLogs/log/Release'
         mkdir -p $cdir
-        touch $cdir/Build.binlog
-        touch $cdir/ToolsetRestore.binlog
-        touch $cdir/source-inner-build.binlog
+        touch "$cdir/Build.binlog"
+        touch "$cdir/ToolsetRestore.binlog"
+        touch "$cdir/source-inner-build.binlog"
         ardir='artifacts/log/Release'
         mkdir -p $ardir
-        touch $ardir/Build.binlog
+        touch "$ardir/Build.binlog"
       displayName: Create new file
     - bash: |
         sudo apt-get install -y rsync
@@ -49,8 +49,10 @@ stages:
           echo $dir
           repoName=$(basename $dir)
           echo $repoName
-          sdir='src/$repoName/artifacts/buildLogs/log/Release'
-          tdir='artifacts/log/Release/$repoName/Release'
+          sdir="src/$repoName/artifacts/buildLogs/log/Release"
+          echo $sdir
+          tdir="artifacts/log/Release/$repoName/Release"
+          echo $tdir
           mkdir -p $tdir
           find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
         done
