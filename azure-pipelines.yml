@@ -25,7 +25,7 @@ stages:
   - job: A1
     steps:
     - bash: |
-        cd $(Build.StagingDirectory)/
+        cd $(Build.StagingDirectory)
         adir=src/arcade/artifacts/buildLogs/log/Release
         mkdir -p ${adir}
         touch "${adir}/Build.binlog"
@@ -54,7 +54,8 @@ stages:
         sudo apt-get clean all
       displayName: Install rsync
     - bash: |
-        cd $(Build.StagingDirectory)/
+        echo "cd $(Build.StagingDirectory)"
+        cd $(Build.StagingDirectory)
         for dir in src/*/
         do
           echo "dir: ${dir}"
