@@ -56,6 +56,7 @@ stages:
           mkdir -p $tdir
           find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
         done
+        find artifacts/ -type f -name "*.binlog"
         targetfolder=$(Build.StagingDirectory)/BuildLogs
         echo "targetfolder: ${targetfolder}"
         mkdir -p ${targetfolder}
