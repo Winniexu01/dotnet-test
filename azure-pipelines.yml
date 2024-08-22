@@ -30,11 +30,13 @@ stages:
         touch "$adir/Build.binlog"
         touch "$adir/ToolsetRestore.binlog"
         touch "$adir/source-inner-build.binlog"
+
         cdir='src/cecil/artifacts/buildLogs/log/Release'
         mkdir -p $cdir
         touch "$cdir/Build.binlog"
         touch "$cdir/ToolsetRestore.binlog"
         touch "$cdir/source-inner-build.binlog"
+
         ardir='artifacts/log/Release'
         mkdir -p $ardir
         touch "$ardir/Build.binlog"
@@ -51,16 +53,18 @@ stages:
           echo "repo: ${repoName}"
           sdir="src/$repoName/artifacts/buildLogs/log/Release"
           echo "srcdir: ${sdir}"
-          tdir="artifacts/log/Release/$repoName/Release"
+          tdir="artifacts/log/Release/$repoName"
           echo "artdir: ${tdir}"
           mkdir -p $tdir
           echo "find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;"
           find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
         done
+
         find artifacts/ -type f -name "*.binlog"
         targetfolder=BuildLogs
-        echo "targetfolder: ${targetfolder}"
         mkdir -p ${targetfolder}
+        echo "targetfolder: ${targetfolder}"
+        
         find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder}/ \;
         find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder}/ \;
       displayName: Copy binlog files  
