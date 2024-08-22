@@ -61,12 +61,12 @@ stages:
         done
 
         find artifacts/ -type f -name "*.binlog"
-        targetfolder=BuildLogs
+        targetfolder=BuildLogs/
         mkdir -p ${targetfolder}
         echo "targetfolder: ${targetfolder}"
-        
-        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder}/ \;
-        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder}/ \;
+
+        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
+        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
       displayName: Copy binlog files  
     - publish: 'BuildLogs'
       artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
