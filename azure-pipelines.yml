@@ -25,6 +25,7 @@ stages:
   - job: A1
     steps:
     - bash: |
+        set -x
         cd $(Build.StagingDirectory)
         adir=src/arcade/artifacts/buildLogs/log/Release
         mkdir -p ${adir}
@@ -42,14 +43,11 @@ stages:
         mkdir -p ${ardir}
         touch "${ardir}/Build.binlog"
 
-        echo "find binlog files under src folder"
         find src/ -type f -name "*.binlog"
-
-        echo ""
-        echo "find binlog files under artifacts folder"
         find artifacts/ -type f -name "*.binlog"
       displayName: Create new file
     - bash: |
+        set -x
         sudo apt-get install -y rsync
         sudo apt-get clean all
       displayName: Install rsync
@@ -59,13 +57,9 @@ stages:
         cd $(Build.StagingDirectory)
         for dir in src/*/
         do
-          echo "dir: ${dir}"
           repoName=$(basename ${dir})
-          echo "repo: ${repoName}"
           sdir=src/${repoName}/artifacts/buildLogs/log/Release/
-          echo "srcdir: ${sdir}"
           tdir=artifacts/log/Release/${repoName}/
-          echo "artdir: ${tdir}"
           mkdir -p ${tdir}
           find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;
         done
@@ -76,13 +70,10 @@ stages:
 
         targetfolder=$(Build.StagingDirectory)/BuildLogs/
         mkdir -p ${targetfolder}
-        echo "targetfolder: ${targetfolder}"
 
         find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetfolder} \;
         find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetfolder} \;
 
-        echo ""
-        echo "find binlog files under ${targetfolder} folder"
         find $(Build.StagingDirectory)/ -type f -name "*.binlog"
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
