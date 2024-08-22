@@ -82,7 +82,7 @@ stages:
 
         echo ""
         echo "find binlog files under ${targetFolder} folder"
-        find ${targetFolder} -type f -name "*.binlog"
+        find $(Build.StagingDirectory)/ -type f -name "*.binlog"
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
       artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
