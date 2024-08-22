@@ -59,21 +59,20 @@ stages:
         do
           echo "dir: ${dir}"
           repoName=$(basename ${dir})
-          echo ""
           echo "repo: ${repoName}"
           sdir=src/${repoName}/artifacts/buildLogs/log/Release/
-          echo ""
           echo "srcdir: ${sdir}"
           tdir=artifacts/log/Release/${repoName}/
-          echo ""
           echo "artdir: ${tdir}"
           mkdir -p ${tdir}
-          echo ""
-          echo "find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;"
           find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;
         done
 
-        targetfolder=BuildLogs/
+        echo ""
+        echo "find binlog files under artifacts folder"
+        find artifacts/ -type f -name "*.binlog"
+
+        targetfolder=$(Build.StagingDirectory)/BuildLogs/
         mkdir -p ${targetfolder}
         echo "targetfolder: ${targetfolder}"
 
@@ -81,7 +80,7 @@ stages:
         find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
 
         echo ""
-        echo "find binlog files under artifacts folder"
+        echo "find binlog files under ${targetFolder} folder"
         find ${targetFolder} -type f -name "*.binlog"
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
