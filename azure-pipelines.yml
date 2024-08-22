@@ -57,7 +57,11 @@ stages:
           find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
         done
       displayName: Copy binlog files  
-    - publish: '/home/vsts/work/1/s/artifacts/log/Release'
+    - publish: '/home/vsts/work/1/s/artifacts'
       artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
-      displayName: Publish BuildLogs
+      displayName: Publish Artifacts
+      continueOnError: true
+    - publish: '/home/vsts/work/1/s/src'
+      artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
+      displayName: Publish Src
       continueOnError: true
