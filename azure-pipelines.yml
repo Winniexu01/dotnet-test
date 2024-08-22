@@ -40,6 +40,9 @@ stages:
         ardir=$(Build.StagingDirectory)/artifacts/log/Release
         mkdir -p ${ardir}
         touch "${ardir}/Build.binlog"
+
+        find src/ -type f -name "*.binlog"
+        find artifacts/ -type f -name "*.binlog"
       displayName: Create new file
     - bash: |
         sudo apt-get install -y rsync
@@ -51,9 +54,9 @@ stages:
           echo "dir: ${dir}"
           repoName=$(basename ${dir})
           echo "repo: ${repoName}"
-          sdir=/src/${repoName}/artifacts/buildLogs/log/Release/
+          sdir=src/${repoName}/artifacts/buildLogs/log/Release/
           echo "srcdir: ${sdir}"
-          tdir=/artifacts/log/Release/${repoName}/
+          tdir=artifacts/log/Release/${repoName}/
           echo "artdir: ${tdir}"
           mkdir -p ${tdir}
           echo "find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;"
