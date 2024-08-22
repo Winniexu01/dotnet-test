@@ -54,14 +54,15 @@ stages:
           tdir="artifacts/log/Release/$repoName/Release"
           echo "artdir: ${tdir}"
           mkdir -p $tdir
+          echo "find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;"
           find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
         done
         find artifacts/ -type f -name "*.binlog"
         targetfolder=BuildLogs
         echo "targetfolder: ${targetfolder}"
         mkdir -p ${targetfolder}
-        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
-        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
+        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder}/ \;
+        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder}/ \;
       displayName: Copy binlog files  
     - publish: 'BuildLogs'
       artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
