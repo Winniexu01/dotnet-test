@@ -25,19 +25,20 @@ stages:
   - job: A1
     steps:
     - bash: |
-        adir=$(Build.StagingDirectory)/src/arcade/artifacts/buildLogs/log/Release
+        cd $(Build.StagingDirectory)/
+        adir=src/arcade/artifacts/buildLogs/log/Release
         mkdir -p ${adir}
         touch "${adir}/Build.binlog"
         touch "${adir}/ToolsetRestore.binlog"
         touch "${adir}/source-inner-build.binlog"
 
-        cdir=$(Build.StagingDirectory)/src/cecil/artifacts/buildLogs/log/Release
+        cdir=src/cecil/artifacts/buildLogs/log/Release
         mkdir -p ${cdir}
         touch "${cdir}/Build.binlog"
         touch "${cdir}/ToolsetRestore.binlog"
         touch "${cdir}/source-inner-build.binlog"
 
-        ardir=$(Build.StagingDirectory)/artifacts/log/Release
+        ardir=artifacts/log/Release
         mkdir -p ${ardir}
         touch "${ardir}/Build.binlog"
 
@@ -49,7 +50,8 @@ stages:
         sudo apt-get clean all
       displayName: Install rsync
     - bash: |
-        for dir in $(Build.StagingDirectory)/src/*/
+        cd $(Build.StagingDirectory)/
+        for dir in src/*/
         do
           echo "dir: ${dir}"
           repoName=$(basename ${dir})
@@ -64,7 +66,7 @@ stages:
         done
 
         find artifacts/ -type f -name "*.binlog"
-        targetfolder=$(Build.StagingDirectory)/BuildLogs/
+        targetfolder=BuildLogs/
         mkdir -p ${targetfolder}
         echo "targetfolder: ${targetfolder}"
 
