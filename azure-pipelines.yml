@@ -27,7 +27,7 @@ stages:
     - bash: |
         set -x
         cd $(Build.StagingDirectory)
-        adir=src/arcade/artifacts/buildLogs/log/Release
+        adir=src/arcade/artifacts/buildLogs/log/Debug
         mkdir -p ${adir}
         touch "${adir}/Build.binlog"
         touch "${adir}/ToolsetRestore.binlog"
