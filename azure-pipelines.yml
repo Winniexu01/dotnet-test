@@ -46,17 +46,18 @@ stages:
     - bash: |
         for dir in src/*/
         do
-          echo $dir
+          echo "dir: ${dir}"
           repoName=$(basename $dir)
-          echo $repoName
+          echo "repo: ${repoName}"
           sdir="src/$repoName/artifacts/buildLogs/log/Release"
-          echo $sdir
+          echo "srcdir: ${sdir}"
           tdir="artifacts/log/Release/$repoName/Release"
-          echo $tdir
+          echo "artdir: ${tdir}"
           mkdir -p $tdir
           find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
         done
         targetfolder=$(Build.StagingDirectory)/BuildLogs
+        echo "targetfolder: ${targetfolder}"
         mkdir -p ${targetfolder}
         find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
         find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
