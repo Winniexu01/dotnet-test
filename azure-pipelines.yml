@@ -58,8 +58,8 @@ stages:
         set -x
         targetFolder=$(Build.StagingDirectory)/BuildLogs/
         mkdir -p ${targetFolder}
-        echo "cd $(Build.StagingDirectory)"
         cd $(Build.StagingDirectory)
+        find artifacts/log/ -exec rsync -R {} -t ${targetFolder} \;
         for dir in src/*/
         do
             repoName=$(basename ${dir})
@@ -68,8 +68,6 @@ stages:
             find src/${repoName}/artifacts/buildLogs/log/Release/ -type f -name "*.binlog" -exec rsync -a {} -t ${DotNetBuildArtifactsLogDir} \;
         done 
 
-        echo ""
-        find ${targetFolder}/ -type f -name "*.binlog"
         find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
