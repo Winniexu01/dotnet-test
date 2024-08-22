@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
 
 variables:
 - name: buildConfiguration
@@ -23,35 +23,17 @@ stages:
   jobs:
   - job: A1
     steps:
-    - script: |
-        echo `date +%Y-%m-%d-%H-%M-%S`
-        dotnet build --configuration $(buildConfiguration)
-      displayName: 'dotnet build $(buildConfiguration)'
     - bash: |
-        cd '/home/vsts/work/1/s/bin/Release/net6.0'
-        echo $(System.JobAttempt) > temp.json
-      displayName: Create new file   
-    - bash: |
-        cd '/home/vsts/work/1/s/bin/Release/net6.0'
-        rm 'appsettings.json'
-        exit 1
-      condition: ne(variables['System.JobAttempt'], '3')
-      displayName: Fail build if partially successful   
-    - bash: |
-        newValue="Succeeded"
-        echo "##vso[task.setvariable variable=status;]$newValue"
-      displayName: Succeed
-      condition: succeeded()
-    - bash: |     
-        newValue="Failed"
-        echo "##vso[task.setvariable variable=status;]$newValue"
-      displayName: Fail
-      condition: failed() 
-    - bash:
-        echo $(status)
-      displayName: 'echo $(status)'
-      condition: succeededOrFailed()   
-    - publish: '/home/vsts/work/1/s/bin/Release/net6.0'
+        for dir in src/*/
+        do
+          repoName=$(basename $dir)
+          sdir='src/$repoName/artifacts/buildLogs/log/Release'
+          tdir='artifacts/log/Release/$repoName/Release'
+          mkdir -p $tdir
+          find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
+        done
+      displayName: Copy binlog files  
+    - publish: '/home/vsts/work/1/s/artifacts/log/Release'
       artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
       displayName: Publish BuildLogs
       continueOnError: true
