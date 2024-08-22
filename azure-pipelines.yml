@@ -46,7 +46,9 @@ stages:
     - bash: |
         for dir in src/*/
         do
+          echo $dir
           repoName=$(basename $dir)
+          echo $repoName
           sdir='src/$repoName/artifacts/buildLogs/log/Release'
           tdir='artifacts/log/Release/$repoName/Release'
           mkdir -p $tdir
