@@ -64,7 +64,7 @@ stages:
         do
             repoName=$(basename ${dir})
             DotNetBuildArtifactsLogDir=${targetFolder}artifacts/log/Release/${repoName}/
-            mkdir /p ${DotNetBuildArtifactsLogDir}
+            mkdir -p ${DotNetBuildArtifactsLogDir}
             find src/${repoName}/artifacts/buildLogs/log/Release/ -type f -name "*.binlog" -exec rsync -a {} -t ${DotNetBuildArtifactsLogDir} \;
         done 
 
