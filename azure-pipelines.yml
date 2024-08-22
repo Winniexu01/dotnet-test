@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 pool:
-  vmImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
+  vmImage: ubuntu-latest
 
 variables:
 - name: buildConfiguration
@@ -24,6 +24,10 @@ stages:
   jobs:
   - job: A1
     steps:
+    - bash: |
+        sudo dnf install -y rsync
+        sudo dnf clean all
+      displayName: Install rsync
     - bash: |
         for dir in src/*/
         do
