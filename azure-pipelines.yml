@@ -78,11 +78,11 @@ stages:
         mkdir -p ${targetfolder}
         echo "targetfolder: ${targetfolder}"
 
-        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
-        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
+        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetfolder} \;
+        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetfolder} \;
 
         echo ""
-        echo "find binlog files under ${targetFolder} folder"
+        echo "find binlog files under ${targetfolder} folder"
         find $(Build.StagingDirectory)/ -type f -name "*.binlog"
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
