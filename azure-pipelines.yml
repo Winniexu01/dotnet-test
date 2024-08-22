@@ -56,12 +56,12 @@ stages:
           mkdir -p $tdir
           find $sdir/ -type f -name "*.binlog" -exec rsync -a {} -t $tdir \;
         done
+        targetfolder=BuildLogs
+        mkdir -p ${targetfolder}
+        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
+        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
       displayName: Copy binlog files  
-    - publish: '/home/vsts/work/1/s/artifacts'
+    - publish: '/home/vsts/work/1/s/BuildLogs'
       artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
       displayName: Publish Artifacts
-      continueOnError: true
-    - publish: '/home/vsts/work/1/s/src'
-      artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
-      displayName: Publish Src
       continueOnError: true
