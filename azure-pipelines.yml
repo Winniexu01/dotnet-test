@@ -39,12 +39,15 @@ stages:
         touch "${cdir}/ToolsetRestore.binlog"
         touch "${cdir}/source-inner-build.binlog"
 
+        cdir2=src/cecil/artifacts/buildLogs/log/Debug
+        mkdir -p ${cdir2}
+        touch "${cdir2}/Build2.binlog"
+        touch "${cdir2}/ToolsetRestore2.binlog"
+        touch "${cdir2}/source-inner-build2.binlog"
+
         ardir=artifacts/log/Release
         mkdir -p ${ardir}
         touch "${ardir}/Build.binlog"
-
-        find src/ -type f -name "*.binlog"
-        find artifacts/ -type f -name "*.binlog"
       displayName: Create new file
     - bash: |
         set -x
@@ -53,28 +56,21 @@ stages:
       displayName: Install rsync
     - script: |
         set -x
+        targetFolder=$(Build.StagingDirectory)/BuildLogs/
+        mkdir -p ${targetFolder}
         echo "cd $(Build.StagingDirectory)"
         cd $(Build.StagingDirectory)
         for dir in src/*/
         do
-          repoName=$(basename ${dir})
-          sdir=src/${repoName}/*/Release/
-          tdir=artifacts/log/Release/${repoName}/
-          mkdir -p ${tdir}
-          find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;
-        done
+            repoName=$(basename ${dir})
+            DotNetBuildArtifactsLogDir=${targetFolder}artifacts/log/Release/${repoName}/
+            mkdir /p ${DotNetBuildArtifactsLogDir}
+            find src/${repoName}/artifacts/buildLogs/log/Release/ -type f -name "*.binlog" -exec rsync -a {} -t ${DotNetBuildArtifactsLogDir} \;
+        done 
 
         echo ""
-        echo "find binlog files under artifacts folder"
-        find artifacts/ -type f -name "*.binlog"
-
-        targetfolder=$(Build.StagingDirectory)/BuildLogs/
-        mkdir -p ${targetfolder}
-
-        find artifacts/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetfolder} \;
-        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetfolder} \;
-
-        find $(Build.StagingDirectory)/ -type f -name "*.binlog"
+        find ${targetFolder}/ -type f -name "*.binlog"
+        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
       artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
