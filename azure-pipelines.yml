@@ -58,7 +58,7 @@ stages:
         for dir in src/*/
         do
           repoName=$(basename ${dir})
-          sdir=src/${repoName}/artifacts/buildLogs/log/Release/
+          sdir=src/${repoName}/*/Release/
           tdir=artifacts/log/Release/${repoName}/
           mkdir -p ${tdir}
           find ${sdir} -type f -name "*.binlog" -exec rsync -a {} -t ${tdir} \;
