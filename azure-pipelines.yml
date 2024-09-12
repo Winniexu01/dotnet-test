@@ -30,24 +30,15 @@ stages:
         adir=src/arcade/artifacts/buildLogs/log/Debug
         mkdir -p ${adir}
         touch "${adir}/Build.binlog"
-        touch "${adir}/ToolsetRestore.binlog"
-        touch "${adir}/source-inner-build.binlog"
+        touch "${adir}/test-usage.xml"
+        touch "${adir}/prebuilt-usage.xml"
 
         cdir=src/cecil/artifacts/buildLogs/log/Release
         mkdir -p ${cdir}
         touch "${cdir}/Build.binlog"
-        touch "${cdir}/ToolsetRestore.binlog"
-        touch "${cdir}/source-inner-build.binlog"
+        touch "${cdir}/test-usage.xml"
+        touch "${cdir}/prebuilt-usage.xml"
 
-        cdir2=src/cecil/artifacts/buildLogs/log/Debug
-        mkdir -p ${cdir2}
-        touch "${cdir2}/Build2.binlog"
-        touch "${cdir2}/ToolsetRestore2.binlog"
-        touch "${cdir2}/source-inner-build2.binlog"
-
-        ardir=artifacts/log/Release
-        mkdir -p ${ardir}
-        touch "${ardir}/Build.binlog"
       displayName: Create new file
     - bash: |
         set -x
@@ -59,16 +50,8 @@ stages:
         targetFolder=$(Build.StagingDirectory)/BuildLogs/
         mkdir -p ${targetFolder}
         cd $(Build.StagingDirectory)
-        find artifacts/log/ -exec rsync -R {} -t ${targetFolder} \;
-        for dir in src/*/
-        do
-            repoName=$(basename ${dir})
-            DotNetBuildArtifactsLogDir=${targetFolder}artifacts/log/Release/${repoName}/
-            mkdir -p ${DotNetBuildArtifactsLogDir}
-            find src/${repoName}/artifacts/buildLogs/log/Release/ -type f -name "*.binlog" -exec rsync -a --remove-source-files {} -t ${DotNetBuildArtifactsLogDir} \;
-        done 
 
-        find src/ -type f -name "*.binlog" -exec rsync -R {} -t ${targetFolder} \;
+        find src/ -type f -name "*usage.xml" -exec rsync -R {} -t ${targetFolder} \;
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
       artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
