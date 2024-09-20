@@ -50,9 +50,7 @@ stages:
         mkdir -p ${targetFolder}
         cd $(Build.StagingDirectory)
 
-        dirs=$(find src/**/artifacts/sb/prebuilt-report/ -type d | wc -l)
-
-        if [ $dirs -gt 1 ]; then
+        if [ $(find src/**/artifacts/sb/prebuilt-report/ -type d | wc -l) -gt 1 ]; then
           find src/**/artifacts/sb/prebuilt-report/ -type f -exec rsync -R {} -t ${targetFolder} \;
         fi
 
