@@ -27,13 +27,12 @@ stages:
     - bash: |
         set -x
         cd $(Build.StagingDirectory)
-        adir=src/arcade/artifacts/buildLogs/log/Debug
+        adir=src/arcade/artifacts/sb/prebuilt-report
         mkdir -p ${adir}
-        touch "${adir}/Build.binlog"
         touch "${adir}/test-usage.xml"
         touch "${adir}/prebuilt-usage.xml"
 
-        cdir=src/cecil/artifacts/buildLogs/log/Release
+        cdir=src/cecil/artifacts/sb/prebuilt-report
         mkdir -p ${cdir}
         touch "${cdir}/Build.binlog"
         touch "${cdir}/test-usage.xml"
@@ -51,7 +50,12 @@ stages:
         mkdir -p ${targetFolder}
         cd $(Build.StagingDirectory)
 
-        find src/ -type f -name "*usage.xml" -exec rsync -R {} -t ${targetFolder} \;
+        find src/arcade/artifacts/sb/prebuilt-report/ -type f
+        find src/cecil/artifacts/sb/prebuilt-report/ -type f
+
+        if [ -d "src/**/artifacts/sb/prebuilt-report/" ]; then
+          find src/**/artifacts/sb/prebuilt-report/ -type f -exec rsync -R {} -t ${targetFolder} \;
+        fi
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
       artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
