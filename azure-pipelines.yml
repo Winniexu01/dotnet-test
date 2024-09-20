@@ -25,21 +25,35 @@ stages:
   - job: A1
     steps:
     - bash: |
-        adir='src/arcade/artifacts/buildLogs/log/Release'
-        mkdir -p $adir
-        touch $adir/test-usage.xml
-        touch $adir/prebuilt-usage.xml
+        set -x
+        cd $(Build.StagingDirectory)
+        adir=src/arcade/artifacts/buildLogs/log/Debug
+        mkdir -p ${adir}
+        touch "${adir}/Build.binlog"
+        touch "${adir}/test-usage.xml"
+        touch "${adir}/prebuilt-usage.xml"
+
+        cdir=src/cecil/artifacts/buildLogs/log/Release
+        mkdir -p ${cdir}
+        touch "${cdir}/Build.binlog"
+        touch "${cdir}/test-usage.xml"
+        touch "${cdir}/prebuilt-usage.xml"
+
       displayName: Create new file
     - bash: |
+        set -x
         sudo apt-get install -y rsync
         sudo apt-get clean all
       displayName: Install rsync
-    - bash: |
+    - script: |
+        set -x
         targetFolder=$(Build.StagingDirectory)/BuildLogs/
         mkdir -p ${targetFolder}
+        cd $(Build.StagingDirectory)
+
         find src/ -type f -name "*usage.xml" -exec rsync -R {} -t ${targetFolder} \;
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
-      artifact: $(Agent.JobName)_BuildLogs_Artifact$(System.JobAttempt)
-      displayName: Publish BuildLogs
+      artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
+      displayName: Publish Artifacts
       continueOnError: true
