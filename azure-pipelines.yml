@@ -55,6 +55,8 @@ stages:
         if [ -e "find src/**/artifacts/sb/prebuilt-report/ -type f" ]; then
           find src/**/artifacts/sb/prebuilt-report/ -type f -exec rsync -R {} -t ${targetFolder} \;
         fi
+
+        find ${targetFolder} -type f
       displayName: Copy binlog files  
     - publish: $(Build.StagingDirectory)/BuildLogs
       artifact: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
