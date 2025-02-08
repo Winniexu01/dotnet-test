@@ -15,6 +15,11 @@ parameters:
 
 steps:
 # Build. Keep it self-contained for simple reusability. (No source-build-specific job variables.)
+- bash: |
+    cd /home/vsts/work/1/s/eng/common
+    chmod +x *.sh
+
+  displayName: Change Permission
 - script: |
     set -x
     df -h
@@ -81,7 +86,7 @@ steps:
       portableBuildArgs='/p:PortableBuild=${{ parameters.platform.portableBuild }}'
     fi
 
-    ${{ coalesce(parameters.platform.buildScript, 'sudo ./build.sh') }} --ci \
+    ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
       --configuration $buildConfig \
       --restore --build --pack $publishArgs -bl \
       $officialBuildArgs \
