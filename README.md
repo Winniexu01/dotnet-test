@@ -1,35 +1,145 @@
-# Sample ASP.NET Core application for Azure Pipelines docs
+# .NET Source Build Reference Packages
 
-For information on how to set up a pipeline for this repository, see [Create your first pipeline](https://docs.microsoft.com/azure/devops/pipelines/get-started-yaml?view=azure-devops).
-For more information on building .NET Core applications, see [.NET Core](https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core?view=azure-devops).
+This repository contains tools, source and build scripts for source buildable reference
+versions of historical .NET Core packages that are referenced by
+[.NET source build](https://github.com/dotnet/source-build). These are used only
+when source building .NET.
 
-# Contributing
+This repo supports three package types:
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.microsoft.com.
+1. Reference - A package that contains API signatures, no implementation. It enables developers to build,
+targeting a specific library version without having the full implementation assembly for that version.
+1. Targeting - A bundle of reference packages that target a specific .NET TFM.
+1. Text only - Packages that contain text-only assets.
 
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+This repo and it's reference packages are often referred to as SBRPs. This acronym is used from time
+to time in issues and some documentation.
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+## Supported Platforms
 
-# Legal Notices
+.NET source build currently only supports Linux but generating a source build reference or text-only package
+is supported on both Windows and Unix based operating systems.
 
-Microsoft and any contributors grant you a license to the Microsoft documentation and other content
-in this repository under the [Creative Commons Attribution 4.0 International Public License](https://creativecommons.org/licenses/by/4.0/legalcode),
-see the [LICENSE](LICENSE) file, and grant you a license to any code in the repository under the [MIT License](https://opensource.org/licenses/MIT), see the
-[LICENSE-CODE](LICENSE-CODE) file.
+## Building
 
-Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation
-may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries.
-The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks.
-Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.
+``` bash
+./build.sh -sb
+```
 
-Privacy information can be found at https://privacy.microsoft.com/en-us/
+## Adding new Packages
 
-Microsoft and any contributors reserve all others rights, whether under their respective copyrights, patents,
-or trademarks, whether by implication, estoppel or otherwise.
+New packages are needed from time to time as
+[existing dependency versions are upgraded](https://github.com/dotnet/source-build/blob/main/Documentation/sourcebuild-in-repos/update-dependencies.md)
+and [new dependencies are added](https://github.com/dotnet/source-build/blob/main/Documentation/sourcebuild-in-repos/new-dependencies.md)
+to .NET. The [generate script](https://github.com/dotnet/source-build-reference-packages/blob/main/generate.sh)
+supports generating new packages. Run `generate.sh --help` for usage details.
+
+When generating a package(s), the tooling will detect and generate all dependent packages.
+
+**Note:** All new packages should be for released stable versions. Adding preview/release candidate
+packages are for exceptional cases only and require approval from
+[dotnet/source-build](https://github.com/orgs/dotnet/teams/source-build).
+
+**Note:** Reference packages should only be added to this repo if they are required during the product
+source build (e.g. a [VMR](https://github.com/dotnet/dotnet) build). Reference packages that are only
+required for building a repo level source build should not be added to this repo. In this case, it is
+appropriate to add these types of package as allowed prebuilt via the `eng/SourceBuildPrebuiltBaseline.xml`
+file. See the [Eliminating pre-builts documentation](https://github.com/dotnet/source-build/blob/main/Documentation/eliminating-pre-builts.md)
+for detailed guidance.
+
+### Reference
+
+``` bash
+./generate.sh --package system.buffers,4.5.1
+```
+
+After generating new reference packages, all new projects must be referenced as a
+[DependencyPackageProjects](https://github.com/dotnet/source-build-reference-packages/blob/main/eng/Build.props#L9).
+These must be defined in dependency order. There is a
+[tracking issue](https://github.com/dotnet/source-build/issues/1690) to address this manual step.
+
+The tooling does not handle all situations and sometimes the generated code will need manual tweeks to get
+it to compile. If this occurs when generating a newer version of an existing package, it can be helpful to
+regenerate the older version to see what customizations to the generated code were made.
+
+#### Workflow
+
+* Generate reference package and its depencencies running the `./generate.sh --package <package>,<version>` script.
+* Inspect any changes to packages that already existed in the repository. There are two reasons why previously
+generated packages show changes when being regenerated.
+    1. The package contains intentional code modifications on top of the generated code.
+    This may be code fixups because the generate tooling does not support a scenario.
+    When this occurs, there should be code comments explaining why the code modification was made. If this is
+    the case, the changes to the existing package should be reverted.
+    2. The generate tooling has changed since the last time this package was generated. The new changes should
+    be considered better/correct and should be committed.
+* Add `DependencyPackageProjects` for all new projects in the
+[eng/Build.props](https://github.com/dotnet/source-build-reference-packages/blob/main/eng/Build.props#L9)
+in the correct dependency order.
+* Run build with the `./build.sh -sb` command.
+* If the compilation produces numerous compilation issue - run the `./build.sh --projects <path to .csproj file>`
+  command for each generated reference package separately.
+  It may be necessary to manually tweak the generated artifacts to address compilation issues.
+  When this occurs, please ensure there is an [tracking issue](#filing-issues) to address the underlying problem with the generator.
+  When making changes to the generated artifacts, it is recommended to utilize the following pre-defined constructs if possible.
+
+  * Customizations.props - Automatically imported by the generated project. Use it for additive changes such as NoWarns or additional source files.
+  * Customizations.cs - Automatically included by the generated project. Use it to add new types or members to partial classes.
+
+  You can search the code base to see example usages.
+  The benefit of using these files is that they will be preserved when the packages are regenerated.
+* Add comments calling out any modifications to the generated code that were necessary.
+
+You can search for known issues in the [Known Generator Issues Markdown file](docs/known_generator_issues.md).
+
+### Targeting
+
+Generating new targeting packages is not supported. No new targeting packs should be needed/added. If you feel
+a new targeting pack is needed, please [open a new issue](#filing-issues) to discuss.
+
+### Text Only
+
+``` bash
+./generate.sh --type text --package microsoft.build.traversal,3.1.6
+```
+
+## Regenerating all Packages
+
+As bugs are fixed or enhancements are made to the generate tooling, it may be desirable or necessary to
+regenerate the existing packages. The following commands can be used to generate all of the reference packages.
+
+``` bash
+find src/referencePackages/src -mindepth 2 -maxdepth 2 -type d | awk -F'/' '{print $(NF-1)","$NF}' > packages.csv
+./generate.sh -x -c packages.csv
+```
+
+## Vulnerable Packages
+
+CVEs may exist for reference packages included in this repo. Because the packages do not contain any
+implementation, they do not pose a security risk. CG is configured in this repo to ignore the reference
+packages. If product repos migrate off these vulnerable packages, they can be [removed](#cleanup).
+
+## Filing Issues
+
+This repo does not accept issues. Please file issues in
+[dotnet/source-build](https://github.com/dotnet/source-build/issues/new/choose).
+
+## Cleanup
+
+Periodically, packages that are unreferenced by the product source build should be deleted. The number of
+unreferenced packages build up over time as the product repositories upgrade their dependencies to newer
+versions. Ideally this cleanup would be performed around RC1 timeframe as the product locks down in preparation
+for the GA release. To find which packages are unreferenced, you can run a VMR build with the `ReportSbrpUsage`
+option to generate an SBRP package usage report. The resulting report will be written to
+`artifacts/log/<configuration>/sbrpPackageUsage.json`.
+
+``` bash
+./build.sh -sb /p:ReportSbrpUsage=true
+```
+
+The VMR CI runs with the `ReportSbrpUsage` option set therefore you can grab the usage report from any build's
+artifacts.
+
+## License
+
+This repo is licensed with [MIT](LICENSE.txt).
