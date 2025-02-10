@@ -81,6 +81,7 @@ steps:
       portableBuildArgs='/p:PortableBuild=${{ parameters.platform.portableBuild }}'
     fi
 
+    sudo chmod +x "./build.sh"
     ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
       --configuration $buildConfig \
       --restore --build --pack $publishArgs -bl \
