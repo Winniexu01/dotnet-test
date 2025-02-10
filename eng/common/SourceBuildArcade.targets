@@ -133,7 +133,7 @@
       <IntermediateFileWithoutVersion Include="$([System.Text.RegularExpressions.Regex]::Replace('%(IntermediatePackageFile.Identity)','\.(\d+\.){2}\d+(-\w+)?(\.(\d+\.){1}\d+)?',''))" />
       <NotSupportIntermediateFile Include="@(IntermediateFileWithoutVersion)"
                                   Condition="'%(IntermediateFileWithoutVersion.FileName) @(IntermediateFileWithoutVersion->Count())' != '%(IntermediateFileWithoutVersion.FileName) 1'
-                                  and '$(GitHubRepositoryName) != 'source-build-reference-packages'" />
+                                  and '$(GitHubRepositoryName)' != 'source-build-reference-packages'" />
     </ItemGroup>
 
     <Error Condition="'@(NotSupportIntermediateFile)' != ''"
