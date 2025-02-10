@@ -55,6 +55,10 @@
   <Target Name="BuildIlFile"
           DependsOnTargets="ResolveIlToolPaths">
     <Exec
+      Command="sudo chmod +x $(MSBuildThisFileDirectory)build-il.sh"
+      IgnoreStandardErrorWarningFormat="true"
+      CustomErrorRegularExpression=": error : " />
+    <Exec
       Command="$(MSBuildThisFileDirectory)build-il.sh $(IlasmDir) $(IlFile) $(OutputFile)"
       IgnoreStandardErrorWarningFormat="true"
       CustomErrorRegularExpression=": error : " />
