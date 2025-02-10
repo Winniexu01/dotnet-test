@@ -15,11 +15,6 @@ parameters:
 
 steps:
 # Build. Keep it self-contained for simple reusability. (No source-build-specific job variables.)
-- bash: |
-    cd /home/vsts/work/1/s/eng/common
-    chmod +x *.sh
-
-  displayName: Change Permission
 - script: |
     set -x
     df -h
