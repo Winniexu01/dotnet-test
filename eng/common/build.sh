@@ -239,7 +239,6 @@ function Build {
     /p:PerformanceTest=$performance_test \
     /p:Sign=$sign \
     /p:Publish=$publish \
-    -v:d \
     $properties
 
   ExitWithExitCode 0
