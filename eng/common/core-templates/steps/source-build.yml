@@ -80,20 +80,34 @@ steps:
     if [ '${{ parameters.platform.portableBuild }}' != '' ]; then
       portableBuildArgs='/p:PortableBuild=${{ parameters.platform.portableBuild }}'
     fi
-    sudo chmod +x ./build.sh
-    ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
-      --configuration $buildConfig \
-      --restore --build --pack -bl \
-      $officialBuildArgs \
-      $internalRuntimeDownloadArgs \
-      $internalRestoreArgs \
-      $targetRidArgs \
-      $runtimeOsArgs \
-      $baseOsArgs \
-      $portableBuildArgs \
-      /p:DotNetBuildSourceOnly=true \
-      /p:DotNetBuildRepo=true \
-      /p:AssetManifestFileName=$assetManifestFileName
+
+    # ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
+    #   --configuration $buildConfig \
+    #   --restore --build --pack $publishArgs -bl \
+    #   $officialBuildArgs \
+    #   $internalRuntimeDownloadArgs \
+    #   $internalRestoreArgs \
+    #   $targetRidArgs \
+    #   $runtimeOsArgs \
+    #   $baseOsArgs \
+    #   $portableBuildArgs \
+    #   /p:DotNetBuildSourceOnly=true \
+    #   /p:DotNetBuildRepo=true \
+    #   /p:AssetManifestFileName=$assetManifestFileName
+    sudo chmod +x ./eng/build.sh
+    ./eng/build.sh --no-build-repo-tasks \
+    --ci \
+    --configuration Release \
+    --restore \
+    --build \
+    --pack \
+    -bl \
+    /p:DotNetPublishUsingPipelines=true \
+    /p:OfficialBuildId=20250211.6 \
+    /p:CopyWipIntoInnerSourceBuildRepo=true \
+    /p:DotNetBuildSourceOnly=true \
+    /p:DotNetBuildRepo=true \
+    /p:AssetManifestFileName=SourceBuild_Managed.xml
   displayName: Build
 
 # Upload build logs for diagnosis.
