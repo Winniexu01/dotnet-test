@@ -80,10 +80,10 @@ steps:
     if [ '${{ parameters.platform.portableBuild }}' != '' ]; then
       portableBuildArgs='/p:PortableBuild=${{ parameters.platform.portableBuild }}'
     fi
-
+    sudo chmod +x ./build.sh
     ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
       --configuration $buildConfig \
-      --restore --build --pack $publishArgs -bl \
+      --restore --build --pack -bl \
       $officialBuildArgs \
       $internalRuntimeDownloadArgs \
       $internalRestoreArgs \
