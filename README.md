@@ -1,145 +1,63 @@
-# .NET Source Build Reference Packages
+ASP.NET Core
+============
 
-This repository contains tools, source and build scripts for source buildable reference
-versions of historical .NET Core packages that are referenced by
-[.NET source build](https://github.com/dotnet/source-build). These are used only
-when source building .NET.
+[![.NET Foundation](https://img.shields.io/badge/.NET%20Foundation-blueviolet.svg)](https://www.dotnetfoundation.org/)
+[![MIT License](https://img.shields.io/github/license/dotnet/aspnetcore?color=%230b0&style=flat-square)](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt) [![Help Wanted](https://img.shields.io/github/issues/dotnet/aspnetcore/help%20wanted?color=%232EA043&label=help%20wanted&style=flat-square)](https://github.com/dotnet/aspnetcore/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) [![Good First Issues](https://img.shields.io/github/issues/dotnet/aspnetcore/good%20first%20issue?color=%23512BD4&label=good%20first%20issue&style=flat-square)](https://github.com/dotnet/aspnetcore/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+[![Discord](https://img.shields.io/discord/732297728826277939?style=flat-square&label=Discord&logo=discord&logoColor=white&color=7289DA)](https://aka.ms/dotnet-discord)
 
-This repo supports three package types:
+ASP.NET Core is an open-source and cross-platform framework for building modern cloud-based internet-connected applications, such as web apps, IoT apps, and mobile backends. ASP.NET Core apps run on [.NET](https://dot.net), a free, cross-platform, and open-source application runtime. It was architected to provide an optimized development framework for apps that are deployed to the cloud or run on-premises. It consists of modular components with minimal overhead, so you retain flexibility while constructing your solutions. You can develop and run your ASP.NET Core apps cross-platform on Windows, Mac, and Linux. [Learn more about ASP.NET Core](https://learn.microsoft.com/aspnet/core/).
 
-1. Reference - A package that contains API signatures, no implementation. It enables developers to build,
-targeting a specific library version without having the full implementation assembly for that version.
-1. Targeting - A bundle of reference packages that target a specific .NET TFM.
-1. Text only - Packages that contain text-only assets.
+## Get started
 
-This repo and it's reference packages are often referred to as SBRPs. This acronym is used from time
-to time in issues and some documentation.
+Follow the [Getting Started](https://learn.microsoft.com/aspnet/core/getting-started) instructions.
 
-## Supported Platforms
+Also check out the [.NET Homepage](https://www.microsoft.com/net) for released versions of .NET, getting started guides, and learning resources.
 
-.NET source build currently only supports Linux but generating a source build reference or text-only package
-is supported on both Windows and Unix based operating systems.
+See the [Triage Process](https://github.com/dotnet/aspnetcore/blob/main/docs/TriageProcess.md) document for more information on how we handle incoming issues.
 
-## Building
+## How to engage, contribute, and give feedback
 
-``` bash
-./build.sh -sb
-```
+Some of the best ways to contribute are to try things out, file issues, join in design conversations,
+and make pull-requests.
 
-## Adding new Packages
+* [Download our latest daily builds](./docs/DailyBuilds.md)
+* Follow along with the development of ASP.NET Core:
+    * [Community Standup](https://live.asp.net): The community standup is held every week and streamed live on YouTube. You can view past standups in the linked playlist.
+    * [Roadmap](https://aka.ms/aspnet/roadmap): The schedule and milestone themes for ASP.NET Core.
+* [Build ASP.NET Core source code](./docs/BuildFromSource.md)
+* Check out the [contributing](CONTRIBUTING.md) page to see the best places to log issues and start discussions.
 
-New packages are needed from time to time as
-[existing dependency versions are upgraded](https://github.com/dotnet/source-build/blob/main/Documentation/sourcebuild-in-repos/update-dependencies.md)
-and [new dependencies are added](https://github.com/dotnet/source-build/blob/main/Documentation/sourcebuild-in-repos/new-dependencies.md)
-to .NET. The [generate script](https://github.com/dotnet/source-build-reference-packages/blob/main/generate.sh)
-supports generating new packages. Run `generate.sh --help` for usage details.
+## Reporting security issues and bugs
 
-When generating a package(s), the tooling will detect and generate all dependent packages.
+Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center (MSRC)  secure@microsoft.com. You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your original message. Further information, including the MSRC PGP key, can be found in the [Security TechCenter](https://technet.microsoft.com/en-us/security/ff852094.aspx).
 
-**Note:** All new packages should be for released stable versions. Adding preview/release candidate
-packages are for exceptional cases only and require approval from
-[dotnet/source-build](https://github.com/orgs/dotnet/teams/source-build).
+## Related projects
 
-**Note:** Reference packages should only be added to this repo if they are required during the product
-source build (e.g. a [VMR](https://github.com/dotnet/dotnet) build). Reference packages that are only
-required for building a repo level source build should not be added to this repo. In this case, it is
-appropriate to add these types of package as allowed prebuilt via the `eng/SourceBuildPrebuiltBaseline.xml`
-file. See the [Eliminating pre-builts documentation](https://github.com/dotnet/source-build/blob/main/Documentation/eliminating-pre-builts.md)
-for detailed guidance.
+These are some other repos for related projects:
 
-### Reference
+* [Documentation](https://github.com/aspnet/Docs) - documentation sources for https://learn.microsoft.com/aspnet/core/
+* [Entity Framework Core](https://github.com/dotnet/efcore) - data access technology
+* [Runtime](https://github.com/dotnet/runtime) - cross-platform runtime for cloud, mobile, desktop, and IoT apps
+* [Razor](https://github.com/dotnet/razor) - the Razor compiler and tooling for working with Razor syntax (.cshtml, .razor)
 
-``` bash
-./generate.sh --package system.buffers,4.5.1
-```
+## Code of conduct
 
-After generating new reference packages, all new projects must be referenced as a
-[DependencyPackageProjects](https://github.com/dotnet/source-build-reference-packages/blob/main/eng/Build.props#L9).
-These must be defined in dependency order. There is a
-[tracking issue](https://github.com/dotnet/source-build/issues/1690) to address this manual step.
+See [CODE-OF-CONDUCT](./CODE-OF-CONDUCT.md)
 
-The tooling does not handle all situations and sometimes the generated code will need manual tweeks to get
-it to compile. If this occurs when generating a newer version of an existing package, it can be helpful to
-regenerate the older version to see what customizations to the generated code were made.
+## Nightly builds
 
-#### Workflow
+This table includes links to download the latest builds of the ASP.NET Core Shared Framework. Also included are links to download the Windows Hosting Bundle, which includes the ASP.NET Core Shared Framework, the .NET Runtime Shared Framework, and the IIS plugin (ASP.NET Core Module). You can download the latest .NET Runtime builds [here](https://github.com/dotnet/runtime/blob/main/docs/project/dogfooding.md#nightly-builds-table), and the latest .NET SDK builds [here](https://github.com/dotnet/installer#table). **If you're unsure what you need, then install the SDK; it has everything except the IIS plugin.**
 
-* Generate reference package and its depencencies running the `./generate.sh --package <package>,<version>` script.
-* Inspect any changes to packages that already existed in the repository. There are two reasons why previously
-generated packages show changes when being regenerated.
-    1. The package contains intentional code modifications on top of the generated code.
-    This may be code fixups because the generate tooling does not support a scenario.
-    When this occurs, there should be code comments explaining why the code modification was made. If this is
-    the case, the changes to the existing package should be reverted.
-    2. The generate tooling has changed since the last time this package was generated. The new changes should
-    be considered better/correct and should be committed.
-* Add `DependencyPackageProjects` for all new projects in the
-[eng/Build.props](https://github.com/dotnet/source-build-reference-packages/blob/main/eng/Build.props#L9)
-in the correct dependency order.
-* Run build with the `./build.sh -sb` command.
-* If the compilation produces numerous compilation issue - run the `./build.sh --projects <path to .csproj file>`
-  command for each generated reference package separately.
-  It may be necessary to manually tweak the generated artifacts to address compilation issues.
-  When this occurs, please ensure there is an [tracking issue](#filing-issues) to address the underlying problem with the generator.
-  When making changes to the generated artifacts, it is recommended to utilize the following pre-defined constructs if possible.
-
-  * Customizations.props - Automatically imported by the generated project. Use it for additive changes such as NoWarns or additional source files.
-  * Customizations.cs - Automatically included by the generated project. Use it to add new types or members to partial classes.
-
-  You can search the code base to see example usages.
-  The benefit of using these files is that they will be preserved when the packages are regenerated.
-* Add comments calling out any modifications to the generated code that were necessary.
-
-You can search for known issues in the [Known Generator Issues Markdown file](docs/known_generator_issues.md).
-
-### Targeting
-
-Generating new targeting packages is not supported. No new targeting packs should be needed/added. If you feel
-a new targeting pack is needed, please [open a new issue](#filing-issues) to discuss.
-
-### Text Only
-
-``` bash
-./generate.sh --type text --package microsoft.build.traversal,3.1.6
-```
-
-## Regenerating all Packages
-
-As bugs are fixed or enhancements are made to the generate tooling, it may be desirable or necessary to
-regenerate the existing packages. The following commands can be used to generate all of the reference packages.
-
-``` bash
-find src/referencePackages/src -mindepth 2 -maxdepth 2 -type d | awk -F'/' '{print $(NF-1)","$NF}' > packages.csv
-./generate.sh -x -c packages.csv
-```
-
-## Vulnerable Packages
-
-CVEs may exist for reference packages included in this repo. Because the packages do not contain any
-implementation, they do not pose a security risk. CG is configured in this repo to ignore the reference
-packages. If product repos migrate off these vulnerable packages, they can be [removed](#cleanup).
-
-## Filing Issues
-
-This repo does not accept issues. Please file issues in
-[dotnet/source-build](https://github.com/dotnet/source-build/issues/new/choose).
-
-## Cleanup
-
-Periodically, packages that are unreferenced by the product source build should be deleted. The number of
-unreferenced packages build up over time as the product repositories upgrade their dependencies to newer
-versions. Ideally this cleanup would be performed around RC1 timeframe as the product locks down in preparation
-for the GA release. To find which packages are unreferenced, you can run a VMR build with the `ReportSbrpUsage`
-option to generate an SBRP package usage report. The resulting report will be written to
-`artifacts/log/<configuration>/sbrpPackageUsage.json`.
-
-``` bash
-./build.sh -sb /p:ReportSbrpUsage=true
-```
-
-The VMR CI runs with the `ReportSbrpUsage` option set therefore you can grab the usage report from any build's
-artifacts.
-
-## License
-
-This repo is licensed with [MIT](LICENSE.txt).
+| Platform | Shared Framework (Installer) | Shared Framework (Binaries) | Hosting Bundle (Installer) |
+| :--------- | :----------: | :----------: | :----------: |
+| **Windows x64** | [Installer](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-win-x64.exe) | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-win-x64.zip) | [Installer](https://aka.ms/dotnet/9.0/daily/dotnet-hosting-win.exe) |
+| **Windows x86** | [Installer](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-win-x86.exe) | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-win-x86.zip) | [Installer](https://aka.ms/dotnet/9.0/daily/dotnet-hosting-win.exe) |
+| **Windows arm64** | [Installer](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-win-arm64.exe) | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-win-arm64.zip) | [Installer](https://aka.ms/dotnet/9.0/daily/dotnet-hosting-win.exe) |
+| **macOS x64** | **N/A** | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-osx-x64.tar.gz) | **N/A** |
+| **macOS arm64** | **N/A** | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-osx-arm64.tar.gz) | **N/A** |
+| **Linux x64** | [Deb Installer](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-x64.deb) - [RPM Installer](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-x64.rpm) | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-linux-x64.tar.gz) | **N/A** |
+| **Linux arm** | **N/A** | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-linux-arm.tar.gz) | **N/A** |
+| **Linux arm64** | [RPM Installer](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-aarch64.rpm) | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-linux-arm64.tar.gz) | **N/A** |
+| **Linux-musl-x64** | **N/A** | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-linux-musl-x64.tar.gz) | **N/A** |
+| **Linux-musl-arm** | **N/A** | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-linux-musl-arm.tar.gz) | **N/A** |
+| **Linux-musl-arm64** | **N/A** | [Binaries](https://aka.ms/dotnet/9.0/daily/aspnetcore-runtime-linux-musl-arm64.tar.gz) | **N/A** |

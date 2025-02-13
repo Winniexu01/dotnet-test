@@ -3,32 +3,124 @@
 <Project>
 
   <PropertyGroup>
-    <GitHubRepositoryName>source-build-reference-packages</GitHubRepositoryName>
+    <GitHubRepositoryName>aspnetcore</GitHubRepositoryName>
     <SourceBuildManagedOnly>true</SourceBuildManagedOnly>
+    <SourceBuildTargetFrameworkFilter>netstandard2.0%3bnetstandard2.1%3bnetcoreapp2.1%3bnetcoreapp3.1%3bnet5.0%3bnet6.0%3bnet7.0%3bnet8.0%3bnet9.0%3bnet10.0</SourceBuildTargetFrameworkFilter>
   </PropertyGroup>
 
-  <Target Name="TriggerBuildDependencyPackageProjects"
-          Condition="'$(DotNetBuildInnerRepo)' == 'true'"
+  <!--
+    Remove inner source .globalconfig file as both the inner and outer config files get loaded and cause a conflict.
+    Leaving the inner will cause all conflicting settings to be ignored.
+    https://learn.microsoft.com/dotnet/fundamentals/code-analysis/configuration-files#general-options.
+    This only needs to be done if there is an inner clone.
+  -->
+  <Target Name="RemoveInnerGlobalConfig"
+          DependsOnTargets="PrepareInnerSourceBuildRepoRoot"
+          BeforeTargets="RunInnerSourceBuildCommand"
+          Condition="'$(DotNetBuildOrchestrator)' != 'true'">
+
+    <Delete Files="$(InnerSourceBuildRepoRoot).globalconfig" />
+  </Target>
+
+  <!-- Build RepoTasks - this is normally triggered via the build script but the inner ArPow source-build is run via msbuild.
+       https://github.com/dotnet/source-build/issues/3807 -->
+  <Target Name="BuildRepoTasks"
+          Condition="'$(DotNetBuildInnerRepo)' == 'true' and '$(DotNetBuildSourceOnly)' == 'true'"
           BeforeTargets="Execute">
+    <!-- If the alternative runtime location and key are present, pass those through -->
     <PropertyGroup>
-      <LocalNuGetPackageCacheDirectory Condition="'$(LocalNuGetPackageCacheDirectory)' == ''">$(CurrentRepoSourceBuiltNupkgCacheDir)</LocalNuGetPackageCacheDirectory>
-      <_AdditionalDependencyProjectsBuildArgs />
-      <_AdditionalDependencyProjectsBuildArgs Condition="'$(RestoreConfigFile)' != ''" >$(_AdditionalDependencyProjectsBuildArgs) /p:RestoreConfigFile=$(RestoreConfigFile)</_AdditionalDependencyProjectsBuildArgs>
+      <_AdditionalRepoTaskBuildArgs />
+      <_AdditionalRepoTaskBuildArgs Condition="'$(DotNetRuntimeSourceFeed)' != ''" >$(_AdditionalRepoTaskBuildArgs) --runtimesourcefeed $(DotNetRuntimeSourceFeed)</_AdditionalRepoTaskBuildArgs>
+      <_AdditionalRepoTaskBuildArgs Condition="'$(DotNetRuntimeSourceFeedKey)' != ''" >$(_AdditionalRepoTaskBuildArgs) --runtimesourcefeedkey $(DotNetRuntimeSourceFeedKey)</_AdditionalRepoTaskBuildArgs>
+      <_AdditionalRepoTaskBuildArgs Condition="'$(RestoreConfigFile)' != ''" >$(_AdditionalRepoTaskBuildArgs) /p:RestoreConfigFile=$(RestoreConfigFile)</_AdditionalRepoTaskBuildArgs>
     </PropertyGroup>
 
-    <MakeDir Condition="'$(LocalNuGetPackageCacheDirectory)' != ''"
-             Directories="$(LocalNuGetPackageCacheDirectory)" />
+    <ItemGroup>
+      <!-- We need to flow FullAssemblySigningSupported even when building repo tasks because they use full signing -->
+      <InnerBuildEnv Condition="'$(FullAssemblySigningSupported)' != ''" Include="FullAssemblySigningSupported=$(FullAssemblySigningSupported)" />
+      <InnerBuildEnv Include="DotNetBuildSourceOnly=$(DotNetBuildSourceOnly)" />
+    </ItemGroup>
 
-    <!-- 'SourceBuildOutputDir' must be included as a build parameter in order to correct new SBRPs referencing online feeds when dependent on DependencyPackageProjects. -->
-    <!-- See https://github.com/dotnet/source-build-reference-packages/pull/858 -->
-    <!-- This command purposefully does not pass DotNetBuildRepo or DotNetBuildOrchestrator, even though that would be the typical pattern for
-         inner command args. The issue is that if they are passed, this file will re-imported on the dependency package project invocation,
-         and because this target executes before Execute, the build will infinitely recurse. This probably could be fixed in other ways, but
-         given that SBRP is slated at some point to get proper support for project refs as a replacement for this invocation, this isn't really worth doing. -->
+    <!-- Call the build.sh script to build the repo tasks. Set IgnoreStandardErrorWarningFormat
+         to true. This avoids fatal errors, because in internal builds there are usually a few failed installation
+         attempts as the install script walks through potential locations for a runtime.
+         The overall build script will return a proper exit code, but we don't want to pick up the printed error messages. -->
     <Exec
-      Command="./build.sh --configuration $(Configuration) /bl:$(ArtifactsDir)sourcebuild-dependency-projects.binlog /p:LocalNuGetPackageCacheDirectory=$(LocalNuGetPackageCacheDirectory) /p:VmrReferencePackagesDir=$(VmrReferencePackagesDir) /p:SourceBuildOutputDir=$(SourceBuildOutputDir) /p:BuildDependencyPackageProjects=true /p:SetUpSourceBuildIntermediateNupkgCache=true /p:DotNetBuildOrchestrator=$(DotNetBuildOrchestrator) /p:DotNetBuildSourceOnly=true /p:DotNetBuildInnerRepo=true /p:MicrosoftNetCoreIlasmPackageRuntimeId=$(MicrosoftNetCoreIlasmPackageRuntimeId) $(_AdditionalDependencyProjectsBuildArgs)"
+      Command="./eng/build.sh --only-build-repo-tasks -bl $(_AdditionalRepoTaskBuildArgs)"
+      IgnoreStandardErrorWarningFormat="true"
       WorkingDirectory="$(InnerSourceBuildRepoRoot)"
-      EnvironmentVariables="@(InnerBuildEnv)" />
+      EnvironmentVariables="@(InnerBuildEnv)"
+      Condition="'$(OS)' != 'Windows_NT'" />
+
+    <Exec
+      Command=".\eng\build.cmd -OnlyBuildRepoTasks -bl $(_AdditionalRepoTaskBuildArgs)"
+      IgnoreStandardErrorWarningFormat="true"
+      WorkingDirectory="$(InnerSourceBuildRepoRoot)"
+      EnvironmentVariables="@(InnerBuildEnv)"
+      Condition="'$(OS)' == 'Windows_NT'" />
+  </Target>
+
+  <Target Name="CustomizeInnerBuildArgs"
+          BeforeTargets="GetSourceBuildCommandConfiguration">
+
+    <PropertyGroup>
+      <InnerBuildArgs Condition="'$(DotNetBuildUseMonoRuntime)' == 'true'">$(InnerBuildArgs) /p:CrossgenOutput=false</InnerBuildArgs>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="GetAspnetcoreCategorizedIntermediateNupkgContents"
+          BeforeTargets="GetCategorizedIntermediateNupkgContents">
+    <PropertyGroup>
+      <InstallersArtifactsDir>$(CurrentRepoSourceBuildArtifactsDir)\installers\$(Configuration)\</InstallersArtifactsDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!--
+        Add the internal installers artifacts required by dotnet/installer.
+      -->
+      <IntermediateNupkgArtifactFile Include="$(InstallersArtifactsDir)aspnetcore_base_runtime.version" />
+      <IntermediateNupkgArtifactFile Include="$(InstallersArtifactsDir)aspnetcore-runtime-*.msi" />
+      <IntermediateNupkgArtifactFile Include="$(InstallersArtifactsDir)aspnetcore-runtime-*.pkg" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="RestoreNpmPackages"
+          Condition="'$(BuildNodeJS)' == 'true' and '$(DotNetBuildSourceOnly)' == 'true'"
+          BeforeTargets="RunInnerSourceBuildCommand">
+
+    <Message Text="Checking node version..." Importance="high" />
+    <Exec
+      Command="node --version"
+      WorkingDirectory="$(InnerSourceBuildRepoRoot)" />
+
+    <Message Text="Checking npm version..." Importance="high" />
+    <Exec
+      Command="npm --version"
+      WorkingDirectory="$(InnerSourceBuildRepoRoot)" />
+
+    <PropertyGroup>
+      <!-- Disable installing puppeteer browsers when running in source build -->
+      <_AdditionalEnvironmentVariable Condition="$(DotNetBuildSourceOnly) == 'true'">PUPPETEER_SKIP_DOWNLOAD=1</_AdditionalEnvironmentVariable>
+    </PropertyGroup>
+
+    <Exec
+      Command="npm ci"
+      WorkingDirectory="$(InnerSourceBuildRepoRoot)"
+      EnvironmentVariables="$(_AdditionalEnvironmentVariable)" />
+
+  </Target>
+
+  <Target Name="BuildNpmFiles"
+          Condition="'$(BuildNodeJS)' == 'true' and '$(DotNetBuildSourceOnly)' == 'true'"
+          DependsOnTargets="RestoreNpmPackages"
+          BeforeTargets="RunInnerSourceBuildCommand">
+
+    <Message Text="Building Node JS files..." Importance="high" />
+
+    <Exec
+      Command="npm run build"
+      WorkingDirectory="$(InnerSourceBuildRepoRoot)" />
+
   </Target>
 
 </Project>

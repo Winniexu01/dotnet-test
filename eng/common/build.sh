@@ -224,9 +224,6 @@ function Build {
     bl="/bl:\"$log_dir/Build.binlog\""
   fi
 
-  sudo chmod +x $scriptroot/../../.packages/microsoft.dotnet.arcade.sdk/10.0.0-beta.25104.1/tools/SourceBuild/SourceBuildArcade.targets
-  cp -rf $scriptroot/SourceBuildArcade.targets $scriptroot/../../.packages/microsoft.dotnet.arcade.sdk/10.0.0-beta.25104.1/tools/SourceBuild/SourceBuildArcade.targets
-
   MSBuild $_InitializeToolset \
     $bl \
     /p:Configuration=$configuration \
