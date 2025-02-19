@@ -1,199 +1,204 @@
-<Project>
+<Project InitialTargets="ValidateTargetOSLowercase">
   <PropertyGroup>
-    <!-- Disable IsTrimmable on non-DefaultNetCoreTargetFrameworks even if explicitly enabled or else we'll get NETSDK1195 and NETSDK1210 errors -->
-    <IsTrimmable Condition="'$(TargetFramework)' != '$(DefaultNetCoreTargetFramework)'"></IsTrimmable>
-    <EnableAOTAnalyzer Condition=" '$(EnableAOTAnalyzer)' == '' ">$([MSBuild]::ValueOrDefault($(IsTrimmable),'false'))</EnableAOTAnalyzer>
-    <!-- TODO: Remove when analyzer is enabled by default with AOT in SDK. See https://github.com/dotnet/sdk/issues/31284 -->
-    <EnableSingleFileAnalyzer Condition=" '$(EnableSingleFileAnalyzer)' == '' ">$(EnableAOTAnalyzer)</EnableSingleFileAnalyzer>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <!-- Ignore API doc requirements for test assets -->
-    <NoWarn Condition="'$(IsTestAssetProject)' == 'true' or '$(IsSampleProject)' == 'true' or '$(IsBenchmarkProject)' == 'true' or
-      '$(IsMicrobenchmarksProject)' == 'true'">$(NoWarn);CS1591</NoWarn>
-  </PropertyGroup>
-
-  <PropertyGroup Label="Resx settings">
-    <GenerateResxSource Condition="'$(GenerateResxSource)' == ''">true</GenerateResxSource>
-    <GenerateResxSourceEmitFormatMethods Condition="'$(GenerateResxSourceEmitFormatMethods)' == ''">true</GenerateResxSourceEmitFormatMethods>
-  </PropertyGroup>
-
-  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-  <!-- Properties which should be set after the project has been evaluated -->
-
-  <PropertyGroup Label="Versioning settings">
-    <!-- The 'human friendly' version to display in installers. In pre-release builds, this might be "2.0.7 Preview 2 Build 12356". In final builds, it should be "2.0.7" -->
-    <BrandingVersionSuffix>$(PreReleaseBrandingLabel) Build $(VersionSuffix)</BrandingVersionSuffix>
-    <PackageBrandingVersion>$(VersionPrefix)</PackageBrandingVersion>
-    <PackageBrandingVersion Condition=" '$(VersionSuffix)' != '' ">$(PackageBrandingVersion) $(BrandingVersionSuffix.Trim())</PackageBrandingVersion>
-
-    <SiteExtensionVersion>$(VersionPrefix)</SiteExtensionVersion>
-    <SiteExtensionVersion Condition=" '$(VersionSuffix)' != '' ">$(VersionPrefix)-$(VersionSuffix.Replace('.','-'))</SiteExtensionVersion>
-
-    <PackageVersion Condition=" '$(PackageVersion)' == '' ">$(Version)</PackageVersion>
-
-    <SharedFxVersion>$(PackageVersion)</SharedFxVersion>
-    <SharedFxVersion Condition=" '$(StabilizePackageVersion)' == 'true' ">$(VersionPrefix)</SharedFxVersion>
-    <SharedFxProductName>$(Product) $(SharedFxVersion) Shared Framework</SharedFxProductName>
-
-    <TargetingPackVersion>$(SharedFxVersion)</TargetingPackVersion>
-
-    <PackageVersion Condition=" '$(NoSemVer20)' == 'true' ">$(SiteExtensionVersion)</PackageVersion>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <!-- Analyzers package are special. In general, they should not have dependencies in the nuspec. Analyzer assemblies are not meant to be used for compilation or runtime. -->
-    <SuppressDependenciesWhenPacking Condition="'$(SuppressDependenciesWhenPacking)' == '' AND '$(IsAnalyzersProject)' == 'true'">true</SuppressDependenciesWhenPacking>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(MSBuildProjectExtension)' == '.csproj' ">
-    <PackageId Condition=" '$(PackageId)' == '' ">$(AssemblyName)</PackageId>
-    <IsPackable
-        Condition="'$(IsPackable)' == '' AND ( $(IsTestProject) OR '$(IsTestAssetProject)' == 'true' OR
-         '$(IsBenchmarkProject)' == 'true' OR '$(IsSampleProject)' == 'true' OR '$(IsMicrobenchmarksProject)' == 'true') ">false</IsPackable>
-  </PropertyGroup>
-
-  <Import Project="eng\Baseline.Designer.props" />
-
-  <PropertyGroup Condition=" '$(IsPackable)' != 'false' AND '$(IsServicingBuild)' == 'true' ">
-    <IsPackageInThisPatch Condition="'$(IsPackageInThisPatch)' == ''">true</IsPackageInThisPatch>
-    <!-- Used to distinguish between packages building -->
-    <IsPackableInNonServicingBuild>true</IsPackableInNonServicingBuild>
-    <!-- Suppress creation of .nupkg for servicing builds of non-shipping projects. -->
-    <IsPackable Condition=" '$(IsPackageInThisPatch)' != 'true' ">false</IsPackable>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <!-- When OnlyPackPlatformSpecificPackages is set, only produce packages for projects which set RuntimeIdentifier. -->
-    <!-- Keep this below where we set "IsPackageInThisPatch" -->
-    <IsPackable Condition=" '$(OnlyPackPlatformSpecificPackages)' == 'true' AND '$(RuntimeIdentifier)' == '' ">false</IsPackable>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <PackageVersionForPackageVersionInfo>$(PackageVersion)</PackageVersionForPackageVersionInfo>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(IsPackageInThisPatch)' != 'true' AND '$(BaselinePackageVersion)' != '' AND '$(IsServicingBuild)' == 'true' ">
-    <!-- This keeps assembly and package versions consistent across patches. If a package is not included in a patch, its version should stay at the baseline. -->
-    <AssemblyVersion Condition="$(BaselinePackageVersion.Contains('-'))">$(BaselinePackageVersion.Substring(0, $(BaselinePackageVersion.IndexOf('-')))).0</AssemblyVersion>
-    <AssemblyVersion Condition="! $(BaselinePackageVersion.Contains('-'))">$(BaselinePackageVersion).0</AssemblyVersion>
     <!--
-      Ideally, we would also set the project version to match the baseline in case NuGet turns a ProjectReference into a nuspec depenendency, but
-      NuGet does not currently handle conflicts between packages and projects which have the same package id/version.
-      See https://github.com/NuGet/Home/issues/6795.
-
-      Because we still use static analysis to scrape versions, only set this during static analysis, which can be detected by checking for both NoBuild and DesignTimeBuild.
+    For non-SDK projects that import this file and then import Microsoft.Common.targets,
+    tell Microsoft.Common.targets not to import Directory.Build.targets again
     -->
-    <Version Condition="'$(NoBuild)' == 'true' AND '$(DesignTimeBuild)' == 'true'">$(BaselinePackageVersion)</Version>
-    <PackageVersion Condition="'$(NoBuild)' == 'true' AND '$(DesignTimeBuild)' == 'true'">$(BaselinePackageVersion)</PackageVersion>
-
-    <!-- For servicing builds, we want to resolve baseline versions of project packages that aren't building, always -->
-    <PackageVersionForPackageVersionInfo>$(BaselinePackageVersion)</PackageVersionForPackageVersionInfo>
+    <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <!-- Implementation projects are the projects which produce nuget packages or shipping assemblies. -->
-    <IsImplementationProject Condition=" '$(IsImplementationProject)' == '' AND
-        '$(IsAnalyzersProject)' != 'true' AND
-        '$(IsBenchmarkProject)' != 'true' AND
-        '$(IsSampleProject)' != 'true' AND
-        '$(IsSpecificationTestProject)' != 'true' AND
-        '$(IsTestAssetProject)' != 'true' AND
-        !$(IsTestProject) AND
-        '$(IsMicrobenchmarksProject)' != 'true' ">true</IsImplementationProject>
-
-    <!-- This determines whether a project is available as a <Reference> to other projects in this repo. -->
-    <IsProjectReferenceProvider Condition=" '$(IsProjectReferenceProvider)' == '' AND
-        ( '$(IsImplementationProject)' == 'true' OR '$(IsSpecificationTestProject)' == 'true' ) ">true</IsProjectReferenceProvider>
-
-    <HasReferenceAssembly
-        Condition=" '$(TargetFramework)' == '$(DefaultNetCoreTargetFramework)' AND '$(IsAspNetCoreApp)' == 'true' ">true</HasReferenceAssembly>
-    <HasReferenceAssembly Condition="'$(HasReferenceAssembly)' == ''">false</HasReferenceAssembly>
-    <ProduceReferenceAssembly>$(HasReferenceAssembly)</ProduceReferenceAssembly>
-
-    <!-- Duplicate setting from Microsoft.Common.CurrentVersion.targets because this is imported after that file. -->
-    <TargetRefPath
-        Condition=" '$(TargetRefPath)' == '' and $(ProduceReferenceAssembly) ">$([MSBuild]::NormalizePath($(TargetDir), 'ref', $(TargetFileName)))</TargetRefPath>
-
-    <IsPackable Condition="'$(IsPackable)' == '' AND ('$(IsImplementationProject)' == 'true' OR '$(IsAnalyzersProject)' == 'true') ">true</IsPackable>
-    <IsPackable Condition="'$(IsPackable)' == '' ">false</IsPackable>
-
-    <BuildHelixPayload Condition="'$(BuildHelixPayload)' == '' AND $(IsTestProject) ">true</BuildHelixPayload>
-    <SkipTests Condition="'$(SkipHelixReadyTests)' == 'true' AND '$(BuildHelixPayload)' == 'true'">true</SkipTests>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <PackageThirdPartyNoticesFile Condition="'$(PackageThirdPartyNoticesFile)' == ''">$(RepoRoot)THIRD-PARTY-NOTICES.TXT</PackageThirdPartyNoticesFile>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(IsPackable)' == 'true'">
-    <None Include="$(PackageThirdPartyNoticesFile)" Pack="true" PackagePath="." />
-  </ItemGroup>
+  <Import Project="$(RepositoryEngineeringDir)Analyzers.targets" />
+  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  <Import Project="$(RepositoryEngineeringDir)liveBuilds.targets" />
+  <Import Project="$(RepositoryEngineeringDir)toolAot.targets" />
+  <Import Project="$(RepositoryEngineeringDir)generators.targets" />
+  <Import Project="$(RepositoryEngineeringDir)python.targets" />
+  <Import Project="$(RepositoryEngineeringDir)generatorProjects.targets" Condition="'$(IsGeneratorProject)' == 'true'" />
+  <Import Project="$(RepositoryEngineeringDir)resolveContract.targets" Condition="'$(IsSourceProject)' == 'true'" />
+  <Import Project="$(RepositoryEngineeringDir)packaging.targets" Condition="'$(IsPackable)' == 'true' and '$(MSBuildProjectExtension)' != '.pkgproj'" />
+  <Import Project="$(RepositoryEngineeringDir)slngen.targets" Condition="'$(IsSlnGen)' == 'true'" />
 
   <!--
-    If assembly is in shared framework and not net4*, assembly version should remain fixed for an entire
-    major.minor release even in servicing.
+  When .NET gets built from source, make the SDK aware there are bootstrap packages
+  for Microsoft.NETCore.App.Runtime.<rid> and Microsoft.NETCore.App.Crossgen2.<rid>.
   -->
-  <PropertyGroup Condition=" '$(IsAspNetCoreApp)' == 'true' AND
-      '$(Language)' == 'C#' AND
-      '$(TargetFrameworkIdentifier)' != '.NETFramework' ">
-    <AssemblyVersion>$(AspNetCoreMajorMinorVersion).0.0</AssemblyVersion>
-  </PropertyGroup>
+  <ItemGroup Condition="'$(DotNetBuildSourceOnly)' == 'true'">
+    <KnownFrameworkReference Update="Microsoft.NETCore.App">
+      <RuntimePackRuntimeIdentifiers
+        Condition="'%(TargetFramework)' == '$(NetCoreAppCurrent)'">%(RuntimePackRuntimeIdentifiers);$(PackageRID)</RuntimePackRuntimeIdentifiers>
+    </KnownFrameworkReference>
+    <KnownCrossgen2Pack Update="Microsoft.NETCore.App.Crossgen2">
+      <Crossgen2RuntimeIdentifiers
+        Condition="'%(TargetFramework)' == '$(NetCoreAppCurrent)'" >%(Crossgen2RuntimeIdentifiers);$(PackageRID)</Crossgen2RuntimeIdentifiers>
+    </KnownCrossgen2Pack>
+    <!-- Avoid references to Microsoft.AspNetCore.App.Runtime.<rid> -->
+    <KnownFrameworkReference Remove="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <PropertyGroup>
-    <!-- Do not update the Microsoft.AspNetCore.App KnownFrameworkReference item unless requested. -->
-    <UpdateAspNetCoreKnownFramework>false</UpdateAspNetCoreKnownFramework>
-    <UpdateAspNetCoreKnownFramework Condition=" '$(UseAspNetCoreSharedRuntime)' == 'true' AND
-      '$(DoNotApplyWorkaroundsToMicrosoftAspNetCoreApp)' != 'true' ">true</UpdateAspNetCoreKnownFramework>
+    <!--
+      Define this here (not just in Versions.props) because the SDK resets it
+      unconditionally in Microsoft.NETCoreSdk.BundledVersions.props.
+    -->
+    <NETCoreAppMaximumVersion>$(NetCoreAppCurrentVersion)</NETCoreAppMaximumVersion>
+    <UnsupportedTargetFrameworkVersion>$([MSBuild]::Add('$(NETCoreAppMaximumVersion.Split('.')[0])', '1')).0</UnsupportedTargetFrameworkVersion>
+    <!-- SDK sets product to assembly but we want it to be our product name -->
+    <Product>Microsoft%AE .NET</Product>
+    <!-- Use the .NET product branding version for informational version description -->
+    <InformationalVersion Condition="'$(InformationalVersion)' == '' and '$(VersionSuffix)' == ''">$(ProductVersion)</InformationalVersion>
+    <InformationalVersion Condition="'$(InformationalVersion)' == '' and '$(PreReleaseVersionLabel)' == 'servicing'">$(ProductVersion)</InformationalVersion>
+    <InformationalVersion Condition="'$(InformationalVersion)' == '' and '$(VersionSuffix)' != ''">$(ProductVersion)-$(VersionSuffix)</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <KnownFrameworkReference Condition="'$(UseAspNetCoreSharedRuntime)' != 'true'" Remove="Microsoft.AspNetCore.App" />
-    <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App" />
+    <SupportedNETCoreAppTargetFramework Include=".NETCoreApp,Version=v$(NETCoreAppMaximumVersion)" DisplayName=".NET $(NETCoreAppMaximumVersion)" Alias="net$(NETCoreAppMaximumVersion)" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(CopySymbolsToArtifacts)' == 'true' AND '$(TargetFramework)' != '' ">
-    <BuildDependsOn>$(BuildDependsOn);_CopySymbolsToArtifacts</BuildDependsOn>
+  <PropertyGroup>
+    <!-- Define properties that depend on the host SDK RID here. -->
+    <BuildHostTools Condition="'$(DotNetBuildOrchestrator)' == 'true' and '$(OutputRID)' != '$(NETCoreSdkRuntimeIdentifier)'">true</BuildHostTools>
+    <BuildHostILTools Condition="'$(BuildHostTools)' == 'true' and $([MSBuild]::IsOsPlatform(Windows))">true</BuildHostILTools>
   </PropertyGroup>
 
-  <!-- Properties for Package Validation -->
-  <PropertyGroup Condition="'$(ExcludeFromSourceOnlyBuild)' != 'true'">
-    <EnablePackageValidation Condition="'$(EnablePackageValidation)' == ''">true</EnablePackageValidation>
-    <DisablePackageBaselineValidation Condition="'$(IsServicingBuild)' != 'true'">true</DisablePackageBaselineValidation>
-    <GenerateCompatibilitySuppressionFile>true</GenerateCompatibilitySuppressionFile>
+  <!-- The Default behavior in VS is to show files for the first target framework in TargetFrameworks property.
+       This is required to show all the files corresponding to all target frameworks in VS. -->
+  <ItemGroup Condition="'$(DefaultLanguageSourceExtension)' != '' and
+                        ('$(BuildingInsideVisualStudio)' == 'true' or '$(DesignTimeBuild)' == 'true')">
+    <None Include="$(MSBuildProjectDirectory)\**\*$(DefaultLanguageSourceExtension)"
+          Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);@(Compile)" />
+  </ItemGroup>
+
+  <!-- Packaging -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <!-- The sfxproj files add the license themselves. -->
+    <None Include="$(LicenseFile)"
+          PackagePath="$([System.IO.Path]::GetFileName('$(LicenseFile)'))"
+          Pack="true"
+          Condition="'$(MSBuildProjectExtension)' != '.sfxproj' and '$(MSBuildProjectFile)' != 'msi.csproj'" />
+    <None Include="$(PackageThirdPartyNoticesFile)"
+          PackagePath="$([System.IO.Path]::GetFileName('$(PackageThirdPartyNoticesFile)'))"
+          Pack="true" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PackageDescription Condition="'$(PackageDescription)' == '' and '$(Description)' != ''">$(Description)</PackageDescription>
+    <RuntimePackageDisclaimer>Internal implementation package not meant for direct consumption. Please do not reference directly.</RuntimePackageDisclaimer>
+    <UseRuntimePackageDisclaimer Condition="'$(UseRuntimePackageDisclaimer)' == '' and
+                                            ($(MSBuildProjectName.StartsWith('runtime.native')) or '$(PackageTargetRuntime)' != '')">true</UseRuntimePackageDisclaimer>
+    <PackageDescription Condition="'$(PackageDescription)' != '' and '$(UseRuntimePackageDisclaimer)' == 'true'">$(RuntimePackageDisclaimer) %0A$(PackageDescription)</PackageDescription>
+    <PackageDescription Condition="'$(PackageDescription)' == '' and '$(UseRuntimePackageDisclaimer)' == 'true'">$(RuntimePackageDisclaimer)</PackageDescription>
+    <!-- Keep in sync as required by the Packaging SDK in Arcade. -->
+    <Description>$(PackageDescription)</Description>
+    <!-- Until we update the TFM to match the Major version, we need to patch in support for RequiresPreviewFeatures -->
+    <GenerateRequiresPreviewFeaturesAttribute Condition="'$(TargetFrameworkMoniker)' == '$(NetCoreAppCurrentTargetFrameworkMoniker)'">true</GenerateRequiresPreviewFeaturesAttribute>
   </PropertyGroup>
 
-  <Target Name="_CopySymbolsToArtifacts">
-    <Copy SourceFiles="$([System.IO.Path]::ChangeExtension('$(TargetPath)', 'pdb'))"
-        DestinationFolder="$(SymbolsOutputPath)$(TargetFramework)"
-        OverwriteReadOnlyFiles="$(OverwriteReadOnlyFiles)"
-        Retries="$(CopyRetryCount)"
-        RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
-        SkipUnchangedFiles="$(SkipCopyUnchangedFiles)" />
+  <PropertyGroup>
+    <!-- when building from source we need to use the current version of various packages as the toolset version, but source-build imports
+         another props file which overrides the versions from Version.props so we can't set it there -->
+    <SystemReflectionMetadataLoadContextToolsetVersion Condition="'$(DotNetBuildSourceOnly)' == 'true'">$(SystemReflectionMetadataLoadContextVersion)</SystemReflectionMetadataLoadContextToolsetVersion>
+    <SystemTextJsonToolsetVersion Condition="'$(DotNetBuildSourceOnly)' == 'true'">$(SystemTextJsonVersion)</SystemTextJsonToolsetVersion>
+  </PropertyGroup>
+
+  <Target Name="ValidateTargetOSLowercase"
+          Condition="!$(TargetOS.Equals($(TargetOS.ToLower()), StringComparison.InvariantCulture))">
+    <Error Text="The passed-in TargetOS property value '$(TargetOS)' must be lowercase." />
   </Target>
 
-  <!--
-    Remove the implicit package reference for Microsoft.AspNetCore.App.Internal.Assets.
-    Projects within the repo will consume framework assets by importing
-    Microsoft.AspNetCore.App.Internal.Assets.targets directly
-  -->
-  <Target Name="_RemoveAspNetCoreAppInternalAssetsReference" AfterTargets="ProcessFrameworkReferences">
+  <Target Name="ValidateReferenceAssemblyProjectTargetFramework"
+          BeforeTargets="CoreCompile"
+          Condition="'$(IsReferenceAssemblyProject)' == 'true' and
+                     '$(SkipValidateReferenceAssemblyProjectReferences)' != 'true'">
+    <Error Text="Reference assemblies must be TargetPlatform agnostic. $(MSBuildProjectName) incorrectly targets $(TargetFramework), platform: $(TargetPlatformIdentifier)."
+           Condition="'$(TargetPlatformIdentifier)' != ''" />
+  </Target>
+
+  <!-- For experimental ref assemblies (which typically have the same name as a regular ref
+       assembly), bump their minor file version by 100 to make it distinguishable from the regular
+       ref assembly. -->
+  <Target Name="UpdateExperimentalRefAssemblyFileVersion"
+          AfterTargets="_InitializeAssemblyVersion"
+	        Condition="'$(IsReferenceAssemblyProject)' == 'true' and '$(IsExperimentalRefAssembly)' == 'true'">
+    <PropertyGroup>
+      <_FileVersionMaj>$(FileVersion.Split('.')[0])</_FileVersionMaj>
+      <_FileVersionMin>$(FileVersion.Split('.')[1])</_FileVersionMin>
+      <_FileVersionBld>$(FileVersion.Split('.')[2])</_FileVersionBld>
+      <_FileVersionRev>$(FileVersion.Split('.')[3])</_FileVersionRev>
+      <FileVersion>$(_FileVersionMaj).$([MSBuild]::Add($(_FileVersionMin), 100)).$(_FileVersionBld).$(_FileVersionRev)</FileVersion>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Allows building against source assemblies when the 'SkipUseReferenceAssembly' attribute is present on ProjectReference items. -->
+  <Target Name="HandleReferenceAssemblyAttributeForProjectReferences"
+          AfterTargets="ResolveProjectReferences"
+          BeforeTargets="FindReferenceAssembliesForReferences"
+          Condition="'@(ProjectReference)' != '' and '@(_ResolvedProjectReferencePaths)' != ''">
+    <!-- If we have a ProjectReference to CoreLib, we need to compile against implementation assemblies,
+         and ignore architecture mismatches in those implementation assemblies. -->
+    <PropertyGroup Condition="@(_ResolvedProjectReferencePaths->AnyHaveMetadataValue('MSBuildSourceProjectFile', '$(CoreLibProject)'))">
+      <CompileUsingReferenceAssemblies Condition="'$(CompileUsingReferenceAssemblies)' == ''">false</CompileUsingReferenceAssemblies>
+      <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+    </PropertyGroup>
+
+    <!-- Clear the ReferenceAssembly attribute on resolved P2Ps that set SkipUseReferenceAssembly to true. -->
     <ItemGroup>
-      <PackageReference Remove="Microsoft.AspNetCore.App.Internal.Assets" />
+      <_ResolvedProjectReferencePaths Condition="'%(_ResolvedProjectReferencePaths.SkipUseReferenceAssembly)' == 'true'"
+                                      ReferenceAssembly="" />
     </ItemGroup>
   </Target>
 
-  <Import Project="eng\Workarounds.targets" />
-  <Import Project="artifacts\bin\GenerateFiles\Directory.Build.targets" Condition=" '$(MSBuildProjectName)' != 'GenerateFiles' " />
-  <Import Project="eng\targets\ResolveIisReferences.targets" Condition=" '$(MSBuildProjectExtension)' != '.vcxproj' " />
-  <Import Project="eng\targets\Cpp.Common.targets"  Condition="'$(MSBuildProjectExtension)' == '.vcxproj'" />
-  <Import Project="eng\targets\CSharp.Common.targets"  Condition="'$(MSBuildProjectExtension)' == '.csproj'" />
-  <Import Project="eng\targets\FSharp.Common.targets"  Condition="'$(MSBuildProjectExtension)' == '.fsproj'" />
-  <Import Project="eng\targets\Wix.Common.targets"  Condition="'$(MSBuildProjectExtension)' == '.wixproj'" />
-  <Import Project="eng\targets\Java.Common.targets"  Condition="'$(MSBuildProjectExtension)' == '.javaproj'" />
-  <Import Project="eng\targets\Sfx.Common.targets"  Condition="'$(MSBuildProjectExtension)' == '.sfxproj'" />
-  <Import Project="eng\testing\linker\trimmingTests.targets" Condition="'$(IsPublishedAppTestProject)' == 'true'" />
-  <Import Project="eng\targets\Helix.targets" Condition=" $(IsTestProject) " />
-  <Import Project="eng\targets\FunctionalTestWithAssets.targets"
-      Condition=" $(IsTestProject) AND $(ContainsFunctionalTestAssets) " />
+  <!-- Filter out transitive P2Ps which should be excluded. -->
+  <Target Name="FilterTransitiveProjectReferences"
+          AfterTargets="IncludeTransitiveProjectReferences"
+          Condition="'$(DisableTransitiveProjectReferences)' != 'true' and
+                     ('@(DefaultReferenceExclusion)' != '' or '@(ProjectReferenceExclusion)' != '')">
+    <ItemGroup>
+      <_transitiveProjectReferenceWithProjectName Include="@(ProjectReference->Metadata('NuGetPackageId'))"
+                                                  OriginalIdentity="%(Identity)" />
+      <_transitiveIncludedProjectReferenceWithProjectName Include="@(_transitiveProjectReferenceWithProjectName)"
+                                                          Exclude="@(DefaultReferenceExclusion);@(ProjectReferenceExclusion)" />
+      <_transitiveExcludedProjectReferenceWithProjectName Include="@(_transitiveProjectReferenceWithProjectName)"
+                                                          Exclude="@(_transitiveIncludedProjectReferenceWithProjectName)" />
+      <ProjectReference Remove="@(_transitiveExcludedProjectReferenceWithProjectName->Metadata('OriginalIdentity'))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Filter out conflicting implicit assembly references. -->
+  <Target Name="FilterImplicitAssemblyReferences"
+          Condition="'$(DisableImplicitFrameworkReferences)' != 'true'"
+          DependsOnTargets="ResolveProjectReferences"
+          AfterTargets="ResolveTargetingPackAssets">
+    <ItemGroup>
+      <_targetingPackReferenceExclusion Include="$(TargetName)" />
+      <_targetingPackReferenceExclusionProjects Include="@(_ResolvedProjectReferencePaths->Metadata('Filename'))" />
+      <_targetingPackReferenceExclusion Include="@(DefaultReferenceExclusion)" />
+    </ItemGroup>
+
+    <!-- Filter out shims from the targeting pack references as an opt-in. -->
+    <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' and
+                          '$(SkipTargetingPackShimReferences)' == 'true'">
+      <_targetingPackReferenceExclusion Include="@(NetFxReference)" />
+      <_targetingPackReferenceExclusion Include="netstandard" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_targetingPackReferenceWithProjectName Include="@(Reference->WithMetadataValue('ExternallyResolved', 'true')->Metadata('Filename'))"
+                                              OriginalIdentity="%(Identity)" />
+      <_targetingPackIncludedReferenceWithProjectName Include="@(_targetingPackReferenceWithProjectName)"
+                                                      Exclude="@(_targetingPackReferenceExclusion);@(_targetingPackReferenceExclusionProjects->WithMetadataValue('ReferenceOutputAssembly', 'true'))" />
+      <_targetingPackExcludedReferenceWithProjectName Include="@(_targetingPackReferenceWithProjectName)"
+                                                      Exclude="@(_targetingPackIncludedReferenceWithProjectName)" />
+      <Reference Remove="@(_targetingPackExcludedReferenceWithProjectName->Metadata('OriginalIdentity'))" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_targetingPackAnalyzerReferenceWithProjectName Include="@(Analyzer->WithMetadataValue('ExternallyResolved', 'true')->Metadata('Filename'))"
+                                                      OriginalIdentity="%(Identity)" />
+      <_targetingPackIncludedAnalyzerReferenceWithProjectName Include="@(_targetingPackAnalyzerReferenceWithProjectName)"
+                                                              Exclude="@(_targetingPackReferenceExclusion);@(_targetingPackReferenceExclusionProjects->WithMetadataValue('OutputItemType', 'Analyzer'))" />
+      <_targetingPackExcludedAnalyzerReferenceWithProjectName Include="@(_targetingPackAnalyzerReferenceWithProjectName)"
+                                                              Exclude="@(_targetingPackIncludedAnalyzerReferenceWithProjectName)" />
+      <Analyzer Remove="@(_targetingPackExcludedAnalyzerReferenceWithProjectName->Metadata('OriginalIdentity'))" />
+    </ItemGroup>
+  </Target>
 </Project>

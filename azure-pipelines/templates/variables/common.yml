@@ -1,8 +1,0 @@
-variables:
-- name: EngCommonTemplatesDir
-  value: /eng/common/templates
-- template: ${{ variables.EngCommonTemplatesDir }}/variables/pool-providers.yml@self
-- name: Codeql.Enabled
-  value: true
-- name: TeamName
-  value: DotNetSourceBuild

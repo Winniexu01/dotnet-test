@@ -1,306 +1,505 @@
 <Project>
 
   <PropertyGroup>
-    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+    <!-- For non-SDK projects that import this file and then import Microsoft.Common.props,
+         tell Microsoft.Common.props not to import Directory.Build.props again. -->
+    <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
+    <!-- Used to determine if we should build some packages only once across multiple official build legs.
+         For offline builds we still set OfficialBuildId but we need to build all the packages for a single
+         leg only, so we also take DotNetBuildSourceOnly into account. -->
+    <BuildingAnOfficialBuildLeg Condition="'$(BuildingAnOfficialBuildLeg)' == '' and '$(OfficialBuildId)' != '' and '$(DotNetBuildSourceOnly)' != 'true'">true</BuildingAnOfficialBuildLeg>
+    <!-- When doing a source build, we want to build the various text-only manifests in
+         all cases, rather than ordinarily where we build them during mobile or wasm
+         build legs. This makes the manifests available on source-only builds. -->
+    <ForceBuildMobileManifests Condition="'$(DotNetBuildSourceOnly)' == 'true'">true</ForceBuildMobileManifests>
+    <!-- Propagate the configuration and platform to project references. When building in VS, this defaults to true.
+         Explicitly setting it to false ensures projects are built in the corresponding configuration both in VS and on the command line. -->
+    <ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
+  </PropertyGroup>
+
+  <PropertyGroup Label="CalculateTargetOS">
+    <_hostOS>linux</_hostOS>
+    <_hostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_hostOS>
+    <_hostOS Condition="$([MSBuild]::IsOSPlatform('FREEBSD'))">freebsd</_hostOS>
+    <_hostOS Condition="$([MSBuild]::IsOSPlatform('NETBSD'))">netbsd</_hostOS>
+    <_hostOS Condition="$([MSBuild]::IsOSPlatform('ILLUMOS'))">illumos</_hostOS>
+    <_hostOS Condition="$([MSBuild]::IsOSPlatform('SOLARIS'))">solaris</_hostOS>
+    <_hostOS Condition="$([MSBuild]::IsOSPlatform('HAIKU'))">haiku</_hostOS>
+    <_hostOS Condition="$([MSBuild]::IsOSPlatform('WINDOWS'))">windows</_hostOS>
+    <HostOS>$(_hostOS)</HostOS>
+    <TargetOS Condition="'$(TargetOS)' == '' and '$(RuntimeIdentifier)' == 'browser-wasm'">browser</TargetOS>
+    <TargetOS Condition="'$(TargetOS)' == ''">$(_hostOS)</TargetOS>
+    <TargetsMobile Condition="'$(TargetOS)' == 'ios' or '$(TargetOS)' == 'iossimulator' or '$(TargetOS)' == 'maccatalyst' or '$(TargetOS)' == 'tvos' or '$(TargetOS)' == 'tvossimulator' or '$(TargetOS)' == 'android' or '$(TargetOS)' == 'browser' or '$(TargetOS)' == 'wasi'">true</TargetsMobile>
+    <TargetsAppleMobile Condition="'$(TargetOS)' == 'ios' or '$(TargetOS)' == 'iossimulator' or '$(TargetOS)' == 'maccatalyst' or '$(TargetOS)' == 'tvos' or '$(TargetOS)' == 'tvossimulator'">true</TargetsAppleMobile>
+  </PropertyGroup>
+
+  <!-- Platform property is required by RepoLayout.props in Arcade SDK. -->
+  <PropertyGroup Label="CalculateArch">
+    <_hostArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</_hostArch>
+    <BuildArchitecture Condition="'$(BuildArchitecture)' == ''">$(_hostArch)</BuildArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and ('$(TargetOS)' == 'browser' or '$(RuntimeIdentifier)' == 'browser-wasm')">wasm</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and ('$(TargetOS)' == 'wasi' or '$(RuntimeIdentifier)' == 'wasi-wasm')">wasm</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(_hostArch)' == 'arm'">arm</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(_hostArch)' == 'armv6'">armv6</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(_hostArch)' == 'armel'">armel</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(_hostArch)' == 'arm64'">arm64</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(_hostArch)' == 'loongarch64'">loongarch64</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(_hostArch)' == 's390x'">s390x</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(_hostArch)' == 'ppc64le'">ppc64le</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == '' and '$(TargetsMobile)' == 'true'">x64</TargetArchitecture>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == ''">x64</TargetArchitecture>
+    <Platform Condition="'$(Platform)' == '' and '$(InferPlatformFromTargetArchitecture)' == 'true'">$(TargetArchitecture)</Platform>
+  </PropertyGroup>
+
+  <PropertyGroup Label="SetOSTargetMinVersions">
+    <!--
+      Minimum target OS versions, keep in sync with:
+        - eng/native/configurecompiler.cmake
+        - eng/native/build-commons.sh
+        - eng/native/gen-buildsys.cmd
+        - src/native/libs/build-native.sh
+        - src/coreclr/tools/aot/ILCompiler.Compiler/Compiler/ObjectWriter/MachObjectWriter.cs
+        - src/coreclr/nativeaot/BuildIntegration/Microsoft.NETCore.Native.Unix.targets
+        - src/mono/mono/tools/offsets-tool/offsets-tool.py
+        - src/mono/msbuild/apple/build/AppleBuild.targets
+        - src/installer/pkg/sfx/bundle/shared-framework-distribution-template-x64.xml
+        - src/installer/pkg/sfx/bundle/shared-framework-distribution-template-arm64.xml
+        - src/mono/msbuild/common/MonoAOTCompiler.props
+        - src/tasks/AppleAppBuilder/Xcode.cs
+        - src/tasks/MobileBuildTasks/Apple/AppleProject.cs
+        - https://github.com/dotnet/sdk repo > src/Installer/redist-installer/targets/GeneratePKG.targets
+     -->
+    <AndroidApiLevelMin>21</AndroidApiLevelMin>
+    <iOSVersionMin>12.2</iOSVersionMin>
+    <tvOSVersionMin>12.2</tvOSVersionMin>
+    <macOSVersionMin>12.0</macOSVersionMin>
+    <MacCatalystVersionMin>15.0</MacCatalystVersionMin>
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- $(RepoRoot) is normally set globally and Arcade overrides it to ensure a trailing slash. -->
-    <RepoRoot Condition=" '$(RepoRoot)' == '' OR !HasTrailingSlash('$(RepoRoot)') ">$(MSBuildThisFileDirectory)</RepoRoot>
-
-    <RepositoryUrl>https://github.com/dotnet/aspnetcore</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
+    <!-- Set OutDirName (Arcade specific property that must be set before the Arcade SDK is imported) to change the BaseOutputPath and
+         BaseIntermediateOutputPath properties to include the ref subfolder. -->
+    <IsReferenceAssemblyProject Condition="$([System.IO.Path]::GetFileName('$(MSBuildProjectDirectory)')) == 'ref'">true</IsReferenceAssemblyProject>
+    <OutDirName Condition="'$(IsReferenceAssemblyProject)' == 'true'">$(MSBuildProjectName)$([System.IO.Path]::DirectorySeparatorChar)ref</OutDirName>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <AnalysisLevel>latest</AnalysisLevel>
-    <AnalysisMode>Default</AnalysisMode>
-  </PropertyGroup>
-
-  <!-- Defines project type conventions. -->
-  <PropertyGroup>
-    <RepoRelativeProjectDir>$([MSBuild]::MakeRelative($(RepoRoot), $(MSBuildProjectDirectory)))</RepoRelativeProjectDir>
-
-    <IsBenchmarkProject Condition=" $(MSBuildProjectName.EndsWith('.Performance')) OR
-        $(RepoRelativeProjectDir.Contains('perf')) OR
-        $(RepoRelativeProjectDir.Contains('benchmarkapps')) ">true</IsBenchmarkProject>
-    <IsMicrobenchmarksProject Condition=" $(MSBuildProjectName.EndsWith('.Microbenchmarks')) ">true</IsMicrobenchmarksProject>
-    <IsSpecificationTestProject Condition="$(MSBuildProjectName.EndsWith('.Specification.Tests'))">true</IsSpecificationTestProject>
-    <IsUnitTestProject Condition=" '$(IsUnitTestProject)' == '' AND
-        '$(IsSpecificationTestProject)' != 'true' AND
-        ( $(MSBuildProjectName.EndsWith('Tests')) OR
-          $(MSBuildProjectName.EndsWith('.Test')) OR
-          $(MSBuildProjectName.EndsWith('.FunctionalTest')) ) ">true</IsUnitTestProject>
-    <IsUnitTestProject Condition=" '$(IsUnitTestProject)' == '' ">false</IsUnitTestProject>
-    <IsTrimmingTestProject Condition="$(MSBuildProjectName.EndsWith('.TrimmingTests'))">true</IsTrimmingTestProject>
-    <IsNativeAotTestProject Condition="$(MSBuildProjectName.EndsWith('.NativeAotTests'))">true</IsNativeAotTestProject>
-    <IsPublishedAppTestProject Condition="'$(IsTrimmingTestProject)' == 'true' or '$(IsNativeAotTestProject)' == 'true'">true</IsPublishedAppTestProject>
-    <IsTestAssetProject Condition=" $(RepoRelativeProjectDir.Contains('testassets')) OR $(MSBuildProjectName.Contains('TestCommon'))">true</IsTestAssetProject>
-    <IsProjectTemplateProject Condition=" ($(RepoRelativeProjectDir.Contains('ProjectTemplates')) OR $(MSBuildProjectName.Contains('ProjectTemplates')) ) AND
-        '$(IsUnitTestProject)' != 'true' AND
-        '$(IsTestAssetProject)' != 'true' ">true</IsProjectTemplateProject>
-    <IsSampleProject Condition=" $(RepoRelativeProjectDir.ToUpperInvariant().Contains('SAMPLE')) ">true</IsSampleProject>
-    <IsAnalyzersProject Condition="$(MSBuildProjectName.EndsWith('.Analyzers'))">true</IsAnalyzersProject>
-    <IsShipping Condition=" '$(IsSampleProject)' == 'true' OR
-        '$(IsTestAssetProject)' == 'true' OR
-        '$(IsBenchmarkProject)' == 'true' OR
-        '$(IsPublishedAppTestProject)' == 'true' OR
-        $(IsUnitTestProject) ">false</IsShipping>
-  </PropertyGroup>
-
-  <!-- Disable logging of some task parameters or metadata to reduce binlog size.
-       Reenable logging of any particular item by changing the value of the property below to 'false'
-       The format is as follows:
-       DisableLogTaskParameter_[task name]_[parameter name] - Disable logging of a particular parameter
-       DisableLogTaskParameterItemMetadata_[task name]_[parameter name] - Disable logging of item metadata of the parameter
-  -->
-  <PropertyGroup>
-    <TrimTaskParameters Condition=" '$(TrimTaskParameters)' == '' ">true</TrimTaskParameters>
-    <!-- ItemsToHash is used for incremental building and hashes input properties to a file
-         This is not generally useful for day-to-day build debugging. -->
-    <DisableLogTaskParameter_Hash_ItemsToHash>$(TrimTaskParameters)</DisableLogTaskParameter_Hash_ItemsToHash>
-
-    <!-- JoinItems takes input ItemGroups. The output ItemGroup is logged. -->
-    <DisableLogTaskParameter_JoinItems_Right>$(TrimTaskParameters)</DisableLogTaskParameter_JoinItems_Right>
-    <DisableLogTaskParameter_JoinItems_Left>$(TrimTaskParameters)</DisableLogTaskParameter_JoinItems_Left>
-
-    <!-- ConvertToAbsolutePaths - The output parameter (AbsolutePaths) is interesting
-         while the input Path is not generally useful. The output itemgroup's metadata
-         is not altered by the task. -->
-    <DisableLogTaskParameter_ConvertToAbsolutePath_Paths>$(TrimTaskParameters)</DisableLogTaskParameter_ConvertToAbsolutePath_Paths>
-    <DisableLogTaskParameterItemMetadata_ConvertToAbsolutePath_Paths>$(TrimTaskParameters)</DisableLogTaskParameterItemMetadata_ConvertToAbsolutePath_Paths>
-
-    <!-- The standard msbuild Copy task does not use Metadata and thus the input/outputs
-         item metadata is not relevant -->
-     <DisableLogTaskParameterItemMetadata_Copy_SourceFiles>$(TrimTaskParameters)</DisableLogTaskParameterItemMetadata_Copy_SourceFiles>
-     <DisableLogTaskParameterItemMetadata_Copy_DestinationFiles>$(TrimTaskParameters)</DisableLogTaskParameterItemMetadata_Copy_DestinationFiles>
-
-     <!-- Reference metadata for GenerateDepsFile, Csc, RAR, etc. are sometimes useful, but extraordinarily large
-          when building against a shared framework where the number of input assemblies is very large.
-          Avoid logging these by default. -->
-     <DisableLogTaskParameterItemMetadata_GenerateDepsFile_ReferenceAssemblies>$(TrimTaskParameters)</DisableLogTaskParameterItemMetadata_GenerateDepsFile_ReferenceAssemblies>
-     <DisableLogTaskParameterItemMetadata_GenerateDepsFile_ReferencePaths>$(TrimTaskParameters)</DisableLogTaskParameterItemMetadata_GenerateDepsFile_ReferencePaths>
-     <DisableLogTaskParameterItemMetadata_ResolveAssemblyReference_Assemblies>$(TrimTaskParameters)</DisableLogTaskParameterItemMetadata_ResolveAssemblyReference_Assemblies>
-     <DisableLogTaskParameterItemMetadata_Csc_References>$(TrimTaskParameters)</DisableLogTaskParameterItemMetadata_Csc_References>
-  </PropertyGroup>
-
-  <Import Project="eng\QuarantinedTests.BeforeArcade.props" />
+  <!-- Import the Arcade SDK -->
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-  <Import Project="eng\QuarantinedTests.AfterArcade.props" />
-  <Import Project="eng\Common.props" />
 
+  <!-- The TFMs to build and test against. -->
   <PropertyGroup>
-    <Product>Microsoft ASP.NET Core</Product>
-    <StrongNameKeyId>MicrosoftAspNetCore</StrongNameKeyId>
+    <NetCoreAppCurrentVersion>10.0</NetCoreAppCurrentVersion>
+    <NetCoreAppCurrentIdentifier>.NETCoreApp</NetCoreAppCurrentIdentifier>
+    <NetCoreAppCurrentTargetFrameworkMoniker>$(NetCoreAppCurrentIdentifier),Version=v$(NetCoreAppCurrentVersion)</NetCoreAppCurrentTargetFrameworkMoniker>
+    <MicrosoftNetCoreAppFrameworkName>Microsoft.NETCore.App</MicrosoftNetCoreAppFrameworkName>
+    <NetCoreAppCurrentBrandName>.NET $(NetCoreAppCurrentVersion)</NetCoreAppCurrentBrandName>
+    <NetCoreAppCurrent>net$(NetCoreAppCurrentVersion)</NetCoreAppCurrent>
 
-    <!-- The SPDX name for the source license. See https://spdx.org/licenses/. -->
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- The previous supported .NET version. -->
+    <NetCoreAppPrevious>net9.0</NetCoreAppPrevious>
+    <NetCoreAppPrevious Condition="'$(DotNetBuildSourceOnly)' == 'true'">$(NetCoreAppCurrent)</NetCoreAppPrevious>
 
-    <!-- Contact email address for NuGet packages and Linux installers. -->
-    <MaintainerEmail>nugetaspnet@microsoft.com</MaintainerEmail>
+    <!-- The minimum supported .NET version. -->
+    <NetCoreAppMinimum>net8.0</NetCoreAppMinimum>
+    <NetCoreAppMinimum Condition="'$(DotNetBuildSourceOnly)' == 'true'">$(NetCoreAppCurrent)</NetCoreAppMinimum>
 
-    <PackageProjectUrl>https://asp.net</PackageProjectUrl>
-    <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
+    <!-- when this is updated, make sure to keep $(_NetCoreAppToolCurrent)
+         in src/mono/wasm/build/WasmApp.LocalBuild.props
+         and in src/mono/msbuild/apple/build/AppleBuild.LocalBuild.props in sync -->
+    <NetCoreAppToolCurrentVersion>10.0</NetCoreAppToolCurrentVersion>
+    <NetCoreAppToolCurrent>net$(NetCoreAppToolCurrentVersion)</NetCoreAppToolCurrent>
+    <NetCoreAppCurrentToolTargetFrameworkMoniker>$(NetCoreAppCurrentIdentifier),Version=v$(NetCoreAppToolCurrentVersion)</NetCoreAppCurrentToolTargetFrameworkMoniker>
 
-    <IncludeSymbols>true</IncludeSymbols>
-    <DefaultNetFxTargetFramework>net462</DefaultNetFxTargetFramework>
+    <AspNetCoreAppCurrentVersion>10.0</AspNetCoreAppCurrentVersion>
+    <AspNetCoreAppCurrent>net$(AspNetCoreAppCurrentVersion)</AspNetCoreAppCurrent>
+
+    <NetFrameworkMinimum>net462</NetFrameworkMinimum>
+    <NetFrameworkCurrent>net48</NetFrameworkCurrent>
+    <NetFrameworkToolCurrent>net472</NetFrameworkToolCurrent>
+    <!-- Don't build for NETFramework during source-build. -->
+    <NetFrameworkMinimum Condition="'$(DotNetBuildSourceOnly)' == 'true'" />
+    <NetFrameworkToolCurrent Condition="'$(DotNetBuildSourceOnly)' == 'true'" />
+    <NetFrameworkCurrent Condition="'$(DotNetBuildSourceOnly)' == 'true'" />
+
+    <ApiCompatNetCoreAppBaselineVersion>9.0.0</ApiCompatNetCoreAppBaselineVersion>
+    <ApiCompatNetCoreAppBaselineTFM>net9.0</ApiCompatNetCoreAppBaselineTFM>
   </PropertyGroup>
 
-  <!-- Warnings and errors -->
+  <PropertyGroup Label="CalculateConfiguration">
+    <!-- The RuntimeConfiguration property allows to pass in/specify a configuration that applies to both CoreCLR and Mono. -->
+    <RuntimeConfiguration Condition="'$(RuntimeConfiguration)' == ''">$(Configuration)</RuntimeConfiguration>
+    <RuntimeConfiguration Condition="'$(RuntimeConfiguration)' == '' and ('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Release')">$(Configuration)</RuntimeConfiguration>
+    <RuntimeConfiguration Condition="'$(RuntimeConfiguration)' == ''">Debug</RuntimeConfiguration>
+    <CoreCLRConfiguration Condition="'$(CoreCLRConfiguration)' == ''">$(RuntimeConfiguration)</CoreCLRConfiguration>
+    <MonoConfiguration Condition="'$(MonoConfiguration)' == '' and '$(RuntimeConfiguration.ToLower())' != 'checked'">$(RuntimeConfiguration)</MonoConfiguration>
+    <!-- There's no checked configuration on Mono. -->
+    <MonoConfiguration Condition="'$(MonoConfiguration)' == '' and '$(RuntimeConfiguration.ToLower())' == 'checked'">Debug</MonoConfiguration>
+    <LibrariesConfiguration Condition="'$(LibrariesConfiguration)' == ''">$(Configuration)</LibrariesConfiguration>
+    <HostConfiguration Condition="'$(HostConfiguration)' == ''">$(Configuration)</HostConfiguration>
+    <TasksConfiguration Condition="'$(TasksConfiguration)' == ''">$(Configuration)</TasksConfiguration>
+    <ToolsConfiguration Condition="'$(ToolsConfiguration)' == ''">$(Configuration)</ToolsConfiguration>
+  </PropertyGroup>
+
   <PropertyGroup>
-    <!-- Ensure API docs are available. -->
-    <NoWarn>$(NoWarn.Replace('1591', ''))</NoWarn>
-    <NoWarn Condition=" '$(BuildingInsideVisualStudio)' == 'true' ">$(NoWarn);0105</NoWarn>
-    <!-- Allow prerelease dependencies in stable packages when we're running the IdentityModel nightly tests -->
-    <NoWarn Condition=" '$(IsIdentityModelTestJob)' == 'true' ">$(NoWarn);NU5104</NoWarn>
+    <LibrariesProjectRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'src', 'libraries'))</LibrariesProjectRoot>
+    <CoreClrProjectRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'src', 'coreclr'))</CoreClrProjectRoot>
+    <MonoProjectRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'src', 'mono'))</MonoProjectRoot>
+    <InstallerProjectRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'src', 'installer'))</InstallerProjectRoot>
+    <WorkloadsProjectRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'src', 'workloads'))</WorkloadsProjectRoot>
+    <ToolsProjectRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'src', 'tools'))</ToolsProjectRoot>
+    <SharedNativeRoot>$([MSBuild]::NormalizeDirectory('$(RepoRoot)', 'src', 'native'))</SharedNativeRoot>
+    <RepoTasksDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'src', 'tasks'))</RepoTasksDir>
+    <IbcOptimizationDataDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'ibc'))</IbcOptimizationDataDir>
+    <MibcOptimizationDataDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'mibc'))</MibcOptimizationDataDir>
+    <DocsDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'docs'))</DocsDir>
+    <BrowserProjectRoot>$([MSBuild]::NormalizeDirectory($(MonoProjectRoot), 'browser'))</BrowserProjectRoot>
+    <WasmProjectRoot>$([MSBuild]::NormalizeDirectory($(MonoProjectRoot), 'wasm'))</WasmProjectRoot>
+    <WasiProjectRoot>$([MSBuild]::NormalizeDirectory($(MonoProjectRoot), 'wasi'))</WasiProjectRoot>
 
-    <!-- For local builds, don't make missing XML docs a fatal build error, but still surface so we have visibility into undocumented APIs. -->
-    <WarningsNotAsErrors Condition=" '$(ContinuousIntegrationBuild)' != 'true' ">$(WarningsNotAsErrors);CS1591</WarningsNotAsErrors>
+    <AppleAppBuilderDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'AppleAppBuilder', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</AppleAppBuilderDir>
+    <AndroidAppBuilderDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'AndroidAppBuilder', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)', 'publish'))</AndroidAppBuilderDir>
+    <MobileBuildTasksDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'MobileBuildTasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</MobileBuildTasksDir>
+    <WasmAppBuilderDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'WasmAppBuilder', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</WasmAppBuilderDir>
+    <WasmBuildTasksDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'WasmBuildTasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)', 'publish'))</WasmBuildTasksDir>
+    <WorkloadBuildTasksDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'WorkloadBuildTasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</WorkloadBuildTasksDir>
+    <LibraryBuilderDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'LibraryBuilder', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</LibraryBuilderDir>
+    <MonoAOTCompilerDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'MonoAOTCompiler', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</MonoAOTCompilerDir>
+    <MonoTargetsTasksDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'MonoTargetsTasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</MonoTargetsTasksDir>
+    <TestExclusionListTasksDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'TestExclusionListTasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)'))</TestExclusionListTasksDir>
+    <InstallerTasksAssemblyPath Condition="'$(MSBuildRuntimeType)' == 'Core'">$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'installer.tasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)', 'installer.tasks.dll'))</InstallerTasksAssemblyPath>
+    <InstallerTasksAssemblyPath Condition="'$(MSBuildRuntimeType)' != 'Core'">$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'installer.tasks', '$(TasksConfiguration)', '$(NetFrameworkToolCurrent)', 'installer.tasks.dll'))</InstallerTasksAssemblyPath>
+    <Crossgen2SdkOverridePropsPath Condition="'$(MSBuildRuntimeType)' == 'Core'">$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'Crossgen2Tasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)', 'Microsoft.NET.CrossGen.props'))</Crossgen2SdkOverridePropsPath>
+    <Crossgen2SdkOverrideTargetsPath Condition="'$(MSBuildRuntimeType)' == 'Core'">$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'Crossgen2Tasks', '$(TasksConfiguration)', '$(NetCoreAppToolCurrent)', 'Microsoft.NET.CrossGen.targets'))</Crossgen2SdkOverrideTargetsPath>
+    <AppleAppBuilderTasksAssemblyPath>$([MSBuild]::NormalizePath('$(AppleAppBuilderDir)', 'AppleAppBuilder.dll'))</AppleAppBuilderTasksAssemblyPath>
+    <AndroidAppBuilderTasksAssemblyPath>$([MSBuild]::NormalizePath('$(AndroidAppBuilderDir)', 'AndroidAppBuilder.dll'))</AndroidAppBuilderTasksAssemblyPath>
+    <MobileBuildTasksAssemblyPath>$([MSBuild]::NormalizePath('$(MobileBuildTasksDir)', 'MobileBuildTasks.dll'))</MobileBuildTasksAssemblyPath>
+    <WasmAppBuilderTasksAssemblyPath>$([MSBuild]::NormalizePath('$(WasmAppBuilderDir)', 'WasmAppBuilder.dll'))</WasmAppBuilderTasksAssemblyPath>
+    <WasmBuildTasksAssemblyPath>$([MSBuild]::NormalizePath('$(WasmBuildTasksDir)', 'WasmBuildTasks.dll'))</WasmBuildTasksAssemblyPath>
+    <WasmAppHostDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'WasmAppHost', 'wasm', '$(Configuration)'))</WasmAppHostDir>
+    <WorkloadBuildTasksAssemblyPath>$([MSBuild]::NormalizePath('$(WorkloadBuildTasksDir)', 'WorkloadBuildTasks.dll'))</WorkloadBuildTasksAssemblyPath>
+    <LibraryBuilderTasksAssemblyPath>$([MSBuild]::NormalizePath('$(LibraryBuilderDir)', 'LibraryBuilder.dll'))</LibraryBuilderTasksAssemblyPath>
+    <MonoAOTCompilerTasksAssemblyPath>$([MSBuild]::NormalizePath('$(MonoAOTCompilerDir)', 'MonoAOTCompiler.dll'))</MonoAOTCompilerTasksAssemblyPath>
+    <MonoTargetsTasksAssemblyPath>$([MSBuild]::NormalizePath('$(MonoTargetsTasksDir)', 'MonoTargetsTasks.dll'))</MonoTargetsTasksAssemblyPath>
+    <TestExclusionListTasksAssemblyPath>$([MSBuild]::NormalizePath('$(TestExclusionListTasksDir)', 'TestExclusionListTasks.dll'))</TestExclusionListTasksAssemblyPath>
+    <CoreCLRToolPath>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'coreclr', '$(TargetOS).$(TargetArchitecture).$(RuntimeConfiguration)'))</CoreCLRToolPath>
+    <ILAsmToolPath Condition="'$(DotNetBuildSourceOnly)' == 'true' or '$(BuildArchitecture)' == 's390x' or '$(BuildArchitecture)' == 'ppc64le'">$(CoreCLRToolPath)</ILAsmToolPath>
+    <!-- force download temmporarily https://github.com/dotnet/runtime/issues/101528
+    <WasmtimeDir Condition="'$(WasmtimeDir)' == '' and '$(WASMTIME_PATH)' != '' and Exists($(WASMTIME_PATH))">$(WASMTIME_PATH)</WasmtimeDir>
+    -->
+    <WasmtimeDir Condition="'$(WasmtimeDir)' == ''">$([MSBuild]::NormalizeDirectory($(ArtifactsObjDir), 'wasmtime'))</WasmtimeDir>
+    <InstallWasmtimeForTests Condition="'$(InstallWasmtimeForTests)' == '' and !Exists($(WasmtimeDir))">true</InstallWasmtimeForTests>
+    <WasmCommonTargetsPath>$([MSBuild]::NormalizeDirectory($(WasmProjectRoot), 'build'))</WasmCommonTargetsPath>
+  </PropertyGroup>
 
-    <!-- xUnit1004 = warns about skipped tests. Make this a non-fatal build warning. -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);xUnit1004</WarningsNotAsErrors>
+  <PropertyGroup Condition="'$(DotNetBuildMonoCrossAOT)' == 'true'">
+    <BuildMonoAOTCrossCompilerOnly>true</BuildMonoAOTCrossCompilerOnly>
+    <MonoCrossAOTTargetOS>android+browser+wasi</MonoCrossAOTTargetOS>
+    <MonoCrossAOTTargetOS Condition="'$(TargetOS)' == 'osx'">$(MonoCrossAOTTargetOS)+tvos+ios+maccatalyst</MonoCrossAOTTargetOS>
+  </PropertyGroup>
 
-    <!-- don't warn about calling ConfigureAwait in test methods. we already commonly get off the xunit threads because they cause issues. -->
-    <NoWarn>$(NoWarn);xUnit1030</NoWarn>
+  <PropertyGroup Label="CalculatePortableBuild">
+    <PortableBuild Condition="'$(PortableBuild)' == '' and '$(DotNetBuildSourceOnly)' == 'true'">false</PortableBuild>
+    <PortableBuild Condition="'$(PortableBuild)' == ''">true</PortableBuild>
+  </PropertyGroup>
 
+  <!-- _portableOS is the portable rid-OS corresponding to the target platform. -->
+  <PropertyGroup Label="CalculatePortableOS">
+    <!-- To determine _portableOS we use TargetOS.
+         TargetOS is not a rid-OS. For example: for Windows it is 'windows' instead of 'win'.
+         And, for flavors of Linux, like 'linux-musl' and 'linux-bionic', TargetOS is 'linux'. -->
+
+    <_portableOS>$(TargetOS.ToLowerInvariant())</_portableOS>
+    <_portableOS Condition="'$(_portableOS)' == 'windows'">win</_portableOS>
+
+    <!-- TargetOS=AnyOS is a sentinel value used by tests, ignore it.  -->
+    <_portableOS Condition="'$(_portableOS)' == 'anyos'">$(__PortableTargetOS)</_portableOS>
+
+    <!-- Detect linux flavors using __PortableTargetOS from the native script. -->
+    <_portableOS Condition="'$(_portableOS)' == 'linux' and '$(__PortableTargetOS)' == 'linux-musl'">linux-musl</_portableOS>
+    <_portableOS Condition="'$(_portableOS)' == 'linux' and '$(__PortableTargetOS)' == 'linux-bionic'">linux-bionic</_portableOS>
+
+    <!-- On Windows, we can build for Windows and Mobile.
+         For other TargetOSes, create a "win" build, built from TargetOS sources and "win" pre-built packages. -->
+    <_portableOS Condition="'$(HostOS)' == 'win' and '$(TargetsMobile)' != 'true'">win</_portableOS>
+  </PropertyGroup>
+
+  <!-- PackageRID is used for packages needed for the target. -->
+  <PropertyGroup Label="CalculatePackageRID">
+    <_packageOS>$(_portableOS)</_packageOS>
+
+    <_packageOS Condition="'$(CrossBuild)' == 'true' and '$(_portableOS)' != 'linux-musl' and '$(_portableOS)' != 'linux-bionic' and '$(_portableOS)' != 'android'">$(_hostOS)</_packageOS>
+
+    <!-- source-build sets PackageOS to build with non-portable rid packages that were source-built previously. -->
+    <PackageRID Condition="'$(PackageOS)' != ''">$(PackageOS)-$(TargetArchitecture)</PackageRID>
+    <PackageRID Condition="'$(PackageRID)' == ''">$(_packageOS)-$(TargetArchitecture)</PackageRID>
+  </PropertyGroup>
+
+  <!-- ToolsRID is used for packages needed on the build host. -->
+  <PropertyGroup Label="CalculateToolsRID">
+    <!-- _portableHostOS is the portable rid-OS corresponding to the build host platform.
+
+         To determine _portableHostOS we use _hostOS, similar to how _portableOS is calculated from TargetOS.
+
+         When we're not cross-building we can detect linux flavors by looking at _portableOS
+         because the target platform and the build host platform are the same.
+         For cross-builds, we're currently unable to detect the flavors. -->
+    <_portableHostOS>$(_hostOS)</_portableHostOS>
+    <_portableHostOS Condition="'$(_portableHostOS)' == 'windows'">win</_portableHostOS>
+    <_portableHostOS Condition="'$(CrossBuild)' != 'true' and '$(_portableOS)' == 'linux-musl'">linux-musl</_portableHostOS>
+
+    <!-- source-build sets ToolsOS to build with non-portable rid packages that were source-built previously. -->
+    <ToolsRID Condition="'$(ToolsOS)' != ''">$(ToolsOS)-$(_hostArch)</ToolsRID>
+    <ToolsRID Condition="'$(ToolsRID)' == ''">$(_portableHostOS)-$(_hostArch)</ToolsRID>
+
+    <!-- Microsoft.NET.Sdk.IL SDK defaults to the portable host rid. Match it to ToolsRID (for source-build). -->
+    <MicrosoftNetCoreIlasmPackageRuntimeId>$(ToolsRID)</MicrosoftNetCoreIlasmPackageRuntimeId>
+  </PropertyGroup>
+
+  <!-- OutputRID is used to name the target platform.
+       For portable builds, OutputRID matches _portableOS.
+       For non-portable builds, it uses __DistroRid (from the native build script), or falls back to RuntimeInformation.RuntimeIdentifier.
+       Source-build sets OutputRID directly. -->
+  <PropertyGroup Label="CalculateOutputRID">
+    <_hostRid Condition="'$(MSBuildRuntimeType)' == 'core'">$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier)</_hostRid>
+    <_hostRid Condition="'$(MSBuildRuntimeType)' != 'core'">win-$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant)</_hostRid>
+
+    <_parseDistroRid>$(__DistroRid)</_parseDistroRid>
+    <_parseDistroRid Condition="'$(_parseDistroRid)' == ''">$(_hostRid)</_parseDistroRid>
+    <_distroRidIndex>$(_parseDistroRid.LastIndexOf('-'))</_distroRidIndex>
+
+    <_outputOS>$(_parseDistroRid.SubString(0, $(_distroRidIndex)))</_outputOS>
+    <_outputOS Condition="'$(PortableBuild)' == 'true'">$(_portableOS)</_outputOS>
+
+    <OutputRID Condition="'$(OutputRID)' == ''">$(_outputOS)-$(TargetArchitecture)</OutputRID>
+  </PropertyGroup>
+
+  <PropertyGroup Label="CalculateTargetOSName">
+    <TargetsFreeBSD Condition="'$(TargetOS)' == 'freebsd'">true</TargetsFreeBSD>
+    <Targetsillumos Condition="'$(TargetOS)' == 'illumos'">true</Targetsillumos>
+    <TargetsSolaris Condition="'$(TargetOS)' == 'solaris'">true</TargetsSolaris>
+    <TargetsHaiku Condition="'$(TargetOS)' == 'haiku'">true</TargetsHaiku>
+    <TargetsLinux Condition="'$(TargetOS)' == 'linux' or '$(TargetOS)' == 'android'">true</TargetsLinux>
+    <TargetsLinuxBionic Condition="'$(_portableOS)' == 'linux-bionic'">true</TargetsLinuxBionic>
+    <TargetsLinuxMusl Condition="'$(_portableOS)' == 'linux-musl'">true</TargetsLinuxMusl>
+    <TargetsLinuxGlibc Condition="'$(TargetsLinux)' == 'true' and '$(TargetsLinuxMusl)' != 'true' and '$(TargetsLinuxBionic)' != 'true'">true</TargetsLinuxGlibc>
+    <TargetsNetBSD Condition="'$(TargetOS)' == 'netbsd'">true</TargetsNetBSD>
+    <TargetsOSX Condition="'$(TargetOS)' == 'osx'">true</TargetsOSX>
+    <TargetsMacCatalyst Condition="'$(TargetOS)' == 'maccatalyst'">true</TargetsMacCatalyst>
+    <TargetsiOS Condition="'$(TargetOS)' == 'ios' or '$(TargetOS)' == 'iossimulator'">true</TargetsiOS>
+    <TargetstvOS Condition="'$(TargetOS)' == 'tvos' or '$(TargetOS)' == 'tvossimulator'">true</TargetstvOS>
+    <TargetsiOSSimulator Condition="'$(TargetOS)' == 'iossimulator'">true</TargetsiOSSimulator>
+    <TargetstvOSSimulator Condition="'$(TargetOS)' == 'tvossimulator'">true</TargetstvOSSimulator>
+    <TargetsAndroid Condition="'$(TargetOS)' == 'android'">true</TargetsAndroid>
+    <TargetsBrowser Condition="'$(TargetOS)' == 'browser'">true</TargetsBrowser>
+    <TargetsWasi Condition="'$(TargetOS)' == 'wasi'">true</TargetsWasi>
+    <TargetsWindows Condition="'$(TargetOS)' == 'windows'">true</TargetsWindows>
+    <TargetsUnix Condition="'$(TargetsFreeBSD)' == 'true' or '$(Targetsillumos)' == 'true' or '$(TargetsSolaris)' == 'true' or '$(TargetsHaiku)' == 'true' or '$(TargetsLinux)' == 'true' or '$(TargetsNetBSD)' == 'true' or '$(TargetsOSX)' == 'true' or '$(TargetsMacCatalyst)' == 'true' or '$(TargetstvOS)' == 'true' or '$(TargetsiOS)' == 'true' or '$(TargetsAndroid)' == 'true'">true</TargetsUnix>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <MicrosoftNetCoreAppRefPackDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'microsoft.netcore.app.ref'))</MicrosoftNetCoreAppRefPackDir>
+    <MicrosoftNetCoreAppRefPackRefDir>$([MSBuild]::NormalizeDirectory('$(MicrosoftNetCoreAppRefPackDir)', 'ref', '$(NetCoreAppCurrent)'))</MicrosoftNetCoreAppRefPackRefDir>
+    <MicrosoftNetCoreAppRefPackDataDir>$([MSBuild]::NormalizeDirectory('$(MicrosoftNetCoreAppRefPackDir)', 'data'))</MicrosoftNetCoreAppRefPackDataDir>
+
+    <MicrosoftNetCoreAppRuntimePackDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'microsoft.netcore.app.runtime.$(OutputRID)', '$(LibrariesConfiguration)'))</MicrosoftNetCoreAppRuntimePackDir>
+    <MicrosoftNetCoreAppRuntimePackRidDir>$([MSBuild]::NormalizeDirectory('$(MicrosoftNetCoreAppRuntimePackDir)', 'runtimes', '$(OutputRID)'))</MicrosoftNetCoreAppRuntimePackRidDir>
+    <MicrosoftNetCoreAppRuntimePackRidLibTfmDir>$([MSBuild]::NormalizeDirectory('$(MicrosoftNetCoreAppRuntimePackRidDir)', 'lib', '$(NetCoreAppCurrent)'))</MicrosoftNetCoreAppRuntimePackRidLibTfmDir>
+    <MicrosoftNetCoreAppRuntimePackNativeDir>$([MSBuild]::NormalizeDirectory('$(MicrosoftNetCoreAppRuntimePackRidDir)', 'native'))</MicrosoftNetCoreAppRuntimePackNativeDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DotNetHostBinDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', '$(OutputRID).$(HostConfiguration)', 'corehost'))</DotNetHostBinDir>
+  </PropertyGroup>
+
+  <!--Feature switches -->
+  <PropertyGroup>
+    <NoPgoOptimize Condition="'$(NoPgoOptimize)' == '' and '$(DotNetBuildSourceOnly)' == 'true'">true</NoPgoOptimize>
+    <EnableNgenOptimization Condition="'$(EnableNgenOptimization)' == '' and '$(DotNetBuildSourceOnly)' == 'true'">false</EnableNgenOptimization>
+    <EnableNgenOptimization Condition="'$(EnableNgenOptimization)' == '' and ('$(Configuration)' == 'Release' or '$(Configuration)' == 'Checked')">true</EnableNgenOptimization>
+    <!-- Enable NuGet static graph evaluation to optimize incremental restore -->
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+    <!-- Turn off end of life target framework checks as we intentionally build older .NETCoreApp configurations. -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <!-- Turn off workload support until we support them. -->
+    <MSBuildEnableWorkloadResolver>false</MSBuildEnableWorkloadResolver>
+    <!-- Disable source link when building locally. -->
+    <DisableSourceLink Condition="'$(DisableSourceLink)' == '' and
+                                  '$(ContinuousIntegrationBuild)' != 'true' and
+                                  '$(OfficialBuildId)' == ''">true</DisableSourceLink>
+    <!-- Runtime doesn't support Arcade-driven target framework filtering. -->
+    <NoTargetFrameworkFiltering>true</NoTargetFrameworkFiltering>
+
+    <NativeBuildPartitionPropertiesToRemove>ClrFullNativeBuild;ClrRuntimeSubset;ClrJitSubset;ClrPalTestsSubset;ClrAllJitsSubset;ClrAllJitsCommunitySubset;ClrILToolsSubset;ClrNativeAotSubset;ClrSpmiSubset;ClrCrossComponentsSubset;ClrDebugSubset;HostArchitecture;PgoInstrument;NativeOptimizationDataSupported;CMakeArgs;CxxStandardLibrary;CxxStandardLibraryStatic;CxxAbiLibrary</NativeBuildPartitionPropertiesToRemove>
+    <UseSystemZlib Condition="'$(TargetsAppleMobile)' == 'true' or '$(TargetOS)' == 'android' or '$(TargetArchitecture)' == 'armv6'">true</UseSystemZlib>
+  </PropertyGroup>
+
+  <!-- RepositoryEngineeringDir isn't set when Installer tests import this file. -->
+  <Import Project="$(RepositoryEngineeringDir)native\naming.props" />
+  <Import Project="$(RepositoryEngineeringDir)Subsets.props" />
+
+  <PropertyGroup>
+    <CoreLibSharedDir>$([MSBuild]::NormalizeDirectory('$(LibrariesProjectRoot)', 'System.Private.CoreLib', 'src'))</CoreLibSharedDir>
+    <CoreLibRefDir>$([MSBuild]::NormalizeDirectory('$(LibrariesProjectRoot)', 'System.Private.CoreLib', 'ref'))</CoreLibRefDir>
+    <CoreLibProject Condition="'$(RuntimeFlavor)' == 'CoreCLR'">$([MSBuild]::NormalizePath('$(CoreClrProjectRoot)', 'System.Private.CoreLib', 'System.Private.CoreLib.csproj'))</CoreLibProject>
+    <CoreLibProject Condition="'$(RuntimeFlavor)' == 'Mono'">$([MSBuild]::NormalizePath('$(MonoProjectRoot)', 'System.Private.CoreLib', 'System.Private.CoreLib.csproj'))</CoreLibProject>
+    <CoreLibProject Condition="'$(UseNativeAotCoreLib)' == 'true'">$([MSBuild]::NormalizePath('$(CoreClrProjectRoot)', 'nativeaot', 'System.Private.CoreLib', 'src', 'System.Private.CoreLib.csproj'))</CoreLibProject>
+    <UriProject>$([MSBuild]::NormalizePath('$(LibrariesProjectRoot)', 'System.Private.Uri', 'src', 'System.Private.Uri.csproj'))</UriProject>
+
+    <!-- this property is used by the SDK to pull in mono-based runtime packs -->
+    <UseMonoRuntime Condition="'$(UseMonoRuntime)' == '' and '$(RuntimeFlavor)' == 'Mono'">true</UseMonoRuntime>
+
+    <!-- For enabling the use of XUnitLogChecker in coreclr and libraries test runs. -->
+    <!-- TODO: Enable XUnitLogChecker for NativeAOT tests https://github.com/dotnet/runtime/issues/94722 -->
+    <IsXUnitLogCheckerSupported Condition="'$(IsXUnitLogCheckerSupported)' == ''">false</IsXUnitLogCheckerSupported>
+    <IsXUnitLogCheckerSupported Condition="'$(RuntimeFlavor)' == 'CoreCLR' and '$(TestNativeAot)' != 'true' and '$(RunNativeAotTestApps)' != 'true' and '$(TestSingleFile)' != 'true' and '$(TargetOS)' != 'browser' and '$(TargetOS)' != 'wasi' and '$(TargetOS)' != 'ios' and '$(TargetOS)' != 'iossimulator' and '$(TargetOS)' != 'tvos' and '$(TargetOS)' != 'tvossimulator' and '$(TargetOS)' != 'maccatalyst' and '$(TargetOS)' != 'android'">true</IsXUnitLogCheckerSupported>
+    <XUnitLogCheckerLibrariesOutDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'XUnitLogChecker'))</XUnitLogCheckerLibrariesOutDir>
+  </PropertyGroup>
+
+  <!-- Packaging -->
+  <PropertyGroup>
+    <GitHubRepositoryName>runtime</GitHubRepositoryName>
+    <RepositoryUrl>https://github.com/dotnet/$(GitHubRepositoryName)</RepositoryUrl>
+    <PackageProjectUrl>https://dot.net</PackageProjectUrl>
+    <Owners>microsoft,dotnetframework</Owners>
+    <IncludeSymbols>true</IncludeSymbols>
+    <LicenseFile>$(MSBuildThisFileDirectory)LICENSE.TXT</LicenseFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Copyright>$(CopyrightNetFoundation)</Copyright>
+    <PackageThirdPartyNoticesFile>$(MSBuildThisFileDirectory)THIRD-PARTY-NOTICES.TXT</PackageThirdPartyNoticesFile>
+    <PackageReleaseNotes>https://go.microsoft.com/fwlink/?LinkID=799421</PackageReleaseNotes>
+    <IsPrivateAssembly>$(MSBuildProjectName.Contains('Private'))</IsPrivateAssembly>
+    <!-- Private packages should not be stable -->
+    <SuppressFinalPackageVersion Condition="'$(SuppressFinalPackageVersion)' == '' and $(IsPrivateAssembly)">true</SuppressFinalPackageVersion>
+    <!-- We don't want Private packages to be shipped to NuGet.org -->
+    <IsShippingPackage Condition="$(IsPrivateAssembly)">false</IsShippingPackage>
+    <PlaceholderFile>$(RepositoryEngineeringDir)_._</PlaceholderFile>
+  </PropertyGroup>
+
+  <!-- Flow these properties to consuming projects. -->
+  <ItemDefinitionGroup>
+    <TargetPathWithTargetPlatformMoniker>
+      <IsPrivateAssembly>$(IsPrivateAssembly.ToLowerInvariant())</IsPrivateAssembly>
+    </TargetPathWithTargetPlatformMoniker>
+  </ItemDefinitionGroup>
+
+  <!-- Language configuration -->
+  <PropertyGroup>
+    <!-- default to allowing all language features -->
+    <LangVersion>preview</LangVersion>
+    <!-- default to max warnlevel -->
+    <AnalysisLevel Condition="'$(MSBuildProjectExtension)' == '.csproj'">preview</AnalysisLevel>
+    <LangVersion Condition="'$(MSBuildProjectExtension)' == '.vbproj'">latest</LangVersion>
+    <!-- Enables Strict mode for Roslyn compiler -->
+    <Features>strict;nullablePublicOnly</Features>
+    <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
+    <!-- Only upgrade NuGetAudit warnings to errors for official builds. -->
+    <WarningsNotAsErrors Condition="'$(OfficialBuild)' != 'true' OR '$(NuGetAuditWarnNotError)' == 'true'">$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <!-- Warnings to always disable -->
+    <NoWarn>$(NoWarn);CS8500;CS8969</NoWarn>
+    <!-- Suppress "CS1591 - Missing XML comment for publicly visible type or member" compiler errors for private assemblies. -->
+    <NoWarn Condition="'$(IsPrivateAssembly)' == 'true'">$(NoWarn);CS1591</NoWarn>
+    <!-- Always pass portable to override arcade sdk which uses embedded for local builds -->
+    <DebugType>portable</DebugType>
+    <KeepNativeSymbols Condition="'$(KeepNativeSymbols)' == '' and '$(DotNetBuildSourceOnly)' == 'true'">true</KeepNativeSymbols>
+    <KeepNativeSymbols Condition="'$(KeepNativeSymbols)' == ''">false</KeepNativeSymbols>
+    <!-- Used for launchSettings.json and runtime config files. -->
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <!-- By default the SDK produces ref assembly for 5.0 or later -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <!-- Define test projects and companions -->
+  <PropertyGroup Condition="$(MSBuildProjectFullPath.Contains('$([System.IO.Path]::DirectorySeparatorChar)tests$([System.IO.Path]::DirectorySeparatorChar)'))">
+    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.UnitTests')) or $(MSBuildProjectName.EndsWith('.Tests'))">true</IsTestProject>
+    <IsTrimmingTestProject Condition="$(MSBuildProjectName.EndsWith('.TrimmingTests'))">true</IsTrimmingTestProject>
+    <IsTestSupportProject Condition="'$(IsTestProject)' != 'true' and '$(IsTrimmingTestProject)' != 'true'">true</IsTestSupportProject>
+
+    <!-- Treat test assemblies as non-shipping (do not publish or sign them). -->
+    <IsShipping Condition="'$(IsTestProject)' == 'true' or '$(IsTestSupportProject)' == 'true' or '$(IsTrimmingTestProject)' == 'true'">false</IsShipping>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Treat as a generator project if either the parent or the parent parent directory is named gen. -->
+    <IsGeneratorProject Condition="$([System.IO.Path]::GetFileName('$(MSBuildProjectDirectory)')) == 'gen' or
+                                   $([System.IO.Path]::GetFileName('$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))')) == 'gen'">true</IsGeneratorProject>
+    <IsSourceProject Condition="'$(IsSourceProject)' == '' and
+                                '$(IsReferenceAssemblyProject)' != 'true' and
+                                '$(IsGeneratorProject)' != 'true' and
+                                '$(IsTestProject)' != 'true' and
+                                '$(IsTrimmingTestProject)' != 'true' and
+                                '$(IsTestSupportProject)' != 'true' and
+                                '$(UsingMicrosoftDotNetSharedFrameworkSdk)' != 'true' and
+                                '$(MSBuildProjectExtension)' != '.pkgproj' and
+                                '$(UsingMicrosoftNoTargetsSdk)' != 'true' and
+                                '$(UsingMicrosoftTraversalSdk)' != 'true'">true</IsSourceProject>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsReferenceAssemblyProject)' == 'true'">
+    <!-- Reference assemblies are special and don't initialize fields or have empty finalizers, etc. -->
+    <RunAnalyzers>false</RunAnalyzers>
+    <!-- disable warnings about unused fields -->
+    <NoWarn>$(NoWarn);CS0169;CS0649;CS8618</NoWarn>
+    <!-- disable CS8597 because we throw null on reference assemblies. -->
+    <NoWarn>$(NoWarn);CS8597</NoWarn>
+    <!-- We base calls from constructors with null literals. -->
+    <NoWarn>$(NoWarn);CS8625</NoWarn>
+    <!-- We dont need to add null annotation within the ref for explicit interface methods. -->
+    <NoWarn>$(NoWarn);CS8617</NoWarn>
+    <!-- No symbols are produced for ref assemblies, but some parts of the SDK still expect pdbs, so we explicitly tell it there are none. -->
+    <!-- Must be set after importing Arcade to override its defaults. -->
+    <DebugType>none</DebugType>
+    <!-- Don't try to publish PDBs for ref assemblies that have none. -->
+    <PublishWindowsPdb>false</PublishWindowsPdb>
+  </PropertyGroup>
+
+
+  <!-- All reference assemblies should have a ReferenceAssemblyAttribute and the 0x70 flag which prevents them from loading. -->
+  <ItemGroup Condition="'$(IsReferenceAssemblyProject)' == 'true'">
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.ReferenceAssemblyAttribute" />
+    <AssemblyAttribute Include="System.Reflection.AssemblyFlags">
+      <_Parameter1>(System.Reflection.AssemblyNameFlags)0x70</_Parameter1>
+      <_Parameter1_IsLiteral>true</_Parameter1_IsLiteral>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(IsSourceProject)' == 'true'">
+    <!-- Must be defined in a props file as imports in Microsoft.DotNet.ApiCompat.Task.targets depend on it. -->
+    <ApiCompatValidateAssemblies>true</ApiCompatValidateAssemblies>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsGeneratorProject)' == 'true'">
+    <!-- Unique assembly versions increases(3x) the compiler throughput during reference package updates. -->
+    <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
+    <!-- To suppress warnings about resetting the assembly version.-->
+    <AssemblyVersion />
+    <!-- Enforce extended rules around API usages in analyzers and generators to ensure our generators follow best practices. -->
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <!-- Warnings that should be disabled in our test projects. -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true' or '$(IsTestSupportProject)' == 'true' or '$(IsTrimmingTestProject)' == 'true'">
+    <!-- we need to re-enable BinaryFormatter within test projects since some tests exercise these code paths to ensure compat -->
+    <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+    <!-- For DotNetBuildSourceOnly, only the bundled BinaryFormatter is built which does not support serialization. -->
+    <EnableUnsafeBinaryFormatterSerialization Condition="'$(DotNetBuildSourceOnly)' == 'true'">false</EnableUnsafeBinaryFormatterSerialization>
+    <!-- don't warn on usage of BinaryFormatter or legacy serialization infrastructure from test projects -->
+    <NoWarn>$(NoWarn);SYSLIB0011;SYSLIB0050;SYSLIB0051</NoWarn>
     <!-- don't warn about unnecessary trim warning suppressions. can be removed with preview 6. -->
     <NoWarn>$(NoWarn);IL2121</NoWarn>
-
-    <!-- // Temporary diagnostic code from https://github.com/dotnet/extensions/pull/4130 for metrics APIs used in test. -->
-    <NoWarn>$(NoWarn);TBD</NoWarn>
-  </PropertyGroup>
-
-  <!-- Source code settings -->
-  <PropertyGroup>
-    <SharedSourceRoot>$(MSBuildThisFileDirectory)src\Shared\</SharedSourceRoot>
-    <GoogleTestSubmoduleRoot>$(RepoRoot)src\submodules\googletest\</GoogleTestSubmoduleRoot>
-
-    <!-- Embed source files that are not tracked by the source control manager in the PDB. -->
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- allow nullable annotated files to be incorporated into tests without warning -->
+    <Nullable Condition="'$(Nullable)' == '' and '$(Language)' == 'C#'">annotations</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>
-    <SharedFxName>Microsoft.AspNetCore.App</SharedFxName>
-    <SharedFxDescription>Shared Framework for hosting of Microsoft ASP.NET Core applications. It is open source, cross-platform and is supported by Microsoft. We hope you enjoy using it! If you do, please consider joining the active community of developers that are contributing to the project on GitHub ($(RepositoryUrl)). We happily accept issues and PRs.</SharedFxDescription>
-
-    <NETCoreAppFrameworkIdentifier>.NETCoreApp</NETCoreAppFrameworkIdentifier>
-    <NETCoreAppFramework>netcoreapp$(AspNetCoreMajorMinorVersion)</NETCoreAppFramework>
-    <AspNetCoreAppFrameworkBrandName>ASP.NET Core $(AspNetCoreMajorMinorVersion)</AspNetCoreAppFrameworkBrandName>
-
-    <TargetingPackName>Microsoft.AspNetCore.App.Ref</TargetingPackName>
-    <RuntimeInstallerBaseName>aspnetcore-runtime</RuntimeInstallerBaseName>
-    <TargetingPackInstallerBaseName>aspnetcore-targeting-pack</TargetingPackInstallerBaseName>
-  </PropertyGroup>
-
-  <!-- Compilation options which apply to all languages. Language-specific options should be set in eng/targets/$(lang).Common.props -->
-  <PropertyGroup>
-    <BuildArchitecture>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</BuildArchitecture>
-
-    <!-- This defines the list of RIDs supported by the ASP.NET Core shared framework.
-         The list is a semicolon separated list of RIDs. Whitespace may not be added to the property. -->
-    <SupportedRuntimeIdentifiers>win-x64;win-x86;win-arm;win-arm64;osx-x64;osx-arm64;linux-musl-x64;linux-musl-arm;linux-musl-arm64;linux-x64;linux-arm;linux-arm64;freebsd-x64</SupportedRuntimeIdentifiers>
-    <SupportedRuntimeIdentifiers Condition=" '$(DotNetBuildSourceOnly)' == 'true' ">$(SupportedRuntimeIdentifiers);$(TargetRuntimeIdentifier)</SupportedRuntimeIdentifiers>
-
-    <!-- Playwright provides binaries for Windows (x86 and x64), macOS (x64) and Linux (x64, non musl). We can't use it on other architectures. -->
-    <IsPlaywrightAvailable Condition="'$(TargetOsName)' == 'linux-musl' OR ('$(TargetArchitecture)' != 'x86' AND '$(TargetArchitecture)' != 'x64')">false</IsPlaywrightAvailable>
-    <IsPlaywrightAvailable Condition="'$(IsPlaywrightAvailable)' == ''">true</IsPlaywrightAvailable>
-
-    <!-- Make error messages clickable in VS Code's console -->
-    <GenerateFullPaths Condition="'$(VSCODE_CWD)' != '' OR '$(TERM_PROGRAM)' == 'vscode'">true</GenerateFullPaths>
-
-    <!-- Fixes a common error in targets implementing a NoBuild mode. -->
-    <BuildProjectReferences Condition=" '$(NoBuild)' == 'true' ">false</BuildProjectReferences>
-  </PropertyGroup>
-
-  <!-- Artifacts layout. Keep these values consistent with items defined in eng/Publishing.props. -->
-  <PropertyGroup>
-    <InstallersOutputPath>$(ArtifactsDir)installers\$(Configuration)\</InstallersOutputPath>
-    <SymbolsOutputPath>$(ArtifactsDir)symbols\$(Configuration)\</SymbolsOutputPath>
-  </PropertyGroup>
-
-  <!-- Ensure these output paths exist. -->
-  <ItemGroup>
-    <CreateDirectory Include="$(InstallersOutputPath)" />
-    <CreateDirectory Include="$(VisualStudioSetupOutputPath)" />
-  </ItemGroup>
-
-  <!-- The location of the local installation of the .NET Core shared framework. -->
-  <PropertyGroup>
-    <LocalDotNetRoot>$(RepoRoot).dotnet\</LocalDotNetRoot>
-    <LocalDotNetRoot Condition="'$(DotNetBuild)' == 'true'">DontDareMutateThisSDK</LocalDotNetRoot>
-
-    <!--
-      Override the SDK default and point to local .dotnet folder. This is done to work around
-      limitations in the way the .NET SDK finds shared frameworks and targeting packs. It allows
-      tests to use the shared frameworks and targeting packs that were just built.
-
-      However, source-build needs this to not happen while building projects that rely on the
-      AppHost framework pack. Source-build installs an SDK in a custom location outside this
-      repository, and setting NetCoreTargetingPackRoot to a different location causes source-build
-      to restore the AppHost pack as a prebuilt rather than using the one that's present in the SDK.
-      Source-build doesn't run tests, so the property is simply conditioned out.
-    -->
-    <NetCoreTargetingPackRoot Condition="'$(DotNetBuild)' != 'true'">$(LocalDotNetRoot)packs\</NetCoreTargetingPackRoot>
-    <!-- This is not correct and needs attention eventually. This is primarily used to find the nethost headers in the apphost pack.
-         These should be coming from a restored apphost pack, rather than a hard-coded local SDK. In fact, aspnetcore
-         should not rely on a local SDK or mutating one to build. -->
-    <NetCoreTargetingPackRoot Condition="'$(DotNetBuild)' == 'true'">$(DotNetRoot)packs\</NetCoreTargetingPackRoot>
-
-  </PropertyGroup>
-
-  <Import Project="eng\tools\RepoTasks\RepoTasks.tasks" Condition="'$(MSBuildProjectName)' != 'RepoTasks' AND '$(DesignTimeBuild)' != 'true'" />
-
-  <PropertyGroup>
-    <!--
-      Disable deterministic source paths in test assets and samples.
-      In order for the debugger to find source files when debugging a locally built binary the PDB must contain original, unmapped local paths
-    -->
-    <DeterministicSourcePaths Condition="'$(IsSampleProject)' == 'true' OR '$(IsTestAssetProject)' == 'true'">false</DeterministicSourcePaths>
-    <!-- Projects which reference Microsoft.AspNetCore.Mvc.Testing should import this targets file to ensure dependency .deps.json files are copied into test output. -->
-    <MvcTestingTargets>$(MSBuildThisFileDirectory)src\Mvc\Mvc.Testing\src\Microsoft.AspNetCore.Mvc.Testing.targets</MvcTestingTargets>
-    <_MvcTestingTasksAssembly>$(ArtifactsBinDir)\Microsoft.AspNetCore.Mvc.Testing.Tasks\$(Configuration)\netstandard2.0\Microsoft.AspNetCore.Mvc.Testing.Tasks.dll</_MvcTestingTasksAssembly>
-    <!-- IIS native projects can only be built on Windows for x86/x64/ARM64. -->
-    <UseIisNativeAssets Condition=" '$(TargetOsName)' == 'win' AND ('$(TargetArchitecture)' == 'x86' OR '$(TargetArchitecture)' == 'x64' OR '$(TargetArchitecture)' == 'ARM64') ">true</UseIisNativeAssets>
-    <!-- This property is shared by several projects to layout the AspNetCore.App targeting pack for installers -->
-    <TargetingPackLayoutRoot>$(ArtifactsObjDir)TargetingPack.Layout\$(Configuration)\</TargetingPackLayoutRoot>
-    <!-- This property is shared by several projects to layout the AspNetCore.App shared framework for installers -->
-    <SharedFrameworkLayoutRoot>$(ArtifactsObjDir)SharedFx.Layout\$(Configuration)\$(TargetRuntimeIdentifier)\</SharedFrameworkLayoutRoot>
-    <!-- This property points to a folder which includes both Microsoft.NETCore.App and AspNetCore.App. -->
-    <RedistSharedFrameworkLayoutRoot>$(ArtifactsObjDir)RedistSharedFx.Layout\$(Configuration)\$(TargetRuntimeIdentifier)\</RedistSharedFrameworkLayoutRoot>
-
-    <ArchiveExtension>.tar.gz</ArchiveExtension>
-    <ArchiveExtension Condition="'$(TargetOsName)' == 'win'">.zip</ArchiveExtension>
+    <CustomBeforeNoTargets>$(RepositoryEngineeringDir)NoTargetsSdk.BeforeTargets.targets</CustomBeforeNoTargets>
+    <CustomAfterTraversalTargets>$(RepositoryEngineeringDir)TraversalSdk.AfterTargets.targets</CustomAfterTraversalTargets>
   </PropertyGroup>
 
   <PropertyGroup>
-    <OfficialBaseURL>https://builds.dotnet.microsoft.com/dotnet/</OfficialBaseURL>
-    <!-- Allow overriding the public base URL for Unified Build scenarios to pull assets from a local build. -->
-    <PublicBaseURL Condition="'$(PublicBaseURL)' == ''">https://ci.dot.net/public/</PublicBaseURL>
-    <InternalBaseURL>https://ci.dot.net/internal/</InternalBaseURL>
-    <!-- Allow overriding where installers are pulled in from previously completed jobs in Unified Build scenarios. -->
-    <AddVersionToCrossArchitectureInstallerBasePath Condition="'$(CrossArchitectureInstallerBasePath)' != ''">true</AddVersionToCrossArchitectureInstallerBasePath>
-    <CrossArchitectureInstallerBasePath Condition="'$(CrossArchitectureInstallerBasePath)' == ''">$(ArtifactsShippingPackagesDir)</CrossArchitectureInstallerBasePath>
+    <!-- Keep in sync with outputs defined in Microsoft.NETCore.Platforms.csproj. -->
+    <BundledRuntimeIdentifierGraphFile>$([MSBuild]::NormalizePath('$(ArtifactsBinDir)', 'Microsoft.NETCore.Platforms', 'runtime.json'))</BundledRuntimeIdentifierGraphFile>
+    <BundledRuntimeIdentifierGraphFile Condition="!Exists('$(BundledRuntimeIdentifierGraphFile)')">$([MSBuild]::NormalizePath('$(LibrariesProjectRoot)', 'Microsoft.NETCore.Platforms', 'src', 'runtime.json'))</BundledRuntimeIdentifierGraphFile>
   </PropertyGroup>
 
-  <!-- Try various places to find the runtime. It's either released (use official version),
-        public but un-released (use dotnetbuilds/public), or internal and unreleased (use dotnetbuilds/internal) -->
-  <ItemGroup Condition="'$(DotNetBuild)' != 'true'">
-    <RemoteAssetBaseURL Include="$(OfficialBaseURL)" />
-    <RemoteAssetBaseURL Include="$(PublicBaseURL)" />
-    <!-- Include the token here as we'll generate the URLs to download based on this item group. -->
-    <RemoteAssetBaseURL Include="$(InternalBaseURL)"
-                        Condition=" '$(DotnetRuntimeSourceFeedKey)' != '' ">
-      <token>$(DotnetRuntimeSourceFeedKey)</token>
-    </RemoteAssetBaseURL>
-  </ItemGroup>
-
-  <!--
-    Only try downloading from the "public" base URL when doing a vertical build.
-    In a vertical build, the public URL will be overwritten to point to local build artifacts.
-  -->
-  <ItemGroup Condition="'$(DotNetBuild)' == 'true'">
-    <!-- MSBuild removes the '//' slashes when passing PublicBaseURL from the outer to the inner build. -->
-    <RemoteAssetBaseURL Condition="$(PublicBaseURL.StartsWith('file:')) and '$(OS)' != 'Windows_NT'" Include="$([System.Text.RegularExpressions.Regex]::Replace('$(PublicBaseURL)', '%28file:\/{1,}%29%28.+%29', 'file:///%242'))" />
-    <RemoteAssetBaseURL Condition="!$(PublicBaseURL.StartsWith('file:')) or '$(OS)' == 'Windows_NT'" Include="$(PublicBaseURL)" />
-  </ItemGroup>
-
-  <PropertyGroup>
-    <!-- PackageReadmeFile specifies the package readme file name in the package. PackageReadmeFilePath points to the package readme file on disk. -->
-    <EnableDefaultPackageReadmeFile Condition="'$(EnableDefaultPackageReadmeFile)' == '' and '$(IsShipping)' != 'false'">true</EnableDefaultPackageReadmeFile>
-    <PackageReadmeFilePath Condition="'$(PackageReadmeFilePath)' == '' and '$(EnableDefaultPackageReadmeFile)' == 'true'">PACKAGE.md</PackageReadmeFilePath>
-    <PackageReadmeFile Condition="'$(PackageReadmeFile)' == '' and '$(EnableDefaultPackageReadmeFile)' == 'true' and Exists('$(PackageReadmeFilePath)' )">PACKAGE.md</PackageReadmeFile>
-  </PropertyGroup>
-
-  <!-- Add a package README file -->
-  <ItemGroup Condition="'$(PackageReadmeFilePath)' != '' and Exists('$(PackageReadmeFilePath)' )">
-    <None Include="$(PackageReadmeFilePath)" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <PropertyGroup>
-    <!-- Set the arcade before common targets so we compute ExcludeFromBuild before arcade uses it. -->
-    <CustomBeforeMicrosoftCommonTargets>$(MSBuildThisFileDirectory)Directory.Build.BeforeCommonTargets.targets</CustomBeforeMicrosoftCommonTargets>
-    <CustomBeforeMicrosoftCommonCrossTargetingTargets>$(MSBuildThisFileDirectory)Directory.Build.BeforeCommonTargets.targets</CustomBeforeMicrosoftCommonCrossTargetingTargets>
-  </PropertyGroup>
-
-  <Import Project="eng\Workarounds.props" />
-  <Import Project="artifacts\bin\GenerateFiles\Directory.Build.props" Condition=" '$(MSBuildProjectName)' != 'GenerateFiles' " />
-  <Import Project="eng\Dependencies.props" />
-  <Import Project="eng\ProjectReferences.props" />
-  <Import Project="eng\RequiresDelayedBuildProjects.props" />
-  <Import Project="eng\SharedFramework.Local.props" />
-  <Import Project="eng\SharedFramework.External.props" />
-  <Import Project="eng\ShippingAssemblies.props" />
-  <Import Project="eng\targets\Cpp.Common.props"  Condition="'$(MSBuildProjectExtension)' == '.vcxproj'" />
-  <Import Project="eng\targets\CSharp.Common.props"  Condition="'$(MSBuildProjectExtension)' == '.csproj'" />
-  <Import Project="eng\targets\Wix.Common.props"  Condition="'$(MSBuildProjectExtension)' == '.wixproj'" />
-  <Import Project="eng\targets\Java.Common.props"  Condition="'$(MSBuildProjectExtension)' == '.javaproj'" />
-  <Import Project="eng\testing\linker\trimmingTests.props" Condition="'$(IsPublishedAppTestProject)' == 'true'" />
-  <Import Project="eng\targets\Helix.props" Condition=" $(IsTestProject) " />
-  <Import Project="eng\targets\FunctionalTestWithAssets.props" Condition=" $(IsTestProject) " />
-
-  <!-- Keys used by InternalsVisibleTo attributes. -->
-  <PropertyGroup>
-    <MoqPublicKey>0024000004800000940000000602000000240000525341310004000001000100c547cac37abd99c8db225ef2f6c8a3602f3b3606cc9891605d02baa56104f4cfc0734aa39b93bf7852f7d9266654753cc297e7d2edfe0bac1cdcf9f717241550e0a7b191195b7667bb4f64bcb8e2121380fd1d9d46ad2d92d2d15605093924cceaf74c4861eff62abf69b9291ed0a340e113be11e6a7d3113e92484cf7045cc7</MoqPublicKey>
-  </PropertyGroup>
 </Project>

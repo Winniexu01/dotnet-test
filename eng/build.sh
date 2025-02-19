@@ -1,408 +1,569 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -ue
 
-#
-# variables
-#
+source="${BASH_SOURCE[0]}"
 
-RESET="\033[0m"
-RED="\033[0;31m"
-YELLOW="\033[0;33m"
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-target_os_name=''
-ci=false
-binary_log=false
-exclude_ci_binary_log=false
-verbosity='minimal'
-run_restore=''
-run_build=true
-run_pack=false
-run_publish=false
-run_tests=false
-run_sign=false
-build_all=false
-build_deps=true
-only_build_repo_tasks=false
-build_repo_tasks=true
-build_managed=''
-build_native=''
-build_nodejs=''
-build_java=''
-build_installers=''
-build_projects=''
-target_arch='x64'
-configuration=''
-runtime_source_feed=''
-runtime_source_feed_key=''
+# resolve $source until the file is no longer a symlink
+while [[ -h "$source" ]]; do
+  scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
+  source="$(readlink "$source")"
+  # if $source was a relative symlink, we need to resolve it relative to the path where the
+  # symlink file was located
+  [[ $source != /* ]] && source="$scriptroot/$source"
+done
+scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 
-if [ "$(uname)" = "Darwin" ]; then
-    target_os_name='osx'
-elif [ "$(uname)" = "FreeBSD" ]; then
-    target_os_name='freebsd'
-else
-    target_os_name='linux'
-fi
+usage()
+{
+  echo "Common settings:"
+  echo "  --arch (-a)                     Target platform: x86, x64, arm, armv6, armel, arm64, loongarch64, riscv64, s390x, ppc64le or wasm."
+  echo "                                  [Default: Your machine's architecture.]"
+  echo "  --binaryLog (-bl)               Output binary log."
+  echo "  --cross                         Optional argument to signify cross compilation."
+  echo "  --configuration (-c)            Build configuration: Debug, Release or Checked."
+  echo "                                  Checked is exclusive to the CLR subset. It is the same as Debug, except code is"
+  echo "                                  compiled with optimizations enabled."
+  echo "                                  [Default: Debug]"
+  echo "  --help (-h)                     Print help and exit."
+  echo "  --hostConfiguration (-hc)       Host build configuration: Debug, Release or Checked."
+  echo "                                  [Default: Debug]"
+  echo "  --librariesConfiguration (-lc)  Libraries build configuration: Debug or Release."
+  echo "                                  [Default: Debug]"
+  echo "  --os                            Target operating system: windows, linux, freebsd, osx, maccatalyst, tvos,"
+  echo "                                  tvossimulator, ios, iossimulator, android, browser, wasi, netbsd, illumos, solaris"
+  echo "                                  linux-musl, linux-bionic, tizen, or haiku."
+  echo "                                  [Default: Your machine's OS.]"
+  echo "  --outputrid <rid>               Optional argument that overrides the target rid name."
+  echo "  --projects <value>              Project or solution file(s) to build."
+  echo "  --runtimeConfiguration (-rc)    Runtime build configuration: Debug, Release or Checked."
+  echo "                                  Checked is exclusive to the CLR runtime. It is the same as Debug, except code is"
+  echo "                                  compiled with optimizations enabled."
+  echo "                                  [Default: Debug]"
+  echo "  -runtimeFlavor (-rf)            Runtime flavor: CoreCLR or Mono."
+  echo "                                  [Default: CoreCLR]"
+  echo "  --subset (-s)                   Build a subset, print available subsets with -subset help."
+  echo "                                 '--subset' can be omitted if the subset is given as the first argument."
+  echo "                                  [Default: Builds the entire repo.]"
+  echo "  --usemonoruntime                Product a .NET runtime with Mono as the underlying runtime."
+  echo "  --verbosity (-v)                MSBuild verbosity: q[uiet], m[inimal], n[ormal], d[etailed], and diag[nostic]."
+  echo "                                  [Default: Minimal]"
+  echo ""
 
-msbuild_args=()
+  echo "Actions (defaults to --restore --build):"
+  echo "  --build (-b)               Build all source projects."
+  echo "                             This assumes --restore has been run already."
+  echo "  --clean                    Clean the solution."
+  echo "  --pack                     Package build outputs into NuGet packages."
+  echo "  --publish                  Publish artifacts (e.g. symbols)."
+  echo "                             This assumes --build has been run already."
+  echo "  --rebuild                  Rebuild all source projects."
+  echo "  --restore (-r)             Restore dependencies."
+  echo "  --sign                     Sign build outputs."
+  echo "  --test (-t)                Incrementally builds and runs tests."
+  echo "                             Use in conjunction with --testnobuild to only run tests."
+  echo ""
 
-#
-# Functions
-#
-__usage() {
-    echo "Usage: $(basename "${BASH_SOURCE[0]}") [options] [[--] <Arguments>...]
+  echo "Libraries settings:"
+  echo "  --coverage                 Collect code coverage when testing."
+  echo "  --framework (-f)           Build framework: net10.0 or net48."
+  echo "                             [Default: net10.0]"
+  echo "  --testnobuild              Skip building tests when invoking -test."
+  echo "  --testscope                Test scope, allowed values: innerloop, outerloop, all."
+  echo ""
 
-Arguments:
-    <Arguments>...                    Arguments passed to the command. Variable number of arguments allowed.
+  echo "Native build settings:"
+  echo "  --clang                    Optional argument to build using clang in PATH (default)."
+  echo "  --clangx                   Optional argument to build using clang version x (used for Clang 7 and newer)."
+  echo "  --clangx.y                 Optional argument to build using clang version x.y (used for Clang 6 and older)."
+  echo "  --cmakeargs                User-settable additional arguments passed to CMake."
+  echo "  --gcc                      Optional argument to build using gcc in PATH (default)."
+  echo "  --gccx.y                   Optional argument to build using gcc version x.y."
+  echo "  --portablebuild            Optional argument: set to false to force a non-portable build."
+  echo "  --keepnativesymbols        Optional argument: set to true to keep native symbols/debuginfo in generated binaries."
+  echo "  --ninja                    Optional argument: set to true to use Ninja instead of Make to run the native build."
+  echo "  --pgoinstrument            Optional argument: build PGO-instrumented runtime"
+  echo "  --fsanitize                Optional argument: Specify native sanitizers to instrument the native build with. Supported values are: 'address'."
+  echo ""
 
-Options:
-    --configuration|-c                The build configuration (Debug, Release). Default=Debug
-    --arch                            The CPU architecture to build for (x64, arm, arm64). Default=$target_arch
-    --os-name                         The base runtime identifier to build for (linux, osx, linux-musl). Default=$target_os_name
+  echo "Command line arguments starting with '/p:' are passed through to MSBuild."
+  echo "Arguments can also be passed in with a single hyphen."
+  echo ""
 
-    --[no-]restore                    Run restore.
-    --[no-]build                      Compile projects. (Implies --no-restore)
-    --[no-]pack                       Produce packages.
-    --[no-]test                       Run tests.
-    --[no-]publish                    Run publish.
-    --[no-]sign                       Run code signing.
+  echo "Here are some quick examples. These assume you are on a Linux x64 machine:"
+  echo ""
+  echo "* Build CoreCLR for Linux x64 on Release configuration:"
+  echo "./build.sh clr -c release"
+  echo ""
+  echo "* Build Debug libraries with a Release runtime for Linux x64."
+  echo "./build.sh clr+libs -rc release"
+  echo ""
+  echo "* Build Release libraries and their tests with a Checked runtime for Linux x64, and run the tests."
+  echo "./build.sh clr+libs+libs.tests -rc checked -lc release -test"
+  echo ""
+  echo "* Build CoreCLR for Linux x64 on Debug configuration using Clang 9."
+  echo "./build.sh clr -clang9"
+  echo ""
+  echo "* Build CoreCLR for Linux x64 on Debug configuration using GCC 8.4."
+  echo "./build.sh clr -gcc8.4"
+  echo ""
+  echo "* Build CoreCLR for Linux x64 using extra compiler flags (-fstack-clash-protection)."
+  echo "EXTRA_CFLAGS=-fstack-clash-protection EXTRA_CXXFLAGS=-fstack-clash-protection ./build.sh clr"
+  echo ""
+  echo "* Cross-compile CoreCLR runtime for Linux ARM64 on Release configuration."
+  echo "./build.sh clr.runtime -arch arm64 -c release -cross"
+  echo ""
+  echo "However, for this example, you need to already have ROOTFS_DIR set up."
+  echo "Further information on this can be found here:"
+  echo "https://github.com/dotnet/runtime/blob/main/docs/workflow/building/coreclr/linux-instructions.md"
+  echo ""
+  echo "* Build Mono runtime for Linux x64 on Release configuration."
+  echo "./build.sh mono -c release"
+  echo ""
+  echo "* Build Release coreclr corelib, crossgen corelib and update Debug libraries testhost to run test on an updated corelib."
+  echo "./build.sh clr.corelib+clr.nativecorelib+libs.pretest -rc release"
+  echo ""
+  echo "* Build Debug mono corelib and update Release libraries testhost to run test on an updated corelib."
+  echo "./build.sh mono.corelib+libs.pretest -rc debug -c release"
+  echo ""
+  echo ""
+  echo "For more general information, check out https://github.com/dotnet/runtime/blob/main/docs/workflow/README.md"
+}
 
-    --projects                        A list of projects to build. (Must be an absolute path.)
-                                      Globbing patterns are supported, such as \"$(pwd)/**/*.csproj\".
-    --no-build-deps                   Do not build project-to-project references and only build the specified project.
-    --no-build-repo-tasks             Suppress building RepoTasks.
-    --only-build-repo-tasks           Only build RepoTasks.
+initDistroRid()
+{
+    source "$scriptroot"/common/native/init-distro-rid.sh
 
-    --all                             Build all project types.
-    --[no-]build-native               Build native projects (C, C++). Ignored in most cases i.e. with `dotnet msbuild`.
-    --[no-]build-managed              Build managed projects (C#, F#, VB).
-    --[no-]build-nodejs               Build NodeJS projects (TypeScript, JS).
-    --[no-]build-java                 Build Java projects.
-    --[no-]build-installers           Build installers.
+    local passedRootfsDir=""
+    local targetOs="$1"
+    local targetArch="$2"
+    local isCrossBuild="$3"
 
-    --ci                              Apply CI specific settings and environment variables.
-    --binarylog|-bl                   Use a binary logger
-    --excludeCIBinarylog              Don't output binary log by default in CI builds (short: -nobl).
-    --verbosity|-v                    MSBuild verbosity: q[uiet], m[inimal], n[ormal], d[etailed], and diag[nostic]
-
-    --runtime-source-feed             Additional feed that can be used when downloading .NET runtimes and SDKs
-    --runtime-source-feed-key         Key for feed that can be used when downloading .NET runtimes and SDKs
-
-Description:
-    This build script installs required tools and runs an MSBuild command on this repository
-    This script can be used to invoke various targets, such as targets to produce packages
-    build projects, run tests, and generate code.
-"
-
-    if [[ "${1:-}" != '--no-exit' ]]; then
-        exit 2
+    # Only pass ROOTFS_DIR if __DoCrossArchBuild is specified and the current platform is not an Apple platform (that doesn't use rootfs)
+    if [[ $isCrossBuild == 1 && "$targetOs" != "osx" && "$targetOs" != "android" && "$targetOs" != "ios" && "$targetOs" != "iossimulator" && "$targetOs" != "tvos" && "$targetOs" != "tvossimulator" && "$targetOs" != "maccatalyst" ]]; then
+        passedRootfsDir=${ROOTFS_DIR}
     fi
+    initDistroRidGlobal "${targetOs}" "${targetArch}" "${passedRootfsDir}"
 }
 
-__error() {
-    echo -e "${RED}error: $*${RESET}" 1>&2
+showSubsetHelp()
+{
+  "$scriptroot/common/build.sh" "-restore" "-build" "/p:Subset=help" "/clp:nosummary /tl:false"
 }
 
-__warn() {
-    echo -e "${YELLOW}warning: $*${RESET}"
-}
+arguments=''
+cmakeargs=''
+extraargs=''
+crossBuild=0
+portableBuild=1
 
-#
-# main
-#
+source $scriptroot/common/native/init-os-and-arch.sh
 
-while [[ $# -gt 0 ]]; do
-    opt="$(echo "${1/#--/-}" | awk '{print tolower($0)}')"
-    case "$opt" in
-        -\?|-h|-help)
-            __usage --no-exit
-            exit 0
-            ;;
-        -configuration|-c)
-            shift
-            configuration="${1:-}"
-            [ -z "$configuration" ] && __error "Missing value for parameter --configuration" && __usage
-            ;;
-        -arch)
-            shift
-            target_arch="${1:-}"
-            [ -z "$target_arch" ] && __error "Missing value for parameter --arch" && __usage
-            ;;
-        -os-name|-osname)
-            shift
-            target_os_name="${1:-}"
-            [ -z "$target_os_name" ] && __error "Missing value for parameter --os-name" && __usage
-            ;;
-        -restore|-r)
-            run_restore=true
-            ;;
-        -no-restore|-norestore)
-            run_restore=false
-            ;;
-        -build|-b)
-            run_build=true
-            ;;
-        -no-build|-nobuild)
-            run_build=false
-            # --no-build implies --no-restore
-            [ -z "$run_restore" ] && run_restore=false
-            ;;
-        -no-build-deps|-nobuilddeps)
-            build_deps=false
-            ;;
-        -pack)
-            run_pack=true
-            ;;
-        -no-pack|-nopack)
-            run_pack=false
-            ;;
-        -publish)
-            run_publish=true
-            ;;
-        -no-publish|-nopublish)
-            run_publish=false
-            ;;
-        -test|-t)
-            run_tests=true
-            ;;
-        -no-test|-notest)
-            run_tests=false
-            ;;
-        -sign)
-            run_sign=true
-            ;;
-        -no-sign|-nosign)
-            run_sign=false
-            ;;
-        -projects)
-            shift
-            build_projects="${1:-}"
-            [ -z "$build_projects" ] && __error "Missing value for parameter --projects" && __usage
-            ;;
-        -all)
-            build_all=true
-            ;;
-        -build-managed|-buildmanaged)
-            build_managed=true
-            ;;
-        -no-build-managed|-nobuildmanaged)
-            build_managed=false
-            ;;
-        -build-nodejs|-buildnodejs)
-            build_nodejs=true
-            ;;
-        -no-build-nodejs|-nobuildnodejs)
-            build_nodejs=false
-            ;;
-        -build-java|-buildjava)
-            build_java=true
-            ;;
-        -no-build-java|-nobuildjava)
-            build_java=false
-            ;;
-        -build-native|-buildnative)
-            build_native=true
-            ;;
-        -no-build-native|-nobuildnative)
-            build_native=false
-            ;;
-        -build-installers|-buildinstallers)
-            build_installers=true
-            ;;
-        -no-build-installers|-nobuildinstallers)
-            build_installers=false
-            ;;
-        -no-build-repo-tasks|-nobuildrepotasks)
-            build_repo_tasks=false
-            ;;
-        -only-build-repo-tasks|-onlybuildrepotasks)
-            only_build_repo_tasks=true
-            ;;
-        -arch)
-            shift
-            target_arch="${1:-}"
-            [ -z "$target_arch" ] && __error "Missing value for parameter --arch" && __usage
-            ;;
-        -ci)
-            ci=true
-            ;;
-        -binarylog|-bl)
-            binary_log=true
-            ;;
-        -excludeCIBinarylog|-nobl)
-            exclude_ci_binary_log=true
-            ;;
-        -dotnet-runtime-source-feed|-dotnetruntimesourcefeed|-runtime-source-feed|-runtimesourcefeed)
-            shift
-            [ -z "${1:-}" ] && __error "Missing value for parameter --runtime-source-feed" && __usage
-            runtime_source_feed="${1:-}"
-            ;;
-        -dotnet-runtime-source-feed-key|-dotnetruntimesourcefeedkey|-runtime-source-feed-key|-runtimesourcefeedkey)
-            shift
-            [ -z "${1:-}" ] && __error "Missing value for parameter --runtime-source-feed-key" && __usage
-            runtime_source_feed_key="${1:-}"
-            ;;
+hostArch=$arch
+
+# Check if an action is passed in
+declare -a actions=("b" "build" "r" "restore" "rebuild" "testnobuild" "sign" "publish" "clean")
+actInt=($(comm -12 <(printf '%s\n' "${actions[@]/#/-}" | sort) <(printf '%s\n' "${@/#--/-}" | sort)))
+firstArgumentChecked=0
+
+while [[ $# > 0 ]]; do
+  opt="$(echo "${1/#--/-}" | tr "[:upper:]" "[:lower:]")"
+
+  if [[ $firstArgumentChecked -eq 0 && $opt =~ ^[a-zA-Z.+]+$ ]]; then
+    if [[ "$opt" == "help" ]]; then
+      showSubsetHelp
+      exit 0
+    fi
+
+    arguments="$arguments /p:Subset=$1"
+    shift 1
+    continue
+  fi
+
+  firstArgumentChecked=1
+
+  case "$opt" in
+     -help|-h|-\?|/?)
+      usage
+      exit 0
+      ;;
+
+     -subset|-s)
+      if [ -z ${2+x} ]; then
+        showSubsetHelp
+        exit 0
+      else
+        passedSubset="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+        if [[ "$passedSubset" == "help" ]]; then
+          showSubsetHelp
+          exit 0
+        fi
+        arguments="$arguments /p:Subset=$2"
+        shift 2
+      fi
+      ;;
+
+     -arch|-a)
+      if [ -z ${2+x} ]; then
+        echo "No architecture supplied. See help (--help) for supported architectures." 1>&2
+        exit 1
+      fi
+      passedArch="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      case "$passedArch" in
+        x64|x86|arm|armv6|armel|arm64|loongarch64|riscv64|s390x|ppc64le|wasm)
+          arch=$passedArch
+          ;;
         *)
-            msbuild_args[${#msbuild_args[*]}]="$1"
-            ;;
-    esac
-    shift
+          echo "Unsupported target architecture '$2'."
+          echo "The allowed values are x86, x64, arm, armv6, armel, arm64, loongarch64, riscv64, s390x, ppc64le and wasm."
+          exit 1
+          ;;
+      esac
+      shift 2
+      ;;
+
+     -configuration|-c)
+      if [ -z ${2+x} ]; then
+        echo "No configuration supplied. See help (--help) for supported configurations." 1>&2
+        exit 1
+      fi
+      passedConfig="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      case "$passedConfig" in
+        debug|release|checked)
+          val="$(tr '[:lower:]' '[:upper:]' <<< ${passedConfig:0:1})${passedConfig:1}"
+          ;;
+        *)
+          echo "Unsupported target configuration '$2'."
+          echo "The allowed values are Debug, Release, and Checked."
+          exit 1
+          ;;
+      esac
+      arguments="$arguments -configuration $val"
+      shift 2
+      ;;
+
+     -framework|-f)
+      if [ -z ${2+x} ]; then
+        echo "No framework supplied. See help (--help) for supported frameworks." 1>&2
+        exit 1
+      fi
+      val="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      arguments="$arguments /p:BuildTargetFramework=$val"
+      shift 2
+      ;;
+
+     -os)
+      if [ -z ${2+x} ]; then
+        echo "No target operating system supplied. See help (--help) for supported target operating systems." 1>&2
+        exit 1
+      fi
+      passedOS="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      case "$passedOS" in
+        windows)
+          os="windows" ;;
+        linux)
+          os="linux" ;;
+        freebsd)
+          os="freebsd" ;;
+        osx)
+          os="osx" ;;
+        maccatalyst)
+          os="maccatalyst" ;;
+        tvos)
+          os="tvos" ;;
+        tvossimulator)
+          os="tvossimulator" ;;
+        ios)
+          os="ios" ;;
+        iossimulator)
+          os="iossimulator" ;;
+        android)
+          os="android" ;;
+        browser)
+          os="browser" ;;
+        wasi)
+          os="wasi" ;;
+        illumos)
+          os="illumos" ;;
+        solaris)
+          os="solaris" ;;
+        linux-bionic)
+          os="linux"
+          __PortableTargetOS=linux-bionic
+          ;;
+        linux-musl)
+          os="linux"
+          __PortableTargetOS=linux-musl
+          ;;
+        haiku)
+          os="haiku" ;;
+        *)
+          echo "Unsupported target OS '$2'."
+          echo "Try 'build.sh --help' for values supported by '--os'."
+          exit 1
+          ;;
+      esac
+      arguments="$arguments /p:TargetOS=$os"
+      shift 2
+      ;;
+
+     -pack)
+      arguments="$arguments --pack /p:BuildAllConfigurations=true"
+      shift 1
+      ;;
+
+     -testscope)
+      if [ -z ${2+x} ]; then
+        echo "No test scope supplied. See help (--help) for supported test scope values." 1>&2
+        exit 1
+      fi
+      arguments="$arguments /p:TestScope=$2"
+      shift 2
+      ;;
+
+     -testnobuild)
+      arguments="$arguments /p:TestNoBuild=true"
+      shift 1
+      ;;
+
+     -coverage)
+      arguments="$arguments /p:Coverage=true"
+      shift 1
+      ;;
+
+     -runtimeconfiguration|-rc)
+      if [ -z ${2+x} ]; then
+        echo "No runtime configuration supplied. See help (--help) for supported runtime configurations." 1>&2
+        exit 1
+      fi
+      passedRuntimeConf="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      case "$passedRuntimeConf" in
+        debug|release|checked)
+          val="$(tr '[:lower:]' '[:upper:]' <<< ${passedRuntimeConf:0:1})${passedRuntimeConf:1}"
+          ;;
+        *)
+          echo "Unsupported runtime configuration '$2'."
+          echo "The allowed values are Debug, Release, and Checked."
+          exit 1
+          ;;
+      esac
+      arguments="$arguments /p:RuntimeConfiguration=$val"
+      shift 2
+      ;;
+
+     -runtimeflavor|-rf)
+      if [ -z ${2+x} ]; then
+        echo "No runtime flavor supplied. See help (--help) for supported runtime flavors." 1>&2
+        exit 1
+      fi
+      passedRuntimeFlav="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      case "$passedRuntimeFlav" in
+        coreclr|mono)
+          val="$(tr '[:lower:]' '[:upper:]' <<< ${passedRuntimeFlav:0:1})${passedRuntimeFlav:1}"
+          ;;
+        *)
+          echo "Unsupported runtime flavor '$2'."
+          echo "The allowed values are CoreCLR and Mono."
+          exit 1
+          ;;
+      esac
+      arguments="$arguments /p:RuntimeFlavor=$val"
+      shift 2
+      ;;
+
+     -usemonoruntime)
+      arguments="$arguments /p:PrimaryRuntimeFlavor=Mono"
+      shift 1
+      ;;
+
+     -librariesconfiguration|-lc)
+      if [ -z ${2+x} ]; then
+        echo "No libraries configuration supplied. See help (--help) for supported libraries configurations." 1>&2
+        exit 1
+      fi
+      passedLibConf="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      case "$passedLibConf" in
+        debug|release)
+          val="$(tr '[:lower:]' '[:upper:]' <<< ${passedLibConf:0:1})${passedLibConf:1}"
+          ;;
+        *)
+          echo "Unsupported libraries configuration '$2'."
+          echo "The allowed values are Debug and Release."
+          exit 1
+          ;;
+      esac
+      arguments="$arguments /p:LibrariesConfiguration=$val"
+      shift 2
+      ;;
+
+     -hostconfiguration|-hc)
+      if [ -z ${2+x} ]; then
+        echo "No host configuration supplied. See help (--help) for supported host configurations." 1>&2
+        exit 1
+      fi
+      passedHostConf="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      case "$passedHostConf" in
+        debug|release|checked)
+          val="$(tr '[:lower:]' '[:upper:]' <<< ${passedHostConf:0:1})${passedHostConf:1}"
+          ;;
+        *)
+          echo "Unsupported host configuration '$2'."
+          echo "The allowed values are Debug, Release, and Checked."
+          exit 1
+          ;;
+      esac
+      arguments="$arguments /p:HostConfiguration=$val"
+      shift 2
+      ;;
+
+     -cross)
+      crossBuild=1
+      arguments="$arguments /p:CrossBuild=True"
+      shift 1
+      ;;
+
+     *crossbuild=true*)
+      crossBuild=1
+      extraargs="$extraargs $1"
+      shift 1
+      ;;
+
+     -clang*)
+      compiler="${opt/#-/}" # -clang-9 => clang-9 or clang-9 => (unchanged)
+      arguments="$arguments /p:Compiler=$compiler /p:CppCompilerAndLinker=$compiler"
+      shift 1
+      ;;
+
+     -cmakeargs)
+      if [ -z ${2+x} ]; then
+        echo "No cmake args supplied." 1>&2
+        exit 1
+      fi
+      cmakeargs="${cmakeargs} $2"
+      shift 2
+      ;;
+
+     -gcc*)
+      compiler="${opt/#-/}" # -gcc-9 => gcc-9 or gcc-9 => (unchanged)
+      arguments="$arguments /p:Compiler=$compiler /p:CppCompilerAndLinker=$compiler"
+      shift 1
+      ;;
+
+     -outputrid)
+      if [ -z ${2+x} ]; then
+        echo "No value for outputrid is supplied. See help (--help) for supported values." 1>&2
+        exit 1
+      fi
+      arguments="$arguments /p:OutputRID=$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      shift 2
+      ;;
+
+     -portablebuild)
+      if [ -z ${2+x} ]; then
+        echo "No value for portablebuild is supplied. See help (--help) for supported values." 1>&2
+        exit 1
+      fi
+      passedPortable="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      if [ "$passedPortable" = false ]; then
+        portableBuild=0
+        arguments="$arguments /p:PortableBuild=false"
+      fi
+      shift 2
+      ;;
+
+     -keepnativesymbols)
+      if [ -z ${2+x} ]; then
+        echo "No value for keepNativeSymbols is supplied. See help (--help) for supported values." 1>&2
+        exit 1
+      fi
+      passedKeepNativeSymbols="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+      if [ "$passedKeepNativeSymbols" = true ]; then
+        arguments="$arguments /p:KeepNativeSymbols=true"
+      fi
+      shift 2
+      ;;
+
+
+      -ninja)
+      if [ -z ${2+x} ]; then
+        arguments="$arguments /p:Ninja=true"
+        shift 1
+      else
+        ninja="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+        if [ "$ninja" = true ]; then
+          arguments="$arguments /p:Ninja=true"
+          shift 2
+        elif [ "$ninja" = false ]; then
+          arguments="$arguments /p:Ninja=false"
+          shift 2
+        else
+          arguments="$arguments /p:Ninja=true"
+          shift 1
+        fi
+      fi
+      ;;
+
+      -pgoinstrument)
+      arguments="$arguments /p:PgoInstrument=true"
+      shift 1
+      ;;
+
+      -fsanitize)
+      if [ -z ${2+x} ]; then
+        echo "No value for -fsanitize is supplied. See help (--help) for supported values." 1>&2
+        exit 1
+      fi
+      arguments="$arguments /p:EnableNativeSanitizers=$2"
+      shift 2
+      ;;
+
+      -fsanitize=*)
+      sanitizers="${opt/#-fsanitize=/}" # -fsanitize=address => address
+      arguments="$arguments /p:EnableNativeSanitizers=$sanitizers"
+      shift 2
+      ;;
+
+      -verbose)
+      arguments="$arguments /p:CoreclrVerbose=true"
+      shift 1
+      ;;
+
+      *)
+      extraargs="$extraargs $1"
+      shift 1
+      ;;
+  esac
 done
 
-if [ "$build_all" = true ]; then
-    msbuild_args[${#msbuild_args[*]}]="-p:BuildAllProjects=true"
+if [ ${#actInt[@]} -eq 0 ]; then
+    arguments="-restore -build $arguments"
 fi
 
-if [ ! -z "$build_projects" ]; then
-    [[ "$build_projects" == /* ]] || build_projects="$DIR/$build_projects"
-    msbuild_args[${#msbuild_args[*]}]="-p:ProjectToBuild=$build_projects"
-elif [ "$build_all" != true ] && [ -z "$build_managed$build_nodejs$build_java$build_native$build_installers" ]; then
-    # This goal of this is to pick a sensible default for `build.sh` with zero arguments.
-    # We believe the most common thing our contributors will work on is C#, so if no other build group was picked, build the C# projects.
-    __warn "No default group of projects was specified, so building the 'managed' and its dependent subset of projects. Run ``build.sh --help`` for more details."
-    build_managed=true
-elif [ "$build_all" != true ] && [ -z "$build_managed" ] && ! [[ "$build_nodejs$build_java$build_native$build_installers" =~ "true" ]]; then
-    # If only negative options were chosen, assume --build-managed.
-    build_managed=true
+if [[ "$os" == "browser" ]]; then
+    # override default arch for Browser, we only support wasm
+    arch=wasm
+fi
+if [[ "$os" == "wasi" ]]; then
+    # override default arch for wasi, we only support wasm
+    arch=wasm
 fi
 
-if [ "$build_deps" = false ]; then
-    msbuild_args[${#msbuild_args[*]}]="-p:BuildProjectReferences=false"
+if [[ "${TreatWarningsAsErrors:-}" == "false" ]]; then
+    arguments="$arguments -warnAsError false"
 fi
 
-if [ "$build_managed" = true ] || ([ "$build_all" = true ] && [ "$build_managed" != false ]); then
-    if [ -z "$build_nodejs" ]; then
-        if [ -x "$(command -v node)" ]; then
-            __warn "Building of C# project is enabled and has dependencies on NodeJS projects. Building of NodeJS projects is enabled since node is detected on PATH."
-            __warn "Note that if you are running Source Build, building NodeJS projects will be disabled later on."
-            build_nodejs=true
-        else
-            __warn "Building of NodeJS projects is disabled since node is not detected on Path and no BuildNodeJs or NoBuildNodeJs setting is set explicitly."
-            build_nodejs=false
-        fi
-    fi
+# disable terminal logger for now: https://github.com/dotnet/runtime/issues/97211
+arguments="$arguments -tl:false"
 
-    if [ "$build_nodejs" = false ]; then
-        __warn "Some managed projects depend on NodeJS projects. Building NodeJS is disabled so the managed projects will fallback to using the output from previous builds. The output may not be correct or up to date."
-    fi
-fi
+initDistroRid "$os" "$arch" "$crossBuild"
 
-# Only set these MSBuild properties if they were explicitly set by build parameters.
-[ ! -z "$build_java" ] && msbuild_args[${#msbuild_args[*]}]="-p:BuildJava=$build_java"
-[ ! -z "$build_native" ] && msbuild_args[${#msbuild_args[*]}]="-p:BuildNative=$build_native"
-[ ! -z "$build_nodejs" ] && msbuild_args[${#msbuild_args[*]}]="-p:BuildNodeJSUnlessSourcebuild=$build_nodejs"
-[ ! -z "$build_managed" ] && msbuild_args[${#msbuild_args[*]}]="-p:BuildManaged=$build_managed"
-[ ! -z "$build_installers" ] && msbuild_args[${#msbuild_args[*]}]="-p:BuildInstallers=$build_installers"
+# Disable targeting pack caching as we reference a partially constructed targeting pack and update it later.
+# The later changes are ignored when using the cache.
+export DOTNETSDK_ALLOW_TARGETING_PACK_CACHING=0
 
-# Run restore by default unless --no-restore or --no-build was specified.
-[ -z "$run_restore" ] && run_restore=true
-
-msbuild_args[${#msbuild_args[*]}]="-p:Restore=$run_restore"
-msbuild_args[${#msbuild_args[*]}]="-p:Build=$run_build"
-if [ "$run_build" = false ]; then
-    msbuild_args[${#msbuild_args[*]}]="-p:NoBuild=true"
-fi
-msbuild_args[${#msbuild_args[*]}]="-p:Pack=$run_pack"
-msbuild_args[${#msbuild_args[*]}]="-p:Publish=$run_publish"
-msbuild_args[${#msbuild_args[*]}]="-p:Test=$run_tests"
-msbuild_args[${#msbuild_args[*]}]="-p:Sign=$run_sign"
-
-msbuild_args[${#msbuild_args[*]}]="-p:TargetArchitecture=$target_arch"
-msbuild_args[${#msbuild_args[*]}]="-p:TargetOsName=$target_os_name"
-
-if [ -z "$configuration" ]; then
-    if [ "$ci" = true ]; then
-        configuration='Release'
-    else
-        configuration='Debug'
-    fi
-fi
-msbuild_args[${#msbuild_args[*]}]="-p:Configuration=$configuration"
-
-# Set up additional runtime args
-toolset_build_args=()
-if [ ! -z "$runtime_source_feed$runtime_source_feed_key" ]; then
-    runtimeFeedArg="/p:DotNetRuntimeSourceFeed=$runtime_source_feed"
-    runtimeFeedKeyArg="/p:DotNetRuntimeSourceFeedKey=$runtime_source_feed_key"
-    msbuild_args[${#msbuild_args[*]}]=$runtimeFeedArg
-    msbuild_args[${#msbuild_args[*]}]=$runtimeFeedKeyArg
-    toolset_build_args[${#toolset_build_args[*]}]=$runtimeFeedArg
-    toolset_build_args[${#toolset_build_args[*]}]=$runtimeFeedKeyArg
-fi
-
-# Initialize global variables need to be set before the import of Arcade is imported
-restore=$run_restore
-
-# Disable node reuse - Workaround perpetual issues in node reuse and custom task assemblies
-nodeReuse=false
-export MSBUILDDISABLENODEREUSE=1
-
-# Ensure passing neither --bl nor --nobl on CI avoids errors in tools.sh. This is needed because we set both variables
-# to false by default i.e. they always exist. (We currently avoid binary logs but that is made visible in the YAML.)
-if [[ "$ci" == true && "$exclude_ci_binary_log" == false ]]; then
-    binary_log=true
-fi
-
-# increase file descriptor limit on macOS
-if [ "$(uname)" = "Darwin" ]; then
-    ulimit -n 10000
-fi
-
-# tools.sh expects the remaining arguments to be available via the $properties string array variable
-# TODO: Remove when https://github.com/dotnet/source-build/issues/4337 is implemented.
-properties=$msbuild_args
-
-# Import Arcade
-. "$DIR/common/tools.sh"
-
-# Add default .binlog location if not already on the command line. tools.sh does not handle this; it just checks
-# $binary_log, $ci and $exclude_ci_binary_log values for an error case.
-if [[ "$binary_log" == true ]]; then
-    found=false
-    for arg in "${msbuild_args[@]}"; do
-        opt="$(echo "${arg/#--/-}" | awk '{print tolower($0)}')"
-        if [[ "$opt" == [-/]bl:* || "$opt" == [-/]binarylogger:* ]]; then
-            found=true
-            break
-        fi
-    done
-    if [[ "$found" == false ]]; then
-        msbuild_args[${#msbuild_args[*]}]="/bl:$log_dir/Build.binlog"
-    fi
-    toolset_build_args[${#toolset_build_args[*]}]="/bl:$log_dir/Build.repotasks.binlog"
-elif [[ "$ci" == true ]]; then
-    # Ensure the artifacts/log directory isn't empty to avoid warnings.
-    touch "$log_dir/empty.log"
-fi
-
-# Capture MSBuild crash logs
-export MSBUILDDEBUGPATH="$log_dir"
-
-# Set this global property so Arcade will always initialize the toolset. The error message you get when you build on a clean machine
-# with -norestore is not obvious about what to do to fix it. As initialization takes very little time, we think always initializing
-# the toolset is a better default behavior.
-_tmp_restore=$restore
-restore=true
-
-InitializeToolset
-
-restore=$_tmp_restore=
-
-if [ "$build_repo_tasks" = true ]; then
-    MSBuild $_InitializeToolset \
-        -p:RepoRoot="$repo_root" \
-        -p:Projects="$DIR/tools/RepoTasks/RepoTasks.csproj" \
-        -p:Configuration=Release \
-        -p:Restore=$run_restore \
-        -p:Build=true \
-        -clp:NoSummary \
-        ${toolset_build_args[@]+"${toolset_build_args[@]}"}
-fi
-
-if [ "$only_build_repo_tasks" != true ]; then
-    # This incantation avoids unbound variable issues if msbuild_args is empty
-    # https://stackoverflow.com/questions/7577052/bash-empty-array-expansion-with-set-u
-    MSBuild $_InitializeToolset -p:RepoRoot="$repo_root" ${msbuild_args[@]+"${msbuild_args[@]}"} -v:d
-fi
-
-ExitWithExitCode 0
+# URL-encode space (%20) to avoid quoting issues until the msbuild call in /eng/common/tools.sh.
+# In *proj files (XML docs), URL-encoded string are rendered in their decoded form.
+cmakeargs="${cmakeargs// /%20}"
+arguments="$arguments /p:TargetArchitecture=$arch /p:BuildArchitecture=$hostArch"
+arguments="$arguments /p:CMakeArgs=\"$cmakeargs\" $extraargs"
+"$scriptroot/common/build.sh" $arguments

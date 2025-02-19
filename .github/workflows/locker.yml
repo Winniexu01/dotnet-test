@@ -1,7 +1,7 @@
-name: Locker - Lock stale issues
+name: Locker - Lock stale issues and PRs
 on:
   schedule:
-    - cron: '34 8 * * *' # Once per day, overnight PT, uncommon minute of hour
+    - cron: '37 8 * * *' # Once per day, early morning PT
 
   workflow_dispatch:
     # Manual triggering through the GitHub UI, API, or CLI
@@ -27,7 +27,7 @@ jobs:
         with:
           repository: "microsoft/vscode-github-triage-actions"
           path: ./actions
-          ref: 066bee9cefa6f0b4bf306040ff36fc7d96a6d56d # Pin to commit: https://github.com/microsoft/vscode-github-triage-actions/commit/066bee9cefa6f0b4bf306040ff36fc7d96a6d56d
+          ref: 066bee9cefa6f0b4bf306040ff36fc7d96a6d56d # locker action commit sha
       - name: Install Actions
         run: npm install --production --prefix ./actions
       - name: Run Locker
@@ -35,5 +35,3 @@ jobs:
         with:
           daysSinceClose:  ${{ fromJson(inputs.daysSinceClose  || 30) }}
           daysSinceUpdate: ${{ fromJson(inputs.daysSinceUpdate || 30) }}
-          ignoredLabel: "Bot: Do Not Lock"
-          typeIs: issue

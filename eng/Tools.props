@@ -1,13 +1,18 @@
 <Project>
-  <!-- Update the generated files when we restore projects. -->
-  <Target Name="GenerateDirectoryBuildFiles"
-      AfterTargets="Restore">
-    <!-- Separate invocations and use different properties to ensure second can load the restored package info. -->
-    <MSBuild Projects="$(RepoRoot)eng\tools\GenerateFiles\GenerateFiles.csproj"
-        RemoveProperties="BaseIntermediateOutputPath"
-        Targets="Restore" />
-    <MSBuild Projects="$(RepoRoot)eng\tools\GenerateFiles\GenerateFiles.csproj"
-        RemoveProperties="BaseIntermediateOutputPath;ExcludeRestorePackageImports"
-        Targets="GenerateDirectoryBuildFiles" />
-  </Target>
+  <PropertyGroup>
+    <!-- Unset the repo tool manifest property in CI as we don't use repo tools there anyway,
+    until https://github.com/dotnet/sdk/issues/10938 is fixed. -->
+    <_RepoToolManifest Condition="'$(ContinuousIntegrationBuild)' == 'true'" />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.Build.Tasks.Packaging" Version="$(MicrosoftDotNetBuildTasksPackagingVersion)" />
+    <PackageReference Include="Microsoft.DotNet.Build.Tasks.Templating" Version="$(MicrosoftDotNetBuildTasksTemplatingVersion)" />
+  </ItemGroup>
+
+  <!-- excluded from source build -->
+  <ItemGroup Condition="'$(DotNetBuildSourceOnly)' != 'true'">
+    <PackageReference Include="Microsoft.DotNet.VersionTools.Tasks" Version="$(MicrosoftDotNetVersionToolsTasksVersion)" />
+  </ItemGroup>
+
 </Project>

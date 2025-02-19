@@ -1,124 +1,219 @@
-# How to contribute
+# Contribution to .NET Runtime
 
-One of the easiest ways to contribute is to participate in discussions on GitHub issues. You can also contribute by submitting pull requests with code changes.
+You can contribute to .NET Runtime with issues and PRs. Simply filing issues for problems you encounter is a great way to contribute. Contributing implementations is greatly appreciated.
 
-## General feedback and discussions?
+## Reporting Issues
 
-Start a discussion on the [repository issue tracker](https://github.com/dotnet/aspnetcore/issues).
+We always welcome bug reports, API proposals and overall feedback. Here are a few tips on how you can make reporting your issue as effective as possible.
 
-## Bugs and feature requests?
+### Identify Where to Report
 
-> [!IMPORTANT]
-> **If you want to report a security-related issue, please see the `Reporting security issues and bugs` section below.**
+The .NET codebase is distributed across multiple repositories in the [dotnet organization](https://github.com/dotnet). Depending on the feedback you might want to file the issue on a different repo. Here are a few common repos:
 
-Before reporting a new issue, try to find an existing issue if one already exists. If it already exists, upvote (👍) it. Also, consider adding a comment with your unique scenarios and requirements related to that issue.  Upvotes and clear details on the issue's impact help us prioritize the most important issues to be worked on sooner rather than later. If you can't find one, that's okay, we'd rather get a duplicate report than none.
+* [dotnet/runtime](https://github.com/dotnet/runtime) .NET runtime, libraries and shared host installers.
+* [dotnet/roslyn](https://github.com/dotnet/roslyn) C# and VB compiler.
+* [dotnet/aspnetcore](https://github.com/dotnet/aspnetcore) ASP.NET Core.
+* [dotnet/efcore](https://github.com/dotnet/efcore) Entity Framework Core.
+* [dotnet/maui](https://github.com/dotnet/maui) .NET MAUI.
+* [dotnet/core](https://github.com/dotnet/core) Can be used to submit feedback if not sure what repo to use.
 
-If you can't find an existing issue, log a new issue in the appropriate GitHub repository. Here are some of the most common repositories:
+### Finding Existing Issues
 
-* [Docs](https://github.com/aspnet/Docs)
-* [AspNetCore](https://github.com/dotnet/aspnetcore)
-* [Entity Framework Core](https://github.com/dotnet/efcore)
-* [Tooling](https://github.com/aspnet/Tooling)
-* [Runtime](https://github.com/dotnet/runtime)
+Before filing a new issue, please search our [open issues](https://github.com/dotnet/runtime/issues) to check if it already exists.
 
-Or browse the full list of repositories in the [aspnet](https://github.com/aspnet/) organization.
+If you do find an existing issue, please include your own feedback in the discussion. Do consider upvoting (👍 reaction) the original post, as this helps us prioritize popular issues in our backlog.
 
-## Reporting security issues and bugs
+### Writing a Good API Proposal
 
-Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center (MSRC)  secure@microsoft.com. You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your original message. Further information, including the MSRC PGP key, can be found in the [Security TechCenter](https://technet.microsoft.com/security/ff852094.aspx).
+Please review our [API review process](https://github.com/dotnet/runtime/blob/main/docs/project/api-review-process.md) documents for guidelines on how to submit an API review. When ready to submit a proposal, please use the [API Suggestion issue template](https://github.com/dotnet/runtime/issues/new?assignees=&labels=api-suggestion&template=02_api_proposal.yml&title=%5BAPI+Proposal%5D%3A+).
 
-## Other discussions
+### Writing a Good Bug Report
 
-Our team members also monitor several other discussion forums:
+Good bug reports make it easier for maintainers to verify and root cause the underlying problem. The better a bug report, the faster the problem will be resolved. Ideally, a bug report should contain the following information:
 
-* [ASP.NET Core forum](https://forums.asp.net/1255.aspx/1?ASP+NET+5)
-* [Stack Overflow](https://stackoverflow.com/) with the [`asp.net-core`](https://stackoverflow.com/questions/tagged/asp.net-core), [`asp.net-core-mvc`](https://stackoverflow.com/questions/tagged/asp.net-core-mvc), or [`entity-framework-core`](https://stackoverflow.com/questions/tagged/entity-framework-core) tags.
+* A high-level description of the problem.
+* A _minimal reproduction_, i.e. the smallest size of code/configuration required to reproduce the wrong behavior.
+* A description of the _expected behavior_, contrasted with the _actual behavior_ observed.
+* Information on the environment: OS/distro, CPU arch, SDK version, etc.
+* Additional information, e.g. is it a regression from previous versions? are there any known workarounds?
 
-## How to submit a PR
+When ready to submit a bug report, please use the [Bug Report issue template](https://github.com/dotnet/runtime/issues/new?assignees=&labels=&template=01_bug_report.yml).
 
-We are always happy to see PRs from community members both for bug fixes as well as new features.
-To help you be successful we've put together a few simple rules to follow when you prepare to contribute to our codebase:
+#### Why are Minimal Reproductions Important?
 
-### Finding an issue to work on
+A reproduction lets maintainers verify the presence of a bug, and diagnose the issue using a debugger. A _minimal_ reproduction is the smallest possible console application demonstrating that bug. Minimal reproductions are generally preferable since they:
 
-  Over the years we've seen many PRs targeting areas of the framework, which we didn't plan to expand further at the time.
-  In all these cases we had to say `no` to those PRs and close them. That, obviously, is not a great outcome for us. And it's especially bad for the contributor, as they've spent a lot of effort preparing the change.
-  To resolve this problem, we've decided to separate a bucket of issues, which would be great candidates for community members to contribute to. We mark these issues with the `help wanted` label. You can find all these issues at [https://aka.ms/aspnet/helpwanted](https://aka.ms/aspnet/helpwanted). When you choose an issue you'd like to work on, you'll see that some include a comment from our team that follows the [Issue Summary Template](/docs/HelpWantedIssueSummaryCommentTemplate.md). That comment is meant to make it much simpler for you to both understand what the problem is as well as provide references and hints about how to approach it.
+1. Focus debugging efforts on a simple code snippet,
+2. Ensure that the problem is not caused by unrelated dependencies/configuration,
+3. Avoid the need to share production codebases.
 
-Within that set, we have additionally marked issues that are good candidates for first-time contributors. Those do not require too much familiarity with the framework and are more novice-friendly. Those are marked with the `good first issue` label. The full list of such issues can be found at [https://aka.ms/aspnet/goodfirstissues](https://aka.ms/aspnet/goodfirstissues).
+#### Are Minimal Reproductions Required?
 
-If you would like to make a contribution to an area not documented here, first open an issue with a description of the change you would like to make and the problem it solves so it can be discussed before a pull request is submitted.
+In certain cases, creating a minimal reproduction might not be practical (e.g. due to nondeterministic factors, external dependencies). In such cases you would be asked to provide as much information as possible, for example by sharing a memory dump of the failing application. If maintainers are unable to root cause the problem, they might still close the issue as not actionable. While not required, minimal reproductions are strongly encouraged and will significantly improve the chances of your issue being prioritized and fixed by the maintainers.
 
-### Before writing code
+#### How to Create a Minimal Reproduction
 
-  We've seen PRs, where customers would solve an issue in a way, which either wouldn't fit into the framework because of how it's designed or it would change the framework in a way, which is not something we'd like to do. To avoid these situations and potentially save you a lot of time, we encourage customers to discuss the preferred design with the team first. To do so, file a new `design proposal` issue, link to the issue you'd like to address, and provide detailed information about how you'd like to solve a specific problem. We triage issues periodically and it will not take long for a team member to engage with you on that proposal.
-  When you get an agreement from our team members that the design proposal you have is solid, then go ahead and prepare the PR.
-  To file a design proposal, look for the relevant issue in the `New issue` page or simply click [this link](https://github.com/dotnet/aspnetcore/issues/new?assignees=&labels=design-proposal&template=4_design_proposal.md):
-  ![image](https://user-images.githubusercontent.com/34246760/107969904-41b9ae80-6f65-11eb-8b84-d15e7d94753b.png)
+The best way to create a minimal reproduction is gradually removing code and dependencies from a reproducing app, until the problem no longer occurs. A good minimal reproduction:
 
-### Before submitting the pull request
+* Excludes all unnecessary types, methods, code blocks, source files, nuget dependencies and project configurations.
+* Contains documentation or code comments illustrating expected vs actual behavior.
+* If possible, avoids performing any unneeded IO or system calls. For example, can the ASP.NET based reproduction be converted to a plain old console app?
 
-Before submitting a pull request, make sure that it checks the following requirements:
+## Contributing Changes
 
-* You find an existing issue with the "help-wanted" label or discuss with the team to agree on adding a new issue with that label
-* You post a high-level description of how it will be implemented and receive a positive acknowledgement from the team before getting too committed to the approach or investing too much effort in implementing it.
-* You add test coverage following existing patterns within the codebase
-* Your code matches the existing syntax conventions within the codebase
-* Your PR is small, focused, and avoids making unrelated changes
+Project maintainers will merge changes that improve the product significantly.
 
-If your pull request contains any of the below, it's less likely to be merged.
+The [Pull Request Guide](docs/workflow/ci/pr-guide.md) and [Copyright](docs/project/copyright.md) docs define additional guidance.
 
-* Changes that break backward compatibility
-* Changes that are only wanted by one person/company. Changes need to benefit a large enough proportion of ASP.NET developers.
-* Changes that add entirely new feature areas without prior agreement
-* Changes that are mostly about refactoring existing code or code style
-* Very large PRs that would take hours to review (remember, we're trying to help lots of people at once). For larger work areas, please discuss with us to find ways of breaking it down into smaller, incremental pieces that can go into separate PRs.
+### DOs and DON'Ts
 
-### During pull request review
+Please do:
 
-A core contributor will review your pull request and provide feedback. To ensure that there is not a large backlog of inactive PRs, the pull request will be marked as stale after two weeks of no activity. After another four days, it will be closed.
+* **DO** follow our [coding style](docs/coding-guidelines/coding-style.md) (C# code-specific).
+* **DO** give priority to the current style of the project or file you're changing even if it diverges from the general guidelines.
+* **DO** include tests when adding new features. When fixing bugs, start with
+  adding a test that highlights how the current behavior is broken.
+* **DO** keep the discussions focused. When a new or related topic comes up
+  it's often better to create new issue than to side track the discussion.
+* **DO** clearly state on an issue that you are going to take on implementing it.
+* **DO** blog and tweet (or whatever) about your contributions, frequently!
 
-### Resources to help you get started
+Please do not:
 
-Here are some resources to help you get started on how to contribute code or new content.
+* **DON'T** make PRs for style changes.
+* **DON'T** surprise us with big pull requests. Instead, file an issue and start
+  a discussion so we can agree on a direction before you invest a large amount
+  of time.
+* **DON'T** commit code that you didn't write. If you find code that you think is a good fit to add to the .NET runtime, file an issue and start a discussion before proceeding.
+* **DON'T** submit PRs that alter licensing related files or headers. If you believe there's a problem with them, file an issue and we'll be happy to discuss it.
+* **DON'T** add API additions without filing an issue and discussing with us first. See [API Review Process](docs/project/api-review-process.md).
 
-* Look at the [Contributor documentation](/docs/README.md) to get started on building the source code on your own.
-* ["Help wanted" issues](https://github.com/dotnet/aspnetcore/labels/help%20wanted) - these issues are up for grabs. Comment on an issue if you want to create a fix.
-* ["Good first issue" issues](https://github.com/dotnet/aspnetcore/labels/good%20first%20issue) - we think these are good for newcomers.
+### Breaking Changes
 
-### Identifying the scale
+Contributions must maintain [API signature](docs/coding-guidelines/breaking-changes.md#bucket-1-public-contract) and behavioral compatibility. Contributions that include [breaking changes](docs/coding-guidelines/breaking-changes.md) will be rejected. Please file an issue to discuss your idea or change if you believe that it may affect managed code compatibility.
 
-If you would like to contribute to one of our repositories, first identify the scale of what you would like to contribute. If it is small (grammar/spelling or a bug fix) feel free to start working on a fix. If you are submitting a feature or substantial code contribution, please discuss it with the team and ensure it follows the product roadmap. You might also read these two blogs posts on contributing code: [Open Source Contribution Etiquette](http://tirania.org/blog/archive/2010/Dec-31.html) by Miguel de Icaza and [Don't "Push" Your Pull Requests](https://www.igvita.com/2011/12/19/dont-push-your-pull-requests/) by Ilya Grigorik. All code submissions will be rigorously reviewed and tested further by the ASP.NET team, and only those that meet an extremely high bar for both quality and design/roadmap appropriateness will be merged into the source.
+### Suggested Workflow
 
-### Submitting a pull request
+We use and recommend the following workflow:
 
-You will need to sign a [Contributor License Agreement](https://cla.dotnetfoundation.org/) when submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to follow the instructions provided by the CLA bot when you send the pull request. This needs to only be done once for any .NET Foundation OSS project.
+1. Create an issue for your work.
+    - You can skip this step for trivial changes.
+    - Reuse an existing issue on the topic, if there is one.
+    - Get agreement from the team and the community that your proposed change is a good one.
+    - If your change adds a new API, follow the [API Review Process](docs/project/api-review-process.md).
+    - Clearly state that you are going to take on implementing it, if that's the case. You can request that the issue be assigned to you. Note: The issue filer and the implementer don't have to be the same person.
+2. Create a personal fork of the repository on GitHub (if you don't already have one).
+3. In your fork, create a branch off of main (`git checkout -b mybranch`).
+    - Name the branch so that it clearly communicates your intentions, such as issue-123 or githubhandle-issue.
+    - Branches are useful since they isolate your changes from incoming changes from upstream. They also enable you to create multiple PRs from the same fork.
+4. Make and commit your changes to your branch.
+    - [Workflow Instructions](docs/workflow/README.md) explains how to build and test.
+    - Please follow our [Commit Messages](#commit-messages) guidance.
+5. Add new tests corresponding to your change, if applicable.
+6. Build the repository with your changes.
+    - Make sure that the builds are clean.
+    - Make sure that the tests are all passing, including your new tests.
+7. Create a pull request (PR) against the dotnet/runtime repository's **main** branch.
+    - State in the description what issue or improvement your change is addressing.
+    - Check if all the Continuous Integration checks are passing. Refer to [triaging failures in CI](docs/workflow/ci/failure-analysis.md) to check if any outstanding errors are known.
+8. Wait for feedback or approval of your changes from the [area owners](docs/area-owners.md).
+    - Details about the pull request [review procedure](docs/workflow/ci/pr-guide.md).
+9. When area owners have signed off, and all checks are green, your PR will be merged.
+    - The next official build will automatically include your change.
+    - You can delete the branch you used for making the change.
 
-If you don't know what a pull request is read this article: <https://help.github.com/articles/using-pull-requests>. Make sure the repository can build and all tests pass. Familiarize yourself with the project workflow and our coding conventions. The coding, style, and general engineering guidelines are published on the [Engineering guidelines](https://github.com/dotnet/aspnetcore/wiki/Engineering-guidelines) page.
+### Help Wanted (Up for Grabs)
 
-### Tests
+The team marks the most straightforward issues as [help wanted](https://github.com/dotnet/runtime/labels/help%20wanted). This set of issues is the place to start if you are interested in contributing but new to the codebase.
 
-* Tests need to be provided for every bug/feature that is completed.
-* Tests only need to be present for issues that need to be verified by QA (for example, not tasks)
-* If there is a scenario that is far too hard to test there does not need to be a test for it.
-  * "Too hard" is determined by the team as a whole.
+### Commit Messages
 
-### Feedback
+Please format commit messages as follows (based on [A Note About Git Commit Messages](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html)):
 
-Your pull request will now go through extensive checks by the subject matter experts on our team. Please be patient; we have hundreds of pull requests across all of our repositories. Update your pull request according to feedback until it is approved by one of the ASP.NET team members. After that, one of our team members may adjust the branch you merge into based on the expected release schedule.
+```
+Summarize change in 50 characters or less
 
-## Merging pull requests
+Provide more detail after the first line. Leave one blank line below the
+summary and wrap all lines at 72 characters or less.
 
-When your pull request has had all feedback addressed, it has been signed off by one or more reviewers with commit access, and all checks are green, we will commit it.
+If the change fixes an issue, leave another blank line after the final
+paragraph and indicate which issue is fixed in the specific format
+below.
 
-We commit pull requests as a single Squash commit unless there are special circumstances. This creates a simpler history than a Merge or Rebase commit. "Special circumstances" are rare, and typically mean that there are a series of cleanly separated changes that will be too hard to understand if squashed together, or for some reason we want to preserve the ability to bisect them.
+Fix #42
+```
 
-## Additional Resources
+Also do your best to factor commits appropriately, not too large with unrelated things in the same commit, and not too small with the same small change applied N times in N different commits.
 
-Here are videos (partially outdated) where members of the ASP.NET Core team provide guidance, advice and samples on how to contribute to this project.
-* For ASP.NET Core - https://www.youtube.com/watch?v=hVdwb41FPvU
-* For Blazor - https://www.youtube.com/watch?v=gRg0xxK8L6w
+### Contributor License Agreement
 
-## Code of conduct
+You must sign a [.NET Foundation Contribution License Agreement (CLA)](https://cla.dotnetfoundation.org) before your PR will be merged. This is a one-time requirement for projects in the .NET Foundation. You can read more about [Contribution License Agreements (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement) on Wikipedia and the [Microsoft Open Source](https://opensource.microsoft.com/cla/) program.
 
-See [CODE-OF-CONDUCT.md](./CODE-OF-CONDUCT.md)
+You don't have to do this up-front. You can simply clone, fork, and submit your pull-request as usual. When your pull-request is created, it is classified by a CLA bot. If the change is trivial (for example, you just fixed a typo), then the PR is labelled with `cla-not-required`. Otherwise it's classified as `cla-required` and the CLA bot will present the agreement to you on the pull-request. The CLA bot will provide a prompt to sign the CLA through a comment on the pull-request. Once you sign a CLA, the current and all future pull-requests will be labelled as `cla-signed`.
+
+### File Headers
+
+The following file header is the used for files in this repo. Please use it for new files.
+
+```
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+```
+
+- See [class.cpp](./src/coreclr/vm/class.cpp) for an example of the header in a C++ file.
+- See [List.cs](./src/libraries/System.Private.CoreLib/src/System/Collections/Generic/List.cs) for an example of the header in a C# file.
+
+### PR - CI Process
+
+The [dotnet continuous integration](https://dev.azure.com/dnceng-public/public/_build) (CI) system will automatically perform the required builds and run tests (including the ones you are expected to run) for PRs. Builds and test runs must be clean or have bugs properly filed against flaky/unexpected failures that are unrelated to your change.
+
+If the CI build fails for any reason, the PR issue will link to the `Azure DevOps` build with further information on the failure.
+
+### PR Feedback
+
+Microsoft team and community members will provide feedback on your change. Community feedback is highly valued. You will often see the absence of team feedback if the community has already provided good review feedback.
+
+One or more Microsoft team members will review every PR prior to merge. They will often reply with "LGTM, modulo comments". That means that the PR will be merged once the feedback is resolved. "LGTM" == "looks good to me".
+
+There are lots of thoughts and [approaches](https://github.com/antlr/antlr4-cpp/blob/master/CONTRIBUTING.md#emoji) for how to efficiently discuss changes. It is best to be clear and explicit with your feedback. Please be patient with people who might not understand the finer details about your approach to feedback.
+
+### Contributing Ports
+
+We encourage ports of CoreCLR to other platforms. There are multiple ports ongoing at any one time. You may be interested in one of the following ports:
+
+Chips:
+
+- [ARM32](https://github.com/dotnet/runtime/labels/arch-arm32)
+- [ARM64](https://github.com/dotnet/runtime/labels/arch-arm64)
+- [X86](https://github.com/dotnet/runtime/labels/arch-x86)
+- [LoongArch64](https://github.com/dotnet/runtime/labels/arch-loongarch64)
+- [RISC-V](https://github.com/dotnet/runtime/labels/arch-riscv)
+
+Operating System:
+
+- [Linux](https://github.com/dotnet/runtime/labels/os-linux)
+- [macOS](https://github.com/dotnet/runtime/labels/os-mac-os-x)
+- [Windows Subsystem for Linux](https://github.com/dotnet/runtime/labels/os-windows-wsl)
+- [FreeBSD](https://github.com/dotnet/runtime/labels/os-freebsd)
+
+Note: Add links to install instructions for each of these ports.
+
+Ports have a weaker contribution bar, at least initially. A functionally correct implementation is considered an important first goal. Performance, reliability and compatibility are all important concerns after that.
+
+#### Copying Files from Other Projects
+
+The .NET runtime uses some files from other projects, per [copyright](./docs/project/copyright.md) rules.
+
+The following rules must be followed for PRs that include files from another project:
+
+- The license of the file is [permissive](https://en.wikipedia.org/wiki/Permissive_free_software_licence).
+- The license of the file is left in-tact.
+- The contribution is correctly attributed in the [3rd party notices](./THIRD-PARTY-NOTICES.TXT) file in the repository, as needed.
+
+See [IdnMapping.cs](./src/libraries/System.Private.CoreLib/src/System/Globalization/IdnMapping.cs) for an example of a file copied from another project and attributed in the [CoreCLR 3rd party notices](./THIRD-PARTY-NOTICES.TXT) file.
+
+#### Porting Files from Other Projects
+
+There are many good algorithms implemented in other languages that would benefit the .NET runtime. The rules for porting a Java file to C#, for example, are the same as would be used for copying the same file, as described above.
+
+[Clean-room](https://en.wikipedia.org/wiki/Clean_room_design) implementations of existing algorithms that are not permissively licensed will generally not be accepted. If you want to create or nominate such an implementation, please create an issue to discuss the idea.
