@@ -8,8 +8,8 @@ trigger:
 
 jobs:
 - job: Setup
-  pool:
-    vmImage: ubuntu-latest
+  # pool:
+  #   vmImage: ubuntu-latest
   steps:
   - script: |
       matrix=["arcade", "sdk"]
