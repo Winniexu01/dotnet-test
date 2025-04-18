@@ -7,21 +7,46 @@ trigger:
 - tmp
 
 
-extends:
-  template: 1es.yml@self
-  parameters:
-    stages: 
-      - stage: stage
-        jobs:
-        - job: Setup
-          steps:
-          - script: dotnet --version
-            displayName: 'Setup'
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+  containers:
+    default_linux_container:
+    image: wenwen01/preps:ubuntu-sdk-2204
 
-        - job: LicenseScan
-          container: wenwen01/preps:ubuntu-sdk-2204
-          dependsOn: Setup
-          timeoutInMinutes: 420
-          steps:
-          - script: dotnet --version
-            displayName: 'test'
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: NetCore1ESPool-Svc-Internal
+      image: 1es-ubuntu-2204
+      os: linux 
+    sdl:
+      sourceAnalysisPool:
+          name: NetCore1ESPool-Svc-Internal
+          image: 1es-windows-2022 
+          os: windows
+      binskim:
+        enabled: true
+      policheck:
+        enabled: true
+      tsa:
+        enabled: true
+    stages:
+    - stage: stage
+      jobs:
+      - job: Setup
+        steps:
+        - script: dotnet --version
+          displayName: 'Setup'
+
+      - job: LicenseScan
+        container: wenwen01/preps:ubuntu-sdk-2204
+        dependsOn: Setup
+        timeoutInMinutes: 420
+        steps:
+        - script: dotnet --version
+          displayName: 'test'
