@@ -407,7 +407,7 @@ resources:
 stages:
     - template: Stages/Stage.yml
       parameters:
-        stage: ${{ stage }}
+        stage: ${{ parameters.stages.stage }}
         pool: ${{ parameters.pool }}
         enforcedSdl: ${{ parameters.enforcedSdl }}
         spokeEsEnforcedSdl: ${{ parameters.spokeEsEnforcedSdl }}
