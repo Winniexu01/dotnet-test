@@ -2,7 +2,7 @@ parameters:
 - name: stage
   type: stage
   default: {}
-  
+
 - name: pool
   type: object
   default: {}
@@ -11,12 +11,14 @@ parameters:
   type: object
   default: {}
 
-pool: ${{ parameters.stage.pool }}
-vmImage: ${{ parameters.stage.pool.image }}
+jobs:
+- job: Setup
+  pool: ${{ parameters.stage.pool }}
+  vmImage: ${{ parameters.stage.pool.image }}
 
-${{ if parameters.containers.default_linux_container.image }}:
-  container:
-    ${{ each pair in parameters.containers.default_linux_container }}:
-      ${{ if ne(pair.key, 'name') }}:
-        ${{ pair.key }}: ${{ pair.value }}
-    name: default_linux_container
+  ${{ if parameters.containers.default_linux_container.image }}:
+    container:
+      ${{ each pair in parameters.containers.default_linux_container }}:
+        ${{ if ne(pair.key, 'name') }}:
+          ${{ pair.key }}: ${{ pair.value }}
+      name: default_linux_container
