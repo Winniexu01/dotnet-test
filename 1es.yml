@@ -12,7 +12,7 @@ parameters:
 stages:
   - stage: BuildStage
     jobs:
-      ${{eacho job in parameters.jobs }}
+      ${{each job in parameters.jobs }}
         - job: ${{ job.job }}
           pool:
             vmImage: ${{ parameters.vmImage }}
