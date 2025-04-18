@@ -16,7 +16,8 @@ extends:
   parameters:
     pool:
       vmImage: ubuntu-latest
-    stage: stage
+    stage: 
+      name: stage
       jobs:
       - job: Setup
         steps:
