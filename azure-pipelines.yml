@@ -15,7 +15,8 @@ extends:
   template: 1es.yml@self
   parameters:
     pool:
-      vmImage: ubuntu-latest
+      os: linux 
+      image: ubuntu-latest
     stage: 
       name: stage
       jobs:
@@ -28,8 +29,6 @@ extends:
         container: default_linux_container
         dependsOn: Setup
         timeoutInMinutes: 420
-        strategy:
-          matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
         steps:
         - script: dotnet --version
           displayName: 'test'

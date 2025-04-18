@@ -1,0 +1,654 @@
+parameters:
+- name: stage
+  type: stage
+  default: {}
+
+# Sdl rules with the highest priority
+- name: enforcedSdl
+  type: object
+  default: {}
+
+# User specified / applied across the pipeline, can be overridden by job specific sdl setting
+- name: pipelineSdl
+  type: object
+  default: {}
+
+- name: spokeEsEnforcedSdl
+  type: object
+
+- name: pool
+  type: object
+  default: {}
+
+- name: containers
+  type: object
+  default: {}
+
+- name: authenticatedContainerRegistries
+  type: object
+  default: null
+
+- name: settings
+  type: object
+
+- name: internalConfig
+  type: object
+
+- name: isOfficial
+  type: boolean
+
+- name: featureFlags
+  type: object
+
+- name: disableAutoBaselineByDefaultADOOrgs
+  type: object
+  default:
+  - 'https://dev.azure.com/ampx/'
+  - 'https://ampx.visualstudio.com/'
+
+- name: supportedSDPWorkflows
+  type: object
+  default:
+  - bedrock
+
+- name: supportedApprovalWorkflows
+  type: object
+  default:
+  - lockbox
+  - approvalService
+  - test
+
+# Global ServiceTreeId defined at the root parameters of the pipeline definition
+- name: globalServiceTreeId
+  type: string
+
+- name: sdp
+  type: object
+
+- name: sdlStageRequired
+  type: boolean
+
+stages:
+# Insert all properties other than 'jobs'
+- ${{ each pair in parameters.stage }}:
+    ${{ if notIn(pair.key, 'jobs', 'pool', 'templateContext', 'dependsOn') }}:
+      ${{ pair.key }}: ${{ pair.value }}
+
+  # If a pipeline is composite and the current stage contains a release job, add a dependency on the SDLSources stage
+  # Temporarily skip pipelines that have "trigger: manual" set on the stage to prevent breaking them. If condition is met, 1ESPT sets a warning in SDLSourcesTagStage.yml
+  ${{ if and(eq(parameters.sdlStageRequired, true), ne(parameters.stage.trigger, 'manual')) }}:
+    dependsOn:
+    - ${{ if parameters.stage.dependsOn }}:
+      - ${{ each dependency in parameters.stage.dependsOn }}:
+        - ${{ if not(or(eq(dependency, 'SDLSources'), eq(dependency, ''))) }}:
+          - ${{ dependency }}
+      - SDLSources
+    - ${{ else }}:
+      - SDLSources
+  ${{ elseif parameters.stage.dependsOn }}:
+    dependsOn: ${{ parameters.stage.dependsOn }}
+
+  # Insert the pool specification if the pool property was specified at the stage level
+  # We need to handle the case when the value is just a string with the pool name and
+  # when it is an object. In case of object, we want to process some properties (such as
+  # 'image' separately). We also need to take care of cases when additional demands are specified
+  ${{ if parameters.stage.pool }}:
+    ${{ if startsWith(convertToJson(parameters.stage.pool), '{') }}:
+      ${{ if containsValue(parameters.internalConfig.disallowedPools, parameters.stage.pool.name) }}:
+        'Pool "${{ parameters.stage.pool.name }}" is not an allowed pool, please use your own 1ES Hosted Pool': error
+      pool:
+        ${{ each pair in parameters.stage.pool }}:
+          ${{ if notIn(pair.key, 'image', 'workspace', 'demands') }}:
+            ${{ pair.key }}: ${{ pair.value }}
+        ${{ if and(eq(parameters.stage.pool.os, 'macOS'), eq(parameters.stage.pool.name, 'Azure Pipelines'), parameters.stage.pool.image) }}:
+          vmImage: ${{ parameters.stage.pool.image }}
+        ${{ elseif or(parameters.stage.pool.image, parameters.stage.pool.workspace) }}:
+          demands:
+          - ${{ if parameters.stage.pool.image }}:
+            - ImageOverride -equals ${{ parameters.stage.pool.image }}
+          - ${{ if parameters.stage.pool.workspace }}:
+            - ${{ if eq(parameters.stage.pool.os, 'linux') }}:
+              - WorkFolder -equals /mnt/${{ parameters.stage.pool.workspace }}
+            - ${{ else }}:
+              - WorkFolder -equals C:\${{ parameters.stage.pool.workspace }}
+          - ${{ if and(parameters.stage.pool.demands, not(startsWith(convertToJson(parameters.stage.pool), '['))) }}:
+            - ${{ parameters.stage.pool.demands }}
+          - ${{ else }}:
+            - ${{ each demand in parameters.stage.pool.demands }}:
+              - ${{ demand }}
+        ${{ elseif parameters.stage.pool.demands }}:
+          demands: ${{ parameters.stage.pool.demands }}
+    ${{ else }}:
+      ${{ if containsValue(parameters.internalConfig.disallowedPools, parameters.stage.pool) }}:
+        'Pool "${{ parameters.stage.pool }}" is not an allowed pool, please use your own 1ES Hosted Pool': error
+      pool: ${{ parameters.stage.pool }}
+
+  # The same as before, but for the case the pool is passed as a pipeline parameter
+  ${{ elseif ne(length(parameters.pool), 0) }}:
+    ${{ if startsWith(convertToJson(parameters.pool), '{') }}:
+      ${{ if containsValue(parameters.internalConfig.disallowedPools, parameters.pool.name) }}:
+        'Pool "${{ parameters.pool.name }}" is not an allowed pool, please use your own 1ES Hosted Pool': error
+      pool:
+        ${{ each pair in parameters.pool }}:
+          ${{ if notIn(pair.key, 'image', 'workspace', 'demands') }}:
+            ${{ pair.key }}: ${{ pair.value }}
+        ${{ if and(eq(parameters.pool.os, 'macOS'), eq(parameters.pool.name, 'Azure Pipelines'), parameters.pool.image) }}:
+          vmImage: ${{ parameters.pool.image }}
+        ${{ elseif or(parameters.pool.image, parameters.pool.workspace) }}:
+          demands:
+          - ${{ if parameters.pool.image }}:
+            - ImageOverride -equals ${{ parameters.pool.image }}
+          - ${{ if parameters.pool.workspace }}:
+            - ${{ if eq(parameters.pool.os, 'linux') }}:
+              - WorkFolder -equals /mnt/${{ parameters.pool.workspace }}
+            - ${{ else }}:
+              - WorkFolder -equals C:\${{ parameters.pool.workspace }}
+          - ${{ if and(parameters.pool.demands, not(startsWith(convertToJson(parameters.pool), '['))) }}:
+            - ${{ parameters.pool.demands }}
+          - ${{ else }}:
+            - ${{ each demand in parameters.pool.demands }}:
+              - ${{ demand }}
+        ${{ elseif parameters.pool.demands }}:
+          demands: ${{ parameters.pool.demands }}
+    ${{ else }}:
+      ${{ if containsValue(parameters.internalConfig.disallowedPools, parameters.pool) }}:
+        'Pool "${{ parameters.pool }}" is not an allowed pool, please use your own 1ES Hosted Pool': error
+      pool: ${{ parameters.pool }}
+
+  jobs:
+
+  # Inject Safe Deployment Practices workflow
+  - ${{ if parameters.stage.templateContext.sdp }}:
+    - ${{ if not(containsValue(parameters.supportedSDPWorkflows, parameters.stage.templateContext.sdp.workflow)) }}:
+      - 'SDP workflow "${{ parameters.stage.templateContext.sdp.workflow }}" is not supported': error
+    - ${{ if and(ne(parameters.stage.templateContext.sdp.condition, ''), not(containsValue(parameters.internalConfig.sdpWorkflowsAllowedToOverrideConditions, parameters.stage.templateContext.sdp.workflow))) }}:
+      - 'Condition override is not supported in "${{ parameters.stage.templateContext.sdp.workflow }}" SDP workflow': error
+
+
+
+  - ${{ each job in parameters.stage.jobs }}:
+    - template: ../Jobs/Job.yml
+      parameters:
+        job: ${{ job }}
+        stage: ${{ parameters.stage }}
+        settings: ${{ parameters.settings }}
+        internalConfig: ${{ parameters.internalConfig }}
+        isOfficial: ${{ parameters.isOfficial }}
+        pipelineSdl: ${{ parameters.pipelineSdl }}
+        spokeEsEnforcedSdl: ${{ parameters.spokeEsEnforcedSdl }}
+        featureFlags: ${{ parameters.featureFlags }}
+        serviceTreeId: ${{ coalesce(parameters.stage.templateContext.serviceTreeId, parameters.globalServiceTreeId) }}
+        ev2ManagedSdpRolloutConfig: ${{ parameters.sdp.ev2ManagedSdpRolloutConfig }}
+        # User specifies templateContext.authenticatedACRs on the stage level
+        ${{ if parameters.stage.templateContext.authenticatedContainerRegistries }}:
+          authenticatedContainerRegistries: ${{ parameters.stage.templateContext.authenticatedContainerRegistries }}
+
+        # User specifies templateContext.authenticatedACRs on the pipeline level
+        ${{ elseif parameters.authenticatedContainerRegistries }}:
+          authenticatedContainerRegistries: ${{ parameters.authenticatedContainerRegistries }}
+
+################# Container set inside job ############################################################
+        ${{ if job.container }}:
+          ${{ if job.container.alias }}:
+            # Skip container definition if container is set to host
+            ${{ if ne(job.container.alias, 'host') }}:
+              container:
+                ${{ if parameters.containers[job.container.alias] }}:
+                  ${{ each pair in parameters.containers[job.container.alias] }}:
+                    ${{ if ne(pair.key, 'name') }}:
+                      ${{ pair.key }}: ${{ pair.value }}
+                  name: ${{ job.container.alias }}
+                ${{ else }}:
+                  'Container ${{ job.container.alias }} is not defined. Add container definition to "container" parameter of template.': error
+          ${{ else }}:
+            'Job container value is not supported': error
+
+################# Container is determined by pool operating system ############################################################
+        ${{ else }}:
+          ${{ if eq(coalesce(job.pool.os, parameters.stage.pool.os, parameters.pool.os, 'windows'), 'windows') }}:
+            ${{ if parameters.containers.default_windows_container.image }}:
+              container:
+                ${{ each pair in parameters.containers.default_windows_container }}:
+                  ${{ if ne(pair.key, 'name') }}:
+                    ${{ pair.key }}: ${{ pair.value }}
+                name: default_windows_container
+          ${{ elseif eq(coalesce(job.pool.os, parameters.stage.pool.os, parameters.pool.os), 'linux') }}:
+            ${{ if parameters.containers.default_linux_container.image }}:
+              container:
+                ${{ each pair in parameters.containers.default_linux_container }}:
+                  ${{ if ne(pair.key, 'name') }}:
+                    ${{ pair.key }}: ${{ pair.value }}
+                name: default_linux_container
+
+        pool:
+          name: ${{ coalesce(job.pool.name, parameters.stage.pool.name, parameters.pool.name) }}
+          os: ${{ coalesce(job.pool.os, parameters.stage.pool.os, parameters.pool.os, 'windows') }}
+          hostArchitecture: ${{ coalesce(job.pool.hostArchitecture, parameters.stage.pool.hostArchitecture, parameters.pool.hostArchitecture, 'amd64') }}
+          pipelinePool:
+            name: ${{ parameters.pool.name }}
+            os: ${{ coalesce( parameters.pool.os, 'windows' ) }}
+            hostArchitecture: ${{ coalesce( parameters.pool.hostArchitecture, 'amd64') }}
+
+        sdl:
+          containerFlowV2: ${{ coalesce(parameters.featureFlags.containerFlowV2, or(and(eq(parameters.os, 'linux'), containsValue(parameters.internalConfig.enableLinuxContainerFlowV2Orgs, variables['System.CollectionId'])), and(eq(parameters.os, 'windows'), containsValue(parameters.internalConfig.enableWindowsContainerFlowV2Orgs, variables['System.CollectionId'])))) }}
+          sourceAnalysisPipelineDefinitionId: ${{ parameters.pipelineSdl.sourceAnalysisPipelineDefinitionId }}
+          sdlExtensionPrefix: ${{ coalesce(parameters.enforcedSdl.sdlExtensionPrefix, job.templateContext.sdl.sdlExtensionPrefix, parameters.pipelineSdl.sdlExtensionPrefix, 'securedevelopmentteam.vss-secure-development-tools') }}
+          gitCheckout_all_repos: ${{ coalesce(parameters.enforcedSdl.gitCheckout_all_repos, job.templateContext.sdl.gitCheckout_all_repos, parameters.pipelineSdl.gitCheckout_all_repos, false) }}
+          sources_analysis_git_lcow: ${{ coalesce(parameters.enforcedSdl.sources_analysis_git_lcow, job.templateContext.sdl.sources_analysis_git_lcow, parameters.pipelineSdl.sources_analysis_git_lcow, false) }}
+          uploadsariftoscanstab: ${{ coalesce(parameters.enforcedSdl.uploadsariftoscanstab, job.templateContext.sdl.uploadsariftoscanstab, parameters.pipelineSdl.uploadsariftoscanstab, True) }}
+          ${{ if or(job.deployment, containsValue(parameters.internalConfig.incrementalSDLBinaryAnalysisDisabledProjects, variables['System.TeamProjectId'])) }}:
+            incrementalSDLBinaryAnalysis: false
+          ${{ else }}:
+            incrementalSDLBinaryAnalysis: ${{ coalesce (parameters.featureFlags.incrementalSDLBinaryAnalysis, containsValue(parameters.internalConfig.incrementalSDLBinaryAnalysisEnabledOrgs, variables['System.CollectionId'])) }}
+          incrementalSDLSourceAnalysis: ${{ coalesce (parameters.featureFlags.incrementalSDLSourceAnalysis, containsValue(parameters.internalConfig.incrementalSDLSourceAnalysisEnabledOrgs, variables['System.CollectionId'])) }}
+          enableDefenderForLinux: ${{ coalesce (parameters.featureFlags.EnableDefenderForLinux, containsValue(parameters.internalConfig.defenderForLinuxEnabledOrgs, variables['System.CollectionId'])) }}
+          accessibilityinsights:
+            enabled: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.enabled, or(containsValue(parameters.internalConfig.accessibilityInsightsEnabledOrgs, variables['System.CollectionId']), containsValue(parameters.internalConfig.accessibilityInsightsEnabledProjects, variables['System.TeamProjectId'])), false) }}
+            severity: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.severity, 'Default') }}
+            configuration: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.configuration, 'recommended') }}
+            customconfigfile: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.customconfigfile, '') }}
+            parser: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.parser, '') }}
+            parserOptions: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.parserOptions, '') }}
+            enableExclusions: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.enableExclusions, false) }}
+            exclusionPatterns: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.exclusionPatterns, '*.d.ts\n*.spec.js\n*.spec.jsx\n*.spec.ts\n*.spec.tsx') }}
+            exitOnFatalError: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.exitOnFatalError, false) }}
+            nodeVersion: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.nodeVersion, '') }}
+            npmAuthenticateWorkFile: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.npmAuthenticateWorkFile, '') }}
+            npmci: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.npmci, false) }}
+            yarnInstall: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.yarnInstall, false) }}
+            yarnInstallFlag: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.yarnInstallFlag, '') }}
+            yarnInstallDir: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.yarnInstallDir, '$(Build.SourcesDirectory)') }}
+            yarnVersion: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.yarnVersion, '1.x') }}
+            pnpmInstall: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.pnpmInstall, false) }}
+            pnpmInstallFlag: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.pnpmInstallFlag, '') }}
+            pnpmVersion: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.pnpmVersion, '') }}
+            pnpmStoreDir: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.pnpmStoreDir, '') }}
+            plugins: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.plugins, '') }}
+            pluginPath: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.pluginPath, '') }}
+            targetsESLint: ${{ coalesce(parameters.pipelineSdl.accessibilityinsights.targetsESLint, '') }}
+          antimalwareScan:
+            enabled: ${{ coalesce(parameters.enforcedSdl.antimalwareScan.enabled, job.templateContext.sdl.antimalwareScan.enabled, parameters.pipelineSdl.antimalwareScan.enabled, parameters.pipelineSdl.enableAllTools, true) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.antimalwareScan.enabledInCloudBuild, parameters.pipelineSdl.antimalwareScan.enabledInCloudBuild) }}
+            supportLogOnError: ${{ coalesce(parameters.enforcedSdl.antimalwareScan.supportLogOnError, job.templateContext.sdl.antimalwareScan.supportLogOnError, parameters.pipelineSdl.antimalwareScan.supportLogOnError, true) }}
+            publishTraceLogs: ${{ coalesce(parameters.enforcedSdl.antimalwareScan.publishTraceLogs, job.templateContext.sdl.antimalwareScan.publishTraceLogs, parameters.pipelineSdl.antimalwareScan.publishTraceLogs, false) }}
+            debugMode: ${{ coalesce(parameters.enforcedSdl.antimalwareScan.debugMode, job.templateContext.sdl.antimalwareScan.debugMode, parameters.pipelineSdl.antimalwareScan.debugMode, false) }}
+            scanTimeoutInMinutes: ${{ coalesce(parameters.enforcedSdl.antimalwareScan.scanTimeoutInMinutes, job.templateContext.sdl.antimalwareScan.scanTimeoutInMinutes, parameters.pipelineSdl.antimalwareScan.scanTimeoutInMinutes, '') }}
+          apiScan:
+            break: ${{ coalesce(parameters.enforcedSdl.apiScan.break, job.templateContext.sdl.apiScan.break, parameters.pipelineSdl.apiScan.break, false) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.apiScan.severity, job.templateContext.sdl.apiScan.severity, parameters.pipelineSdl.apiScan.severity, 'Default') }}
+          armory:
+            break: ${{ coalesce(parameters.enforcedSdl.armory.break, job.templateContext.sdl.armory.break, parameters.pipelineSdl.armory.break, false) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.armory.enabled, job.templateContext.sdl.armory.enabled, parameters.pipelineSdl.armory.enabled, parameters.pipelineSdl.enableAllTools, true) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.armory.severity, job.templateContext.sdl.armory.severity, parameters.pipelineSdl.armory.severity, 'Default') }}
+            targetFiles: ${{ coalesce(parameters.enforcedSdl.armory.targetFiles, job.templateContext.sdl.armory.targetFiles, parameters.pipelineSdl.armory.targetFiles, 'f|**\*.json;-|.gdn\**;') }}
+          bandit:
+            break: ${{ coalesce(parameters.enforcedSdl.bandit.break, parameters.pipelineSdl.bandit.break, false) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.bandit.breakInCloudBuild, parameters.pipelineSdl.bandit.breakInCloudBuild) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.bandit.enabled, parameters.pipelineSdl.bandit.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.bandit.enabledInCloudBuild, parameters.pipelineSdl.bandit.enabledInCloudBuild) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.bandit.severity, parameters.pipelineSdl.bandit.severity, 'Default') }}
+            targetsType: ${{ coalesce(parameters.enforcedSdl.bandit.targetsType, parameters.pipelineSdl.bandit.targetsType, 'banditPattern') }}
+            recursive: ${{ coalesce(parameters.enforcedSdl.bandit.recursive, parameters.pipelineSdl.bandit.recursive, true) }}
+            excludedPaths: ${{ coalesce(parameters.enforcedSdl.bandit.excludedPaths, parameters.pipelineSdl.bandit.excludedPaths, '.gdn') }}
+            targets: ${{ coalesce(parameters.enforcedSdl.bandit.targets, parameters.pipelineSdl.bandit.targets, 'f|**/*.py;-|.gdn/**') }}
+            minSeverity: ${{ coalesce(parameters.enforcedSdl.bandit.minSeverity, parameters.pipelineSdl.bandit.minSeverity, '') }}
+            minConfidence: ${{ coalesce(parameters.enforcedSdl.bandit.minConfidence, parameters.pipelineSdl.bandit.minConfidence, '') }}
+            baseline: ${{ coalesce(parameters.enforcedSdl.bandit.baseline, parameters.pipelineSdl.bandit.baseline, '') }}
+          binskim:
+            break: ${{ coalesce(parameters.enforcedSdl.binskim.break, job.templateContext.sdl.binskim.break, parameters.pipelineSdl.binskim.break, parameters.pipelineSdl.applyOfficialBreakToolPolicyWithTsaEnabled, not(and(parameters.isOfficial, or(parameters.enforcedSdl.tsa.enabled, parameters.pipelineSdl.tsa.enabled)))) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.binskim.breakInCloudBuild, parameters.pipelineSdl.binskim.breakInCloudBuild) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.binskim.enabled, job.templateContext.sdl.binskim.enabled, parameters.pipelineSdl.binskim.enabled, parameters.pipelineSdl.enableAllTools, true) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.binskim.enabledInCloudBuild, parameters.pipelineSdl.binskim.enabledInCloudBuild) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.binskim.severity, job.templateContext.sdl.binskim.severity, parameters.pipelineSdl.binskim.severity, 'Default') }}
+            scanOutputDirectoryOnly: ${{ coalesce(parameters.enforcedSdl.binskim.scanOutputDirectoryOnly, job.templateContext.sdl.binskim.scanOutputDirectoryOnly, parameters.pipelineSdl.binskim.scanOutputDirectoryOnly) }}  # We don't put a default here and leave it to OneES_AutoBaseline_PassSanityChecks variable to determine
+            analyzeTargetGlob: ${{ coalesce(parameters.enforced.binskim.analyzeTargetGlob, job.templateContext.sdl.binskim.analyzeTargetGlob, parameters.pipelineSdl.binskim.analyzeTargetGlob, '') }}
+            prerelease: ${{ coalesce(parameters.enforced.binskim.prerelease, job.templateContext.sdl.binskim.prerelease, parameters.pipelineSdl.binskim.prerelease, false) }}
+            ${{ each wave in parameters.internalConfig.prefastAndBinskimRebaselineWaves }}:
+              ${{ if or(containsValue(wave.value.orgs, variables['System.CollectionId']), and(eq(wave.key, 'final'), not(contains(convertToJson(parameters.internalConfig.prefastAndBinskimRebaselineWaves), variables['System.CollectionId'])))) }}:
+                # Allow customers to opt-out by setting 'parameters.pipelineSdl.binskim.preReleaseVersion' to empty in case of any issues
+                ${{ if or(eq(convertToJson(parameters.pipelineSdl.binskim.preReleaseVersion), '""'), eq(parameters.featureFlags.autoBaseline, false)) }}:
+                  useV4: false
+                ${{ else }}:
+                  useV4: true
+            ${{ if eq(convertToJson(job.templateContext.sdl.binskim.preReleaseVersion), '""') }}:  # disable binskim 4.3.1 at job level
+              preReleaseVersion: ''
+            ${{ else }}:
+              preReleaseVersion: ${{ coalesce(job.templateContext.sdl.binskim.preReleaseVersion, parameters.pipelineSdl.binskim.preReleaseVersion, '') }}
+            symbolsPath: ${{ coalesce(parameters.enforced.binskim.symbolsPath, job.templateContext.sdl.binskim.symbolsPath, parameters.pipelineSdl.binskim.symbolsPath, '') }}
+            # Settings below are only supported in CloudBuildJob
+            symbolsDirectory: ${{ coalesce(parameters.enforcedSdl.binskim.symbolsDirectory, job.templateContext.sdl.binskim.symbolsDirectory, parameters.pipelineSdl.binskim.symbolsDirectory) }}
+            targetPathPattern: ${{ coalesce(parameters.enforced.binskim.targetPathPattern, job.templateContext.sdl.binskim.targetPathPattern, parameters.pipelineSdl.binskim.targetPathPattern, '\"\"') }}
+            targetPathExclusionPattern: ${{ coalesce(parameters.enforced.binskim.targetPathExclusionPattern, job.templateContext.sdl.binskim.targetPathExclusionPattern, parameters.pipelineSdl.binskim.targetPathExclusionPattern, '\"\"') }}
+            analyzeConfigPath: ${{ coalesce(parameters.enforced.binskim.analyzeConfigPath, job.templateContext.sdl.binskim.analyzeConfigPath, parameters.pipelineSdl.binskim.analyzeConfigPath, 'default') }}
+          clippy:
+            break: ${{ coalesce(job.templateContext.sdl.clippy.break, parameters.pipelineSdl.clippy.break, true) }}
+            continueOnError: ${{ coalesce(job.templateContext.sdl.clippy.continueOnError, parameters.pipelineSdl.clippy.continueOnError, false) }}
+            enabled: ${{ coalesce(job.templateContext.sdl.clippy.enabled, parameters.pipelineSdl.clippy.enabled, or(eq(job.templateContext.workflow, 'Rust'), containsValue(job.steps.*.task, '1ES.Build.Rust.Run@1'))) }}
+            allTargets: ${{ coalesce(job.templateContext.sdl.clippy.allTargets, parameters.pipelineSdl.clippy.allTargets, true) }}
+            extraArgs: ${{ coalesce(job.templateContext.sdl.clippy.extraArgs, parameters.pipelineSdl.clippy.extraArgs, '') }}
+            enforcePolicy: ${{ coalesce(job.templateContext.sdl.clippy.enforcePolicy, parameters.pipelineSdl.clippy.enforcePolicy, true) }}
+            strict: ${{ coalesce(job.templateContext.sdl.clippy.strict, parameters.pipelineSdl.clippy.strict, false) }}
+            condition: ${{ coalesce(job.templateContext.sdl.clippy.condition, parameters.pipelineSdl.clippy.condition, '') }}
+          cloudbuild:
+            disableFlightingForRulesActiveBeforeDateString: ${{ coalesce(parameters.enforcedSdl.cloudbuild.disableFlightingForRulesActiveBeforeDateString, job.templateContext.sdl.cloudbuild.disableFlightingForRulesActiveBeforeDateString, parameters.pipelineSdl.cloudbuild.disableFlightingForRulesActiveBeforeDateString, '2020-11-01') }}
+            noBreakMode: ${{ coalesce(parameters.enforced.cloudbuild.noBreakMode, job.templateContext.sdl.cloudbuild.noBreakMode, parameters.pipelineSdl.cloudbuild.noBreakMode, false) }}
+            minSeverity: ${{ coalesce(parameters.enforcedSdl.cloudbuild.minSeverity, job.templateContext.sdl.cloudbuild.minSeverity, parameters.pipelineSdl.cloudbuild.minSeverity, '\"error\"') }}
+            breakTools: ${{ coalesce(parameters.enforcedSdl.cloudbuild.breakTools, job.templateContext.sdl.cloudbuild.breakTools, parameters.pipelineSdl.cloudbuild.breakTools, '\"\"') }}
+            enableAuditMode: ${{ coalesce(parameters.enforcedSdl.cloudbuild.enableAuditMode, job.templateContext.sdl.cloudbuild.enableAuditMode, parameters.pipelineSdl.cloudbuild.enableAuditMode, false) }}
+          componentgovernance:
+            enabled: ${{ coalesce(parameters.enforcedSdl.componentgovernance.enabled, job.templateContext.sdl.componentgovernance.enabled, parameters.pipelineSdl.componentgovernance.enabled, parameters.pipelineSdl.enableAllTools, true) }}
+            ignoreDirectories: ${{ coalesce(parameters.enforcedSdl.componentgovernance.ignoreDirectories, job.templateContext.sdl.componentgovernance.ignoreDirectories, parameters.pipelineSdl.componentgovernance.ignoreDirectories) }}
+            alertWarningLevel: ${{ coalesce(parameters.enforcedSdl.componentgovernance.alertWarningLevel, job.templateContext.sdl.componentgovernance.alertWarningLevel, parameters.pipelineSdl.componentgovernance.alertWarningLevel) }}
+            failOnAlert: ${{ coalesce(parameters.enforcedSdl.componentgovernance.failOnAlert, job.templateContext.sdl.componentgovernance.failOnAlert, parameters.pipelineSdl.componentgovernance.failOnAlert) }}
+            verbosity: ${{ coalesce(parameters.enforcedSdl.componentgovernance.verbosity, job.templateContext.sdl.componentgovernance.verbosity, parameters.pipelineSdl.componentgovernance.verbosity) }}
+            useAgentBuildDirectory: ${{ coalesce(parameters.enforcedSdl.componentgovernance.useAgentBuildDirectory, job.templateContext.sdl.componentgovernance.useAgentBuildDirectory, parameters.pipelineSdl.componentgovernance.useAgentBuildDirectory, false) }}
+            timeoutInMinutes: ${{ coalesce(parameters.enforcedSdl.componentgovernance.timeoutInMinutes, job.templateContext.sdl.componentgovernance.timeoutInMinutes, parameters.pipelineSdl.componentgovernance.timeoutInMinutes) }}
+          codeInspector:
+            enabled: ${{ coalesce(parameters.enforcedSdl.codeInspector.enabled, job.templateContext.sdl.codeInspector.enabled, parameters.pipelineSdl.codeInspector.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            toolVersion: ${{ coalesce(parameters.enforcedSdl.codeInspector.toolVersion, job.templateContext.sdl.codeInspector.toolVersion, parameters.pipelineSdl.codeInspector.toolVersion, 'latest') }}
+            productId: ${{ coalesce(parameters.enforcedSdl.codeInspector.productId, job.templateContext.sdl.codeInspector.productId, parameters.pipelineSdl.codeInspector.productId) }}
+            excludeFilters: ${{ coalesce(parameters.enforcedSdl.codeInspector.excludeFilters, job.templateContext.sdl.codeInspector.excludeFilters, parameters.pipelineSdl.codeInspector.excludeFilters, 'sample,example,test,docs,.vs,.git,.gdn') }}
+            logLevel: ${{ coalesce(parameters.enforcedSdl.codeInspector.logLevel, job.templateContext.sdl.codeInspector.logLevel, parameters.pipelineSdl.codeInspector.logLevel, 'Info') }}
+          codeSignValidation:
+            break: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.break, job.templateContext.sdl.codeSignValidation.break, parameters.pipelineSdl.codeSignValidation.break, false) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.breakInCloudBuild, job.templateContext.sdl.codeSignValidation.breakInCloudBuild, parameters.pipelineSdl.codeSignValidation.breakInCloudBuild) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.enabled, job.templateContext.sdl.codeSignValidation.enabled, parameters.pipelineSdl.codeSignValidation.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            enabledInLevels: ${{ coalesce(parameters.stage.templateContext.sdl.codeSignValidation.enabled, job.templateContext.sdl.codeSignValidation.enabled, true) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.enabledInCloudBuild, parameters.pipelineSdl.codeSignValidation.enabledInCloudBuild) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.severity, job.templateContext.sdl.codeSignValidation.severity, parameters.pipelineSdl.codeSignValidation.severity, 'Default') }}
+            excludePassesFromLog: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.excludePassesFromLog, job.templateContext.sdl.codeSignValidation.excludePassesFromLog, parameters.pipelineSdl.codeSignValidation.excludePassesFromLog, false) }}
+            additionalTargetsGlobPattern: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.additionalTargetsGlobPattern, job.templateContext.sdl.codeSignValidation.additionalTargetsGlobPattern, parameters.pipelineSdl.codeSignValidation.additionalTargetsGlobPattern, '') }}
+            policyFile: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.policyFile, job.templateContext.sdl.codeSignValidation.policyFile, parameters.pipelineSdl.codeSignValidation.policyFile, '') }}
+            # Settings below are only supported in CloudBuildJob
+            targetDirectory: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.targetDirectory, job.templateContext.sdl.codeSignValidation.targetDirectory, parameters.pipelineSdl.codeSignValidation.targetDirectory) }}
+            globPattern: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.globPattern, job.templateContext.sdl.codeSignValidation.globPattern, parameters.pipelineSdl.codeSignValidation.globPattern ) }}
+            targetPathExclusionPattern: ${{ coalesce(parameters.enforced.codeSignValidation.targetPathExclusionPattern, job.templateContext.sdl.codeSignValidation.targetPathExclusionPattern, parameters.pipelineSdl.codeSignValidation.targetPathExclusionPattern, '\"\"') }}
+            useTestSign: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.useTestSign, job.templateContext.sdl.codeSignValidation.useTestSign, parameters.pipelineSdl.codeSignValidation.useTestSign, not(parameters.isOfficial) ) }}
+            td1: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td1, job.templateContext.sdl.codeSignValidation.td1, parameters.pipelineSdl.codeSignValidation.td1 ) }}
+            td2: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td2, job.templateContext.sdl.codeSignValidation.td2, parameters.pipelineSdl.codeSignValidation.td2 ) }}
+            td3: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td3, job.templateContext.sdl.codeSignValidation.td3, parameters.pipelineSdl.codeSignValidation.td3 ) }}
+            td4: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td4, job.templateContext.sdl.codeSignValidation.td4, parameters.pipelineSdl.codeSignValidation.td4 ) }}
+            td5: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td5, job.templateContext.sdl.codeSignValidation.td5, parameters.pipelineSdl.codeSignValidation.td5 ) }}
+            td6: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td6, job.templateContext.sdl.codeSignValidation.td6, parameters.pipelineSdl.codeSignValidation.td6 ) }}
+            td7: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td7, job.templateContext.sdl.codeSignValidation.td7, parameters.pipelineSdl.codeSignValidation.td7 ) }}
+            td8: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td8, job.templateContext.sdl.codeSignValidation.td8, parameters.pipelineSdl.codeSignValidation.td8 ) }}
+            td9: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td9, job.templateContext.sdl.codeSignValidation.td9, parameters.pipelineSdl.codeSignValidation.td9 ) }}
+            td10: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td10, job.templateContext.sdl.codeSignValidation.td10, parameters.pipelineSdl.codeSignValidation.td10 ) }}
+            td11: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td11, job.templateContext.sdl.codeSignValidation.td11, parameters.pipelineSdl.codeSignValidation.td11 ) }}
+            td12: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.td12, job.templateContext.sdl.codeSignValidation.td12, parameters.pipelineSdl.codeSignValidation.td12 ) }}
+            maxThreads: ${{ coalesce(parameters.enforcedSdl.codeSignValidation.maxThreads, job.templateContext.sdl.codeSignValidation.maxThreads, parameters.pipelineSdl.codeSignValidation.maxThreads) }}
+            timeoutInMinutes: ${{ coalesce(job.templateContext.sdl.codeSignValidation.timeoutInMinutes, parameters.pipelineSdl.codeSignValidation.timeoutInMinutes) }}
+          codeql:
+            # parameters for deprecated semmle guardian task
+            tsandjs:
+              enabled: ${{ coalesce(parameters.enforcedSdl.codeql.tsandjs.enabled, job.templateContext.sdl.codeql.tsandjs.enabled, parameters.pipelineSdl.codeql.tsandjs.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            python:
+              enabled: ${{ coalesce(parameters.enforcedSdl.codeql.python.enabled, job.templateContext.sdl.codeql.python.enabled, parameters.pipelineSdl.codeql.python.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            break: ${{ coalesce(parameters.enforcedSdl.codeql.break, job.templateContext.sdl.codeql.break, parameters.pipelineSdl.codeql.break, false) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.codeql.severity, job.templateContext.sdl.codeql.severity, parameters.pipelineSdl.codeql.severity, 'Default') }}
+            # parameters for CodeQL 3000
+            compiled:
+              enabled: ${{ coalesce(parameters.enforcedSdl.codeql.compiled.enabled, job.templateContext.sdl.codeql.compiled.enabled, parameters.pipelineSdl.codeql.compiled.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+              # When codeql.compiled.enabled.break or codeql.analyzeInPipeline is set to true, the database is not uploaded and the repo may get out of compliance with Continuous SDL
+              # This is intended for "PR mode" of CodeQL 3000 on unofficial templates, or by tented repos on official templates
+              # Not intended to support parameters.enforcedSdl.codeql.compiled.break (unless this is set to false)
+              break: ${{ coalesce(job.templateContext.sdl.codeql.compiled.break, parameters.pipelineSdl.codeql.compiled.break, false) }}
+              ignoreSuppressions: ${{ coalesce(job.templateContext.sdl.codeql.compiled.ignoreSuppressions, parameters.pipelineSdl.codeql.compiled.ignoreSuppressions, false) }}
+              severity: ${{ coalesce(job.templateContext.sdl.codeql.compiled.severity, parameters.pipelineSdl.codeql.compiled.severity, 'critical,important') }}
+            interpreted:
+              # Support existing codeql.compiled.enabled and legacy runSourceLanguagesInSourceAnalysis. This parameter is for passing values to templates; not used by customers.
+              # enabled: ${{ coalesce(parameters.enforcedSdl.codeql.compiled.enabled, job.templateContext.sdl.codeql.compiled.enabled, parameters.pipelineSdl.codeql.compiled.enabled, parameters.pipelineSdl.enableAllTools, false) }}  # TODO part 3 (deprecate codeql.runSourceLanguagesInSourceAnalysis)
+              enabled: ${{ coalesce(parameters.enforcedSdl.codeql.runSourceLanguagesInSourceAnalysis, job.templateContext.sdl.codeql.runSourceLanguagesInSourceAnalysis, parameters.pipelineSdl.codeql.runSourceLanguagesInSourceAnalysis, parameters.enforcedSdl.codeql.compiled.enabled, job.templateContext.sdl.codeql.compiled.enabled, parameters.pipelineSdl.codeql.compiled.enabled, parameters.pipelineSdl.enableAllTools, false) }}  # part 2 (enable by default)
+              # language: ${{ coalesce(parameters.enforcedSdl.codeql.interpreted.language, job.templateContext.sdl.codeql.interpreted.language, parameters.pipelineSdl.codeql.interpreted.language) }}  # TODO part 3 (deprecate codeql.sourceLanguages)
+              language: ${{ coalesce(parameters.enforcedSdl.codeql.interpreted.language, job.templateContext.sdl.codeql.sourceLanguages, parameters.pipelineSdl.codeql.sourceLanguages, job.templateContext.sdl.codeql.interpreted.language, parameters.pipelineSdl.codeql.interpreted.language) }}
+            buildIdentifier: ${{ coalesce(parameters.pipelineSdl.codeql.buildIdentifier, job.templateContext.sdl.codeql.buildIdentifier, format('{0}_{1}', parameters.stage.stage, job.job)) }}
+            enabledOnNonDefaultBranches: ${{ coalesce(parameters.enforcedSdl.codeql.enabledOnNonDefaultBranches, job.templateContext.sdl.codeql.enabledOnNonDefaultBranches, parameters.pipelineSdl.codeql.enabledOnNonDefaultBranches, false) }}
+            # language: ${{ coalesce(parameters.enforcedSdl.codeql.language, job.templateContext.sdl.codeql.language, parameters.pipelineSdl.codeql.language) }}  # TODO part 3 (deprecate codeql.binaryLanguage)
+            language: ${{ coalesce(parameters.enforcedSdl.codeql.language, job.templateContext.sdl.codeql.binaryLanguages, parameters.pipelineSdl.codeql.binaryLanguages, job.templateContext.sdl.codeql.language, parameters.pipelineSdl.codeql.language) }}
+            # When codeql.compiled.enabled.break or codeql.analyzeInPipeline is set to true, the database is not uploaded and the repo may get out of compliance with Continuous SDL
+            # This is intended for "PR mode" of CodeQL 3000 on unofficial templates, or by tented repos on official templates
+            # Not intended to support parameters.enforcedSdl.codeql.compiled.break (unless this is set to false)
+            analyzeInPipeline: ${{ coalesce(job.templateContext.sdl.codeql.analyzeInPipeline, parameters.pipelineSdl.codeql.analyzeInPipeline) }}
+            # The default value for buildMode should be empty, which means CodeQL 3000 will trace the build. A value should only be set when a specific buildMode from CodeQL CLI is needed, like 'none' for SDL source stage
+            buildMode: ${{ coalesce(job.templateContext.sdl.codeql.buildMode, parameters.pipelineSdl.codeql.buildMode) }}
+            cadence: ${{ coalesce(parameters.enforcedSdl.codeql.cadence, job.templateContext.sdl.codeql.cadence, parameters.pipelineSdl.codeql.cadence) }}
+            loglevel: ${{ coalesce(parameters.enforcedSdl.codeql.loglevel, job.templateContext.sdl.codeql.loglevel, parameters.pipelineSdl.codeql.loglevel) }}
+            queryFolder: ${{ coalesce(parameters.enforcedSdl.codeql.queryFolder, job.templateContext.sdl.codeql.queryFolder, parameters.pipelineSdl.codeql.queryFolder) }}
+            querySuite: ${{ coalesce(parameters.enforcedSdl.codeql.querySuite, job.templateContext.sdl.codeql.querySuite, parameters.pipelineSdl.codeql.querySuite) }}
+            tsaEnabled: ${{ coalesce(parameters.enforcedSdl.codeql.tsaEnabled, job.templateContext.sdl.codeql.tsaEnabled, parameters.pipelineSdl.codeql.tsaEnabled) }}
+            excludePathPatterns: ${{ coalesce(parameters.enforcedSdl.codeql.excludePathPatterns, job.templateContext.sdl.codeql.excludePathPatterns, parameters.pipelineSdl.codeql.excludePathPatterns) }}
+          credscan:
+            break: ${{ coalesce(parameters.enforcedSdl.credscan.break, job.templateContext.sdl.credscan.break, parameters.pipelineSdl.credscan.break, true) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.credscan.breakInCloudBuild, parameters.pipelineSdl.credscan.breakInCloudBuild) }}
+            enabled: ${{ coalesce( parameters.enforcedSdl.credscan.enabled, job.templateContext.sdl.credscan.enabled, parameters.pipelineSdl.credscan.enabled, parameters.pipelineSdl.enableAllTools, eq(lower(variables['Build.Reason']), 'pullrequest')) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.credscan.enabledInCloudBuild, parameters.pipelineSdl.credscan.enabledInCloudBuild) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.credscan.severity, job.templateContext.sdl.credscan.severity, parameters.pipelineSdl.credscan.severity, 'Default') }}
+            suppressionsFile: ${{ coalesce(parameters.enforcedSdl.credscan.suppressionsFile, job.templateContext.sdl.credscan.suppressionsFile, parameters.pipelineSdl.credscan.suppressionsFile) }}
+            outputFormat: ${{ coalesce(parameters.enforcedSdl.credscan.outputFormat, job.templateContext.sdl.credscan.outputFormat, parameters.pipelineSdl.credscan.outputFormat, 'pre') }}
+            batchSize: ${{ coalesce(parameters.enforcedSdl.credscan.batchSize, job.templateContext.sdl.credscan.batchSize, parameters.pipelineSdl.credscan.batchSize) }}
+            # Currently only supported in CloudBuildJob
+            inputsOnly: ${{ coalesce(parameters.enforcedSdl.credscan.inputsOnly, job.templateContext.sdl.credscan.inputsOnly, parameters.pipelineSdl.credscan.inputsOnly, false) }}
+            prerelease: ${{ coalesce(parameters.enforcedSdl.credscan.prerelease, job.templateContext.sdl.credscan.prerelease, parameters.pipelineSdl.credscan.prerelease, false) }}
+            debugMode: ${{ coalesce(parameters.enforcedSdl.credscan.debugMode, job.templateContext.sdl.credscan.debugMode, parameters.pipelineSdl.credscan.debugMode, false) }}
+            suppressAsError: ${{ coalesce(parameters.enforcedSdl.credscan.suppressAsError, job.templateContext.sdl.credscan.suppressAsError, parameters.pipelineSdl.credscan.suppressAsError, false) }}
+          csrf:
+            break: ${{ coalesce(parameters.enforcedSdl.csrf.break, job.templateContext.sdl.csrf.break, parameters.pipelineSdl.csrf.break, false) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.csrf.enabled, job.templateContext.sdl.csrf.enabled, parameters.pipelineSdl.csrf.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.csrf.severity, job.templateContext.sdl.csrf.severity, parameters.pipelineSdl.csrf.severity, 'Default') }}
+          eslint:
+            break: ${{ coalesce(parameters.enforcedSdl.eslint.break, parameters.pipelineSdl.eslint.break, not(and(parameters.isOfficial, or(parameters.enforcedSdl.tsa.enabled, parameters.pipelineSdl.tsa.enabled)))) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.eslint.breakInCloudBuild, parameters.pipelineSdl.eslint.breakInCloudBuild) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.eslint.enabled, parameters.pipelineSdl.eslint.enabled, parameters.pipelineSdl.enableAllTools, true) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.eslint.enabledInCloudBuild, job.templateContext.sdl.eslint.enabledInCloudBuild, parameters.pipelineSdl.eslint.enabledInCloudBuild) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.eslint.severity, parameters.pipelineSdl.eslint.severity, 'Default') }}
+            configuration: ${{ coalesce(parameters.enforcedSdl.eslint.configuration, parameters.pipelineSdl.eslint.configuration, 'recommended') }}
+            customconfigfile: ${{ coalesce(parameters.enforcedSdl.eslint.customconfigfile, parameters.pipelineSdl.eslint.customconfigfile, '') }}
+            parser: ${{ coalesce(parameters.enforcedSdl.eslint.parser, parameters.pipelineSdl.eslint.parser, '') }}
+            parserOptions: ${{ coalesce(parameters.enforcedSdl.eslint.parserOptions, parameters.pipelineSdl.eslint.parserOptions, '') }}
+            enableExclusions: ${{ coalesce(parameters.enforcedSdl.eslint.enableExclusions, parameters.pipelineSdl.eslint.enableExclusions, false) }}
+            exclusionPatterns: ${{ coalesce(parameters.enforcedSdl.eslint.exclusionPatterns, parameters.pipelineSdl.eslint.exclusionPatterns, '*.d.ts\n*.spec.js\n*.spec.jsx\n*.spec.ts\n*.spec.tsx') }}
+            exclusionsFilePath: ${{ coalesce(parameters.enforcedSdl.eslint.exclusionsFilePath, parameters.pipelineSdl.eslint.exclusionsFilePath, '') }}
+            exitOnFatalError: ${{ coalesce(parameters.enforcedSdl.eslint.exitOnFatalError, parameters.pipelineSdl.eslint.exitOnFatalError, false) }}
+            nodeVersion: ${{ coalesce(parameters.enforcedSdl.eslint.nodeVersion, parameters.pipelineSdl.eslint.nodeVersion, '') }}
+            npmAuthenticateWorkFile: ${{ coalesce(parameters.enforcedSdl.eslint.npmAuthenticateWorkFile, parameters.pipelineSdl.eslint.npmAuthenticateWorkFile, '') }}
+            npmci: ${{ coalesce(parameters.enforcedSdl.eslint.npmci, parameters.pipelineSdl.eslint.npmci, false) }}
+            yarnInstall: ${{ coalesce(parameters.enforcedSdl.eslint.yarnInstall, parameters.pipelineSdl.eslint.yarnInstall, false) }}
+            yarnInstallFlag: ${{ coalesce(parameters.enforcedSdl.eslint.yarnInstallFlag, parameters.pipelineSdl.eslint.yarnInstallFlag, '') }}
+            yarnInstallDir: ${{ coalesce(parameters.enforcedSdl.eslint.yarnInstallDir, parameters.pipelineSdl.eslint.yarnInstallDir, '$(Build.SourcesDirectory)') }}
+            yarnVersion: ${{ coalesce(parameters.enforcedSdl.eslint.yarnVersion, parameters.pipelineSdl.eslint.yarnVersion, '1.x') }}
+            pnpmInstall: ${{ coalesce(parameters.enforcedSdl.eslint.pnpmInstall, parameters.pipelineSdl.eslint.pnpmInstall, false) }}
+            pnpmInstallFlag: ${{ coalesce(parameters.enforcedSdl.eslint.pnpmInstallFlag, parameters.pipelineSdl.eslint.pnpmInstallFlag, '') }}
+            pnpmVersion: ${{ coalesce(parameters.enforcedSdl.eslint.pnpmVersion, parameters.pipelineSdl.eslint.pnpmVersion, '') }}
+            pnpmStoreDir: ${{ coalesce(parameters.enforcedSdl.eslint.pnpmStoreDir, parameters.pipelineSdl.eslint.pnpmStoreDir, '') }}
+            customEnvironments: ${{ coalesce(parameters.enforcedSdl.eslint.customEnvironments, parameters.pipelineSdl.eslint.customEnvironments, false) }}
+            environmentsBrowser: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsBrowser, parameters.pipelineSdl.eslint.environmentsBrowser, true) }}
+            environmentsNode: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsNode, parameters.pipelineSdl.eslint.environmentsNode, true) }}
+            environmentsCommonJs: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsCommonJs, parameters.pipelineSdl.eslint.environmentsCommonJs, false) }}
+            environmentsSharedNodeBrowser: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsSharedNodeBrowser, parameters.pipelineSdl.eslint.environmentsSharedNodeBrowser, false) }}
+            environmentsEs6: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsEs6, parameters.pipelineSdl.eslint.environmentsEs6, true) }}
+            environmentsEs2017: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsEs2017, parameters.pipelineSdl.eslint.environmentsEs2017, true) }}
+            environmentsEs2020: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsEs2020, parameters.pipelineSdl.eslint.environmentsEs2020, true) }}
+            environmentsWorker: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsWorker, parameters.pipelineSdl.eslint.environmentsWorker, false) }}
+            environmentsAmd: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsAmd, parameters.pipelineSdl.eslint.environmentsAmd, false) }}
+            environmentsMocha: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsMocha, parameters.pipelineSdl.eslint.environmentsMocha, false) }}
+            environmentsJasmine: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsJasmine, parameters.pipelineSdl.eslint.environmentsJasmine, false) }}
+            environmentsJest: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsJest, parameters.pipelineSdl.eslint.environmentsJest, false) }}
+            environmentsPhantomjs: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsPhantomjs, parameters.pipelineSdl.eslint.environmentsPhantomjs, false) }}
+            environmentsProtractor: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsProtractor, parameters.pipelineSdl.eslint.environmentsProtractor, false) }}
+            environmentsQunit: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsQunit, parameters.pipelineSdl.eslint.environmentsQunit, false) }}
+            environmentsJquery: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsJquery, parameters.pipelineSdl.eslint.environmentsJquery, false) }}
+            environmentsPrototypejs: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsPrototypejs, parameters.pipelineSdl.eslint.environmentsPrototypejs, false) }}
+            environmentsShelljs: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsShelljs, parameters.pipelineSdl.eslint.environmentsShelljs, false) }}
+            environmentsMeteor: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsMeteor, parameters.pipelineSdl.eslint.environmentsMeteor, false) }}
+            environmentsMongo: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsMongo, parameters.pipelineSdl.eslint.environmentsMongo, false) }}
+            environmentsApplescript: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsApplescript, parameters.pipelineSdl.eslint.environmentsApplescript, false) }}
+            environmentsNashorn: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsNashorn, parameters.pipelineSdl.eslint.environmentsNashorn, false) }}
+            environmentsServiceworker: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsServiceworker, parameters.pipelineSdl.eslint.environmentsServiceworker, false) }}
+            environmentsAtomtest: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsAtomtest, parameters.pipelineSdl.eslint.environmentsAtomtest, false) }}
+            environmentsEmbertest: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsEmbertest, parameters.pipelineSdl.eslint.environmentsEmbertest, false) }}
+            environmentsWebExtensions: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsWebExtensions, parameters.pipelineSdl.eslint.environmentsWebExtensions, false) }}
+            environmentsGreasemonkey: ${{ coalesce(parameters.enforcedSdl.eslint.environmentsGreasemonkey, parameters.pipelineSdl.eslint.environmentsGreasemonkey, false) }}
+            plugins: ${{ coalesce(parameters.enforcedSdl.eslint.plugins, parameters.pipelineSdl.eslint.plugins, '') }}
+            pluginPath: ${{ coalesce(parameters.enforcedSdl.eslint.pluginPath, parameters.pipelineSdl.eslint.pluginPath, '') }}
+            targetsESLint: ${{ coalesce(parameters.enforcedSdl.eslint.targetsESLint, parameters.pipelineSdl.eslint.targetsESLint, '') }}
+          fxcop:
+            break: ${{ coalesce(parameters.enforcedSdl.fxcop.break, job.templateContext.sdl.fxcop.break, parameters.pipelineSdl.fxcop.break, true) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.fxcop.severity,  job.templateContext.sdl.fxcop.severity, parameters.pipelineSdl.fxcop.severity, 'Default') }}
+          git:
+            longpaths: ${{ coalesce(parameters.enforcedSdl.git.longpaths, job.templateContext.sdl.git.longpaths, parameters.pipelineSdl.git.longpaths, false) }}
+            submodules: ${{ coalesce(parameters.enforcedSdl.git.submodules, job.templateContext.sdl.git.submodules, parameters.pipelineSdl.git.submodules) }}
+            lfs: ${{ coalesce(parameters.enforcedSdl.git.lfs, job.templateContext.sdl.git.lfs, parameters.pipelineSdl.git.lfs) }}
+            fetchDepth: ${{ coalesce(parameters.enforcedSdl.git.fetchDepth, job.templateContext.sdl.git.fetchDepth, parameters.pipelineSdl.git.fetchDepth) }}
+            fetchTags: ${{ coalesce(parameters.enforcedSdl.git.fetchTags, job.templateContext.sdl.git.fetchTags, parameters.pipelineSdl.git.fetchTags) }}
+            fetchFilter: ${{ coalesce(parameters.enforcedSdl.git.fetchFilter, job.templateContext.sdl.git.fetchFilter, parameters.pipelineSdl.git.fetchFilter) }}
+            persistCredentials: ${{ coalesce(parameters.enforcedSdl.git.persistCredentials, job.templateContext.sdl.git.persistCredentials, parameters.pipelineSdl.git.persistCredentials, parameters.featureFlags.incrementalSDLSourceAnalysis, containsValue(parameters.internalConfig.incrementalSDLSourceAnalysisEnabledOrgs, variables['System.CollectionId'])) }}
+            path: ${{ coalesce(parameters.enforcedSdl.git.path, job.templateContext.sdl.git.path, parameters.pipelineSdl.git.path) }}
+            timeoutInMinutes: ${{ coalesce(parameters.enforcedSdl.git.timeoutInMinutes, job.templateContext.sdl.git.timeoutInMinutes, parameters.pipelineSdl.git.timeoutInMinutes) }}
+            retryCount: ${{ coalesce(parameters.enforcedSdl.git.retryCount, job.templateContext.sdl.git.retryCount, parameters.pipelineSdl.git.retryCount) }}
+          moderncop:
+            break: ${{ coalesce(parameters.enforcedSdl.moderncop.break, job.templateContext.sdl.moderncop.break, parameters.pipelineSdl.moderncop.break, true) }}
+          policheck:
+            break: ${{ coalesce(parameters.enforcedSdl.policheck.break, job.templateContext.sdl.policheck.break, parameters.pipelineSdl.policheck.break, true) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.policheck.breakInCloudBuild, parameters.pipelineSdl.policheck.breakInCloudBuild) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.policheck.enabled, job.templateContext.sdl.policheck.enabled, parameters.pipelineSdl.policheck.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.policheck.enabledInCloudBuild, parameters.pipelineSdl.policheck.enabledInCloudBuild) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.policheck.severity, job.templateContext.sdl.policheck.severity, parameters.pipelineSdl.policheck.severity, 'Default') }}
+            sarif: ${{ coalesce(parameters.enforcedSdl.policheck.sarif, job.templateContext.sdl.policheck.sarif, parameters.pipelineSdl.policheck.sarif, false) }}
+            exclusionsFile: ${{ coalesce(parameters.enforcedSdl.policheck.exclusionsFile, job.templateContext.sdl.policheck.exclusionsFile, parameters.pipelineSdl.policheck.exclusionsFile, '') }}
+          prefast:
+            break: ${{ coalesce(parameters.enforcedSdl.prefast.break, job.templateContext.sdl.prefast.break, parameters.pipelineSdl.prefast.break, false) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.prefast.enabled, job.templateContext.sdl.prefast.enabled, parameters.pipelineSdl.prefast.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.prefast.enabledInCloudBuild, parameters.pipelineSdl.prefast.enabledInCloudBuild) }}
+            msBuildVersion: ${{ coalesce(parameters.enforcedSdl.prefast.msBuildVersion, job.templateContext.sdl.prefast.msBuildVersion, parameters.pipelineSdl.prefast.msBuildVersion, 15.0) }}
+            msBuildArchitecture: ${{ coalesce(parameters.enforcedSdl.prefast.msBuildArchitecture, job.templateContext.sdl.prefast.msBuildArchitecture, parameters.pipelineSdl.prefast.msBuildArchitecture, 'x86') }}
+            ${{ if eq(coalesce(parameters.featureFlags.autoEnablePREfastWithNewRuleset, false), true) }}:
+              severity: ${{ coalesce(parameters.enforcedSdl.prefast.severity, job.templateContext.sdl.prefast.severity, parameters.pipelineSdl.prefast.severity, 'CriticalError') }}
+            ${{ else }}:
+              severity: ${{ coalesce(parameters.enforcedSdl.prefast.severity, job.templateContext.sdl.prefast.severity, parameters.pipelineSdl.prefast.severity, 'Default') }}
+            copyLogsOnly: ${{ coalesce(parameters.enforcedSdl.prefast.copyLogsOnly, job.templateContext.sdl.prefast.copyLogsOnly, parameters.pipelineSdl.prefast.copyLogsOnly, false) }}
+          psscriptanalyzer:
+            break: ${{ coalesce(parameters.enforcedSdl.psscriptanalyzer.break, parameters.pipelineSdl.psscriptanalyzer.break, false) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.psscriptanalyzer.breakInCloudBuild, parameters.pipelineSdl.psscriptanalyzer.breakInCloudBuild) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.psscriptanalyzer.enabled, parameters.pipelineSdl.psscriptanalyzer.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.psscriptanalyzer.enabledInCloudBuild, parameters.pipelineSdl.psscriptanalyzer.enabledInCloudBuild) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.psscriptanalyzer.severity, parameters.pipelineSdl.psscriptanalyzer.severity, 'Default') }}
+            settings: ${{ coalesce(parameters.enforcedSdl.psscriptanalyzer.settings, parameters.pipelineSdl.psscriptanalyzer.settings, 'recommended') }}
+            policyName: ${{ coalesce(parameters.enforcedSdl.psscriptanalyzer.policyName, parameters.pipelineSdl.psscriptanalyzer.policyName, parameters.pipelineSdl.policy, 'Microsoft' ) }}
+          publishLogs:
+            enabled: ${{ coalesce(parameters.enforcedSdl.publishLogs.enabled, job.templateContext.sdl.publishLogs.enabled, parameters.pipelineSdl.publishLogs.enabled, true) }}
+            ${{ if or(job.strategy.matrix, job.strategy.parallel) }}:
+              artifactName: ${{ format('drop_{0}_{1}_{2}', parameters.stage.stage, job.job, '$(System.JobPositionInPhase)') }}_sdl_analysis
+            ${{ elseif job.deployment }}:
+              artifactName: ${{ format('drop_{0}_{1}', parameters.stage.stage, job.deployment) }}_sdl_analysis
+            ${{ else }}:
+              artifactName: ${{ format('drop_{0}_{1}', parameters.stage.stage, job.job) }}_sdl_analysis
+            artifactType: ${{ coalesce(parameters.enforcedSdl.publishLogs.artifactType, job.templateContext.sdl.publishLogs.artifactType, parameters.pipelineSdl.publishLogs.artifactType, 'Container') }}
+            condition: ${{ coalesce(parameters.enforcedSdl.publishLogs.condition, job.templateContext.sdl.publishLogs.condition, parameters.pipelineSdl.publishLogs.condition, '') }}
+          roslyn:
+            break: ${{ coalesce(parameters.enforcedSdl.roslyn.break, job.templateContext.sdl.roslyn.break, parameters.pipelineSdl.roslyn.break, true) }}
+            breakInCloudBuild: ${{ coalesce(parameters.enforcedSdl.roslyn.breakInCloudBuild, parameters.pipelineSdl.roslyn.breakInCloudBuild) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.roslyn.enabled, job.templateContext.sdl.roslyn.enabled, parameters.pipelineSdl.roslyn.enabled, parameters.pipelineSdl.enableAllTools, false) }}
+            enabledInCloudBuild: ${{ coalesce(parameters.enforcedSdl.roslyn.enabledInCloudBuild, parameters.pipelineSdl.roslyn.enabledInCloudBuild) }}
+            ${{ if eq(coalesce(parameters.featureFlags.autoEnableRoslynWithNewRuleset, false), true) }}:
+              severity: ${{ coalesce(parameters.enforcedSdl.roslyn.severity, job.templateContext.sdl.roslyn.severity, parameters.pipelineSdl.roslyn.severity, 'CriticalError') }}
+            ${{ else }}:
+              severity: ${{ coalesce(parameters.enforcedSdl.roslyn.severity, job.templateContext.sdl.roslyn.severity, parameters.pipelineSdl.roslyn.severity, 'Default') }}
+            copyLogsOnly: ${{ coalesce(parameters.enforcedSdl.roslyn.copyLogsOnly, job.templateContext.sdl.roslyn.copyLogsOnly, parameters.pipelineSdl.roslyn.copyLogsOnly, false) }}
+            loadRoslynConfiguredAnalyzersOption: ${{ coalesce(parameters.enforcedSdl.roslyn.loadRoslynConfiguredAnalyzersOption, job.templateContext.sdl.roslyn.loadRoslynConfiguredAnalyzersOption, parameters.pipelineSdl.roslyn.loadRoslynConfiguredAnalyzersOption) }}
+            runEvenWhenNoOutputs: ${{ coalesce(parameters.enforcedSdl.roslyn.runEvenWhenNoOutputs, job.templateContext.sdl.roslyn.runEvenWhenNoOutputs, parameters.pipelineSdl.roslyn.runEvenWhenNoOutputs, false) }}
+          spotBugs:
+            break: ${{ coalesce(parameters.enforcedSdl.spotBugs.break, job.templateContext.sdl.spotBugs.break, parameters.pipelineSdl.spotBugs.break, false) }}
+            enabled: ${{ coalesce(parameters.enforcedSdl.spotBugs.enabled, job.templateContext.sdl.spotBugs.enabled, parameters.pipelineSdl.spotBugs.enabled, parameters.pipelineSdl.enableAllTools, parameters.isOfficial ) }}
+            severity: ${{ coalesce(parameters.enforcedSdl.spotBugs.severity, job.templateContext.sdl.spotBugs.severity, parameters.pipelineSdl.spotBugs.severity, 'Default') }}
+            scanOutputDirectoryOnly: ${{ coalesce(parameters.enforcedSdl.spotBugs.scanOutputDirectoryOnly, job.templateContext.sdl.spotBugs.scanOutputDirectoryOnly, parameters.pipelineSdl.spotBugs.scanOutputDirectoryOnly, true) }}
+            effort: ${{ coalesce(parameters.enforcedSdl.spotBugs.effort, job.templateContext.sdl.spotBugs.effort, parameters.pipelineSdl.spotBugs.effort, 'max') }}
+          spmi:
+            enabled: ${{ coalesce(parameters.enforcedSdl.spmi.enabled, job.templateContext.sdl.spmi.enabled, parameters.pipelineSdl.spmi.enabled, not(containsValue(parameters.internalConfig.spmiDisabledOrgs, variables['System.CollectionId'])), false) }}
+            exactToolVersion: ${{ coalesce(parameters.enforcedSdl.spmi.exactToolVersion, job.templateContext.sdl.spmi.exactToolVersion, parameters.pipelineSdl.spmi.exactToolVersion) }}
+          liquidSecureCheck:
+            enabled: ${{ coalesce(parameters.enforcedSdl.liquidSecureCheck.enabled, job.templateContext.sdl.liquidSecureCheck.enabled, parameters.pipelineSdl.liquidSecureCheck.enabled, containsValue(parameters.internalConfig.liquidSecureCheckEnabledOrgs, variables['System.CollectionId']), false) }}
+            subjectIds: ${{ coalesce(parameters.enforcedSdl.liquidSecureCheck.subjectIds, job.templateContext.sdl.liquidSecureCheck.subjectIds, parameters.pipelineSdl.liquidSecureCheck.subjectIds) }}
+            profiles: ${{ coalesce(parameters.enforcedSdl.liquidSecureCheck.subprofilesjectIds, job.templateContext.sdl.liquidSecureCheck.profiles, parameters.pipelineSdl.liquidSecureCheck.profiles) }}
+            failWhenNotCompliant: ${{ coalesce(parameters.enforcedSdl.liquidSecureCheck.failWhenNotCompliant, job.templateContext.sdl.liquidSecureCheck.failWhenNotCompliant, parameters.pipelineSdl.liquidSecureCheck.failWhenNotCompliant, false) }}
+          advancedSecurityPublish:
+            enabled: ${{ coalesce(parameters.enforcedSdl.advancedSecurityPublish.enabled, job.templateContext.sdl.advancedSecurityPublish.enabled, parameters.pipelineSdl.advancedSecurityPublish.enabled, or(containsValue(parameters.internalConfig.advancedSecurityPublishEnabledOrgs, variables['System.CollectionId']), containsValue(parameters.internalConfig.advancedSecurityPublishEnabledProjects, variables['System.TeamProjectId'])), false) }}
+          tsa:
+            enabled: ${{ coalesce(parameters.enforcedSdl.tsa.enabled, parameters.pipelineSdl.tsa.enabled, false) }}
+            configFile: ${{ coalesce(parameters.enforcedSdl.tsa.configFile, job.templateContext.sdl.tsa.configFile, parameters.pipelineSdl.tsa.configFile, '$(Build.SourcesDirectory)/.config/tsaoptions.json') }}
+            config: ${{ coalesce(parameters.enforcedSdl.tsa.config, job.templateContext.sdl.tsa.config, parameters.pipelineSdl.tsa.config) }}
+            onboard: ${{ coalesce(parameters.enforcedSdl.tsa.onboard, job.templateContext.sdl.tsa.onboard, parameters.pipelineSdl.tsa.onboard, true) }}
+            # Settings below are only supported in CloudBuildJob
+            uniqueCodeBaseName: ${{ coalesce(parameters.enforcedSdl.tsa.uniqueCodeBaseName, job.templateContext.sdl.tsa.uniqueCodeBaseName, parameters.pipelineSdl.tsa.uniqueCodeBaseName) }}
+            notificationEmail: ${{ coalesce(parameters.enforcedSdl.tsa.notificationEmail, job.templateContext.sdl.tsa.notificationEmail, parameters.pipelineSdl.tsa.notificationEmail) }}
+            adoInstanceUrl: ${{ coalesce(parameters.enforcedSdl.tsa.adoInstanceUrl, job.templateContext.sdl.tsa.adoInstanceUrl, parameters.pipelineSdl.tsa.adoInstanceUrl) }}
+            adoTeamProjectName: ${{ coalesce(parameters.enforcedSdl.tsa.adoTeamProjectName, job.templateContext.sdl.tsa.adoTeamProjectName, parameters.pipelineSdl.tsa.adoTeamProjectName) }}
+            areaPath: ${{ coalesce(parameters.enforcedSdl.tsa.areaPath, job.templateContext.sdl.tsa.areaPath, parameters.pipelineSdl.tsa.areaPath) }}
+            codebaseAdmin: ${{ coalesce(parameters.enforcedSdl.tsa.codebaseAdmin, job.templateContext.sdl.tsa.codebaseAdmin, parameters.pipelineSdl.tsa.codebaseAdmin) }}
+          tslint:
+            break: ${{ coalesce(parameters.enforcedSdl.tslint.break, job.templateContext.sdl.tslint.break, parameters.pipelineSdl.tslint.break, false) }}
+          baseline:
+            baselineFile: ${{ coalesce(parameters.enforcedSdl.baseline.baselineFile, job.templateContext.sdl.baseline.baselineFile, parameters.pipelineSdl.baseline.baselineFile) }}
+            baselineSet: ${{ coalesce(parameters.enforcedSdl.baseline.baselineSet, job.templateContext.sdl.baseline.baselineSet, parameters.pipelineSdl.baseline.baselineSet, 'default') }}
+          suppression:
+            suppressionFile: ${{ coalesce(parameters.enforcedSdl.suppression.suppressionFile, job.templateContext.sdl.suppression.suppressionFile, parameters.pipelineSdl.suppression.suppressionFile) }}
+            suppressionSet: ${{ coalesce(parameters.enforcedSdl.suppression.suppressionSet, job.templateContext.sdl.suppression.suppressionSet, parameters.pipelineSdl.suppression.suppressionSet, 'default') }}
+          severity: ${{ coalesce(parameters.enforcedSdl.severity, job.templateContext.sdl.severity, parameters.pipelineSdl.severity, 'Error') }}   # allow to overwrite severity. 1ES default severity is Error (P0)
+          ${{ if or(eq(coalesce(parameters.featureFlags.autoEnableRoslynWithNewRuleset, false), true), eq(coalesce(parameters.featureFlags.autoEnablePREfastWithNewRuleset, false), true)) }}:
+            policy: ${{ coalesce(parameters.enforcedSdl.policy, job.templateContext.sdl.policy, parameters.pipelineSdl.policy, 'MicrosoftCanary') }}
+          ${{ else }}:
+            policy: ${{ coalesce(parameters.enforcedSdl.policy, job.templateContext.sdl.policy, parameters.pipelineSdl.policy, 'Microsoft') }}
+          sdtReport:
+            enabled: ${{ coalesce(parameters.enforcedSdl.sdtReport.enabled, job.templateContext.sdl.sdtReport.enabled, parameters.pipelineSdl.sdtReport.enabled, true) }}
+          officialBuildWithTsaUploadDisabled: false
+          sourceAnalysisPool:
+            name: ${{ parameters.pipelineSdl.sourceAnalysisPool.name }}
+            demands: ${{ parameters.pipelineSdl.sourceAnalysisPool.demands }}
+          postValidationJobAnalysisPool:
+            name: ${{ parameters.pipelineSdl.postValidationJobAnalysisPool.name }}
+            image: ${{ parameters.pipelineSdl.postValidationJobAnalysisPool.image }}
+            os: ${{ parameters.pipelineSdl.postValidationJobAnalysisPool.os }}
+            hostArchitecture: ${{ coalesce( parameters.pipelineSdl.postValidationJobAnalysisPool.hostArchitecture, 'amd64') }}
+            demands: ${{ parameters.pipelineSdl.postValidationJobAnalysisPool.demands }}
+            workspace: ${{ parameters.pipelineSdl.postValidationJobAnalysisPool.workspace }}
+          sourceAnalysisTimeoutInMinutes: ${{ coalesce(parameters.pipelineSdl.sourceAnalysisTimeoutInMinutes, 120) }}
+          sourceAnalysisPostSteps: ${{ coalesce(parameters.enforcedSdl.sourceAnalysisPostSteps, parameters.pipelineSdl.sourceAnalysisPostSteps) }}
+          binaryAnalysisPostSteps: ${{ coalesce(parameters.enforcedSdl.binaryAnalysisPostSteps, parameters.pipelineSdl.binaryAnalysisPostSteps) }}
+          sbom:
+            enabled: ${{ coalesce(parameters.enforcedSdl.sbom.enabled, job.templateContext.sdl.sbom.enabled, parameters.pipelineSdl.sbom.enabled, parameters.isOfficial) }}
+            validate: ${{ coalesce(parameters.enforcedSdl.sbom.validate, job.templateContext.sdl.sbom.validate, parameters.pipelineSdl.sbom.validate, false) }}
+            packageName: ${{ coalesce(job.templateContext.sdl.sbom.packageName, parameters.pipelineSdl.sbom.packageName) }}
+            packageVersion: ${{ coalesce(job.templateContext.sdl.sbom.packgeVersion, parameters.pipelineSdl.sbom.packgeVersion) }}
+            buildComponentPath: ${{ coalesce(job.templateContext.sdl.sbom.buildComponentPath, parameters.pipelineSdl.sbom.buildComponentPath) }}
+            dockerImagesToScan: ${{ coalesce(job.templateContext.sdl.sbom.dockerImagesToScan, parameters.pipelineSdl.sbom.dockerImagesToScan) }}
+            additionalComponentDetectorArgs: ${{ coalesce(job.templateContext.sdl.sbom.additionalComponentDetectorArgs, parameters.pipelineSdl.sbom.additionalComponentDetectorArgs) }}
+            sbomPostSteps: ${{ coalesce(parameters.enforcedSdl.sbom.sbomPostSteps, parameters.pipelineSdl.sbom.sbomPostSteps) }}
+            validateOneBranch: ${{ coalesce(parameters.enforcedSdl.sbom.validateOneBranch, job.templateContext.sdl.sbom.validateOneBranch, parameters.pipelineSdl.sbom.validateOneBranch, false) }}
+            continueOnError: ${{ coalesce(parameters.enforcedSdl.sbom.continueOnError, job.templateContext.sdl.sbom.continueOnError, parameters.pipelineSdl.sbom.continueOnError, true) }}
+          enforcedTenant: ${{ parameters.pipelineSdl.enforcedTenant }}
+          sourceRepositoriesToScan: ${{ parameters.pipelineSdl.sourceRepositoriesToScan }}
+          customCheckout: ${{ parameters.pipelineSdl.customCheckout }}
+          stageName: ${{ parameters.stage.stage }}
+          ${{ if or(job.strategy.matrix, job.strategy.parallel) }}:
+            jobName: ${{ format('{0}_{1}', job.job, '$(System.JobPositionInPhase)') }}
+          ${{ elseif job.deployment }}:
+            jobName: ${{ job.deployment }}
+          ${{ else }}:
+            jobName: ${{ job.job }}
+          disableAutoBaselineByDefaultADOOrgs: ${{ parameters.disableAutoBaselineByDefaultADOOrgs }}
+          disableAutoBaselineCloudBuildByDefaultADOOrgs: ${{ parameters.disableAutoBaselineByDefaultADOOrgs }}
+          autobaseline:
+            disableAutoBaselineOnNonDefaultBranches: ${{ coalesce(parameters.pipelineSdl.autobaseline.disableAutoBaselineOnNonDefaultBranches, false) }}
+            isMainPipeline: ${{ coalesce(parameters.pipelineSdl.autobaseline.isMainPipeline, false) }}
+            skipUsingMainPipelineConfig: ${{ coalesce(parameters.pipelineSdl.autobaseline.skipUsingMainPipelineConfig, false) }}
+            enableForGitHub: ${{ coalesce(parameters.pipelineSdl.autobaseline.enableForGitHub, true) }}
+            useGitOps: ${{ coalesce(parameters.pipelineSdl.autobaseline.useGitOps, true) }}  # This is a temporary flag to disable GitOps for a pipeline if something goes wrong
+          applyOfficialBreakToolPolicyWithTsaEnabled: ${{ parameters.pipelineSdl.applyOfficialBreakToolPolicyWithTsaEnabled }}
+          binaryAnalysisCaching:
+            userState: ${{ coalesce(parameters.pipelineSdl.binaryAnalysisCaching.userState, job.templateContext.sdl.binaryAnalysisCaching.numWorkers, 'default') }}
+            toolsList: ${{ coalesce(parameters.pipelineSdl.binaryAnalysisCaching.toolsList, job.templateContext.sdl.binaryAnalysisCaching.toolsList, 'anti_malware spmi') }}
+            numWorkers: ${{ coalesce(parameters.pipelineSdl.binaryAnalysisCaching.numWorkers, job.templateContext.sdl.binaryAnalysisCaching.numWorkers, '') }}
+            enableArchiveScanning: ${{ coalesce(parameters.pipelineSdl.binaryAnalysisCaching.enableArchiveScanning, job.templateContext.sdl.binaryAnalysisCaching.enableArchiveScanning, '') }}
+            archiveSizeThreshold: ${{ coalesce(parameters.pipelineSdl.binaryAnalysisCaching.archiveSizeThreshold, job.templateContext.sdl.binaryAnalysisCaching.archiveSizeThreshold, '') }}
+          sourceAnalysisCaching:
+            userState: ${{ coalesce(parameters.pipelineSdl.sourceAnalysisCaching.userState, 'default') }}
+          sourceAnalysisVariablesToReset: ${{ parameters.pipelineSdl.sourceAnalysisVariablesToReset }}

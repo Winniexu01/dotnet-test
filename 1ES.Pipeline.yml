@@ -1,0 +1,441 @@
+parameters:
+
+- name: isOfficial
+  type: boolean
+  default: true
+
+- name: stages
+  type: stageList
+  default: []
+
+- name: pool
+  type: object
+  default: {}
+
+- name: containers
+  type: object
+  default: {}
+
+# Sdl rules with the highest priority
+- name: enforcedSdl
+  type: object
+  default: {}
+
+- name: spokeEsEnforcedSdl
+  type: object
+  default: {}
+
+# User specified / applied across the pipeline, can be overridden by job specific sdl setting
+- name: sdl
+  type: object
+  default: {}
+
+- name: authenticatedContainerRegistries
+  type: object
+  default: null
+
+- name: settings
+  type: object
+  default: {}
+
+- name: customBuildTags
+  type: object
+  default: null
+
+- name: customLogIssues
+  type: object
+  default: null
+
+# This should be used for any internal configuration that can't be overriden by customers
+- name: internalConfig
+  type: object
+  default:
+    outputTasks:
+    - 1ES.PublishPipelineArtifact@1
+    - 1ES.PublishBuildArtifacts@1
+    - 1ES.PublishArtifactsDrop@1
+    - 1ES.PublishNuGet@1
+    - 1ES.PublishAzureDevOpsExtension@1
+    - ecdc45f6-832d-4ad9-b52b-ee49e94659be@
+    - PublishPipelineArtifact@
+    - PublishBuildArtifacts@
+    - CopyPublishBuildArtifacts@
+    - artifactDropTask@
+    - ms-vscs-artifact.build-tasks.artifactDropTask-1.artifactDropTask@
+    - f9d96d25-0c81-4e77-8282-1ad1f785cbb4@
+    - PublishAzureDevOpsExtension@
+    - 631511b4-50ab-47c8-b766-7ae2aa672733
+    inputTasks:
+    - 1ES.DownloadPipelineArtifact@1
+    - 1ES.DownloadArtifactsDrop@1
+    buildJobIndicativeTasks:
+    - MSBuild@1
+    - VSBuild@1
+    - 1ES.BuildContainerImage@1
+    - 1ES.MicroBuildVstsDrop@1
+    - DockerCompose@
+    - 6975e2d1-96d3-4afc-8a41-498b5d34ea19
+    - CBTask@
+    - tse-cloudbuild.tse-cloudbuild-tasks.CA671F24-CBD6-48CB-92F3-FC13396450A1.CBTask
+    - NuGetCommand@
+    - NuGetRestore@
+    - 333b11bd-d341-40d9-afcf-b32d5ce6f23b
+    - MicroBuildPromoteNugetPackages@
+    - MicroBuildUploadVstsDropFolder@
+    - 1ES.Signing@
+    - AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@
+    - ManifestGeneratorTask@
+    signTasks:
+    - EsrpCodeSigning@
+    - 1ES.Signing@
+    # CODESYNC: disallowedPools @ scripts/data/resourceAccessConfig.json
+    disallowedPools:
+    - M365ReleasePool
+    - M365ReleasePipelines
+    - M365ComplianceTest
+    - M365ComplianceProd
+    - M365ComplianceGcc
+    - M365ComplianceDod
+    - M365ComplianceMC
+    - M365ComplianceLX
+    - M365ComplianceFR
+    - M365ComplianceGM
+    spmiDisabledOrgs:
+    - 78a0c1d2-887b-4de2-acac-f42021467e0f  # 1ESPipelineTemplates-OB, only for testing purposes
+    advancedSecurityPublishEnabledOrgs:
+    - cbad75f8-022e-4112-a6fb-e5312f755f69  # 1ESPipelineTemplates-PPE
+    - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+    - 011b8bdf-6d56-4f87-be0d-0092136884d9  # devdiv
+    - 3da63ab2-6a4c-484b-8c5f-9df97cc64da8  # onedrive
+    - cdcc3dee-d62a-41ee-aded-daf587e1851b  # microsoftit
+    - 19422243-19b9-4d85-9ca6-bc961861d287  # msasg
+    - a2fba5bb-e91f-4218-8d9f-3ba6468216b4  # office
+    - 2ce6486e-7d3b-47bb-8e16-5f19a43015c9  # skype
+    - d1a8f71c-7f64-45ad-9c5c-19c2f469d620  # o365exchange
+    - c0cf4e79-2860-48b9-a5f4-0ffff4167045  # msazuredev
+    - cb55739e-4afe-46a3-970f-1b49d8ee7564  # microsoft
+    - c22e3f6e-2072-467d-9342-214b57c9b8fe  # domoreexp
+    - c4cc6188-765e-44d7-b2f1-c199b15c3087  # yammer
+    - df21f221-97bd-4539-89b4-4cc1e465102d  # aivertical
+    advancedSecurityPublishEnabledProjects:
+    incrementalSDLBinaryAnalysisEnabledOrgs:
+    - cbad75f8-022e-4112-a6fb-e5312f755f69  # 1ESPipelineTemplates-PPE
+    - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+    - 19422243-19b9-4d85-9ca6-bc961861d287  # msasg
+    - d1a8f71c-7f64-45ad-9c5c-19c2f469d620  # o365exchange
+    incrementalSDLSourceAnalysisEnabledOrgs:
+    - cbad75f8-022e-4112-a6fb-e5312f755f69  # 1ESPipelineTemplates-PPE
+    # - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+    # - 19422243-19b9-4d85-9ca6-bc961861d287  # msasg
+    incrementalSDLBinaryAnalysisDisabledProjects:
+    - b924d696-3eae-4116-8443-9a18392d8544  # AzureDevOps
+    defenderForLinuxEnabledOrgs:
+    - cbad75f8-022e-4112-a6fb-e5312f755f69  # 1ESPipelineTemplates-PPE
+    - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+    - 341001b6-62a6-4d7e-aa61-779aea3de100  # monacotools
+    - 011b8bdf-6d56-4f87-be0d-0092136884d9  # devdiv
+    - b55de4ed-4b5a-4215-a8e4-0a0a5f71e7d8  # dnceng
+    - 0fb41ef4-5012-48a9-bf39-4ee3de03ee35  # azure-sdk
+    - d1a8f71c-7f64-45ad-9c5c-19c2f469d620  # o365exchange
+    - a2fba5bb-e91f-4218-8d9f-3ba6468216b4  # office
+    nuGetAuthenticateEnabledOrgs:
+    - cbad75f8-022e-4112-a6fb-e5312f755f69  # 1ESPipelineTemplates-PPE
+    - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+    liquidSecureCheckEnabledOrgs:
+    - 5452b7c6-6d13-4311-bde5-1fe030d05e3c  # twcdot
+
+    accessibilityInsightsEnabledOrgs:
+    - cbad75f8-022e-4112-a6fb-e5312f755f69  # 1ESPipelineTemplates-PPE
+    # Ring 0
+    - d9210329-e453-491d-8f8f-c17bec2a4758  # accessibility-insights-private
+    - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+    - 3279d477-42d3-4782-aad4-539980998e32  # pipeline-templates-migration
+    - dac179e9-5964-4d77-bb7f-4f089b278825  # obilshield
+    - ecabb27c-da65-4178-903f-61596228fe64  # uifabric
+    - 6d052814-ef12-4fcb-ad5f-76819b6181ad  # nipapersonal
+    - 19ecae39-0bb1-4998-a9de-c6aefc50786c  # cloudbuild
+    - 3852f397-56af-481a-81ee-2bef56a90038  # cloudestest
+    - baef5a64-ca05-4961-9c5f-d774e01a8b08  # cloudtest
+    - 87c5f08b-1859-4711-a8e4-8baae5b6f05f  # onebranch
+    - 171b7618-96f4-42cb-a6be-f0991aab05f8  # office-test1
+    # Ring 1
+    - 88ecc445-f5f6-40e6-ad81-d3957d54bca3  # msit-test1
+    # Ring 2
+    - 3eaa499d-4bbe-43ee-9598-065c7dff5553  # accessibility-insights
+    accessibilityInsightsEnabledProjects:
+    reposOptedOutOfCodeQLAutoInjection:
+    - dd5d0c0c-09fa-47f2-9926-004cc7be0bfb  # https://dev.azure.com/1ESPipelineTemplates-OB/1ESPipelinesTest/_git/1ESPipelinesTest
+    deleteBaselineEntriesBeforeDate: '2024-02-29 00:00:00Z'
+    deleteOlderCloudBuildBaselines: false  # delete baselines older than deleteBaselineEntriesBeforeDate
+    windowsBinaryAnalysisTools:
+    - advancedSecurityPublish
+    - antimalwareScan
+    - binskim
+    - clippy
+    - codeSignValidation
+    - credscan
+    - prefast
+    - roslyn
+    - spotBugs
+    - spmi
+    linuxBinaryAnalysisTools:
+    - advancedSecurityPublish
+    - antimalwareScan
+    - credscan
+    - binskim
+    - clippy
+    m365ClassicClouds:
+    - Public
+    - Gal
+    - Gcc
+    - Gcch
+    - Dod
+    m365SovereignClouds:
+    - USSec
+    - USNat
+    - Bleu
+    - Delos
+    supportedCloudsForNonM365Ev2Workflows:
+    - Public
+    approvalWorkflowsAllowedToOverrideConditions:
+    - lockbox
+    - test
+    sdpWorkflowsAllowedToOverrideConditions:
+    - bedrock
+    m365CloudsForDividedHeraFlow:
+    - Gal
+    - Gcc
+    - Gcch
+    - Dod
+    supportedWorkflowsForApprovalService:
+    - ev2-classic
+    - ev2-ra
+    supportedEv2Workflows:
+    - m365-ev2-classic
+    - m365-ev2-ra
+    - ev2-classic
+    - ev2-ra
+    m365Workflows:
+    - m365-ev2-classic
+    - m365-ev2-ra
+    - m365-replication
+    - m365-custom
+    - m365-stratus-app
+    releaseWorkflowsAllowedToBypassCheckoutStepCheckForSDL:
+    - ev2-classic
+    - ev2-ra
+    - m365-ev2-classic
+    - m365-ev2-ra
+    - m365-replication
+    # The Rust release workflow requires checking out the repository to release packages because:
+    # - the packages to publish are essentially tar files of the source files in the repository, and
+    # - currently, there is no way to publish existing packages; `cargo publish` always starts from the source.
+    # Additionally, the Rust release workflow depends on build evidences produced by the Rust build workflow.
+    # These build evidences confirm that builds have been performed on the source using the Rust build workflow,
+    # and that the source has undergone an SDL source scan. For these reasons, the Rust release workflow
+    # is permitted to bypass the checkout step check for SDL.
+    - Rust
+    pipelinesWithDependencyOnCheckout:
+    - 7b6a73d1-20cd-49c4-8789-7c3c9289dffb/3461     # 1ESPipelineTemplates-PPE/1ESPipelinesTest
+    - 7b6a73d1-20cd-49c4-8789-7c3c9289dffb/3466
+    - 6fb8cb7d-5623-420c-946b-ca74e63ac8ba/5003     # apidrop/Content CI
+    - 6fb8cb7d-5623-420c-946b-ca74e63ac8ba/5008
+    - 6fb8cb7d-5623-420c-946b-ca74e63ac8ba/5288
+    - 6fb8cb7d-5623-420c-946b-ca74e63ac8ba/5554
+    - 11ac29bc-5a99-400b-b225-01839ab0c9df/12791    # domoreexp/Teamspace
+    - 11ac29bc-5a99-400b-b225-01839ab0c9df/12796
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/235      # ghostbusters/Development
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/237
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/245
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/274
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/275
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/276
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/280
+    - 7b69060e-88aa-4323-9687-88cc80f6f077/283
+    - 71221402-f755-4fe2-9b9a-35bee80c244f/561      # microsoftdigitallearning/PEDTsTools
+    - 71221402-f755-4fe2-9b9a-35bee80c244f/580
+    - 3d1a556d-2042-4a45-9dae-61808ff33d3b/46254    # microsoftit/OneITVSO
+    - 3d1a556d-2042-4a45-9dae-61808ff33d3b/65844
+    - 3d1a556d-2042-4a45-9dae-61808ff33d3b/65456
+    - 3d1a556d-2042-4a45-9dae-61808ff33d3b/24074
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/4887     # mpsit/ScrumGitProjects1
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/4900
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/4941
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5082
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5103
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5341
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5477
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5504
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5561
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5564
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5573
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5576
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5578
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5594
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5642
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5682
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5683
+    - db635de9-6980-4e4a-9a68-c3252d82e537/375889   # msazure/OneAgile
+    - 708e929f-6bd5-415a-8daf-25b1dac08dd8/15045    # mseng/1ES
+    - 9ed2c125-1cd5-4a17-886b-9d267f3a5fab/18587    # mseng/Domino
+    - 9ed2c125-1cd5-4a17-886b-9d267f3a5fab/18586
+    - 9ed2c125-1cd5-4a17-886b-9d267f3a5fab/18629
+    - b924d696-3eae-4116-8443-9a18392d8544/15146    # mseng/AzureDevOps
+    - 906d4e3c-a9ba-4056-8440-4cdd68a1d176/30308    # office/CLE
+    - 40af5200-1775-45d6-b64b-4c951cbb7170/39       # cmr-cap/CAP CMR Hub
+    - 3d7ddd91-4d8e-4438-8de0-86863a7bac54/35214    # msasg/BingDNS
+    - 3d7ddd91-4d8e-4438-8de0-86863a7bac54/38188
+    - a321292d-4587-445a-8343-5d5460d8111e/455      # mswps/LBAM
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/38821    # o365exchange/O365%20Core
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39249
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39250
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39269
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39272
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39287
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39312
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39365
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39370
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39374
+    - 959adb23-f323-4d52-8203-ff34e5cbeefa/39546
+    - c978ac10-fc79-4879-9a73-42adb531be5f/2502     # onebranch/Pipeline
+    - 9edb3992-8769-4242-8885-51fd5e080cac/1572     # starlightagilebi/FDnE_Plat
+    - 9edb3992-8769-4242-8885-51fd5e080cac/1638
+    - 2d142023-d18c-4947-b848-6a22d942ccbc/2249     # worldwidelearning/WWL Reporting and Insights
+    - 1f524086-a280-4ac5-a5dd-690e2b444b6e/543      # cdsops
+    - 43d28e05-9930-4a28-9ab2-1b02a03f859e/86       # quest-cet/CEHub
+    - 757c53e6-6506-4367-a785-1ac4ff3973d4/3216     # 1edu/Analytics
+    - 757c53e6-6506-4367-a785-1ac4ff3973d4/3227
+    - 939e4efb-83bb-4c75-9f9a-34bbcb86da50/7637     # vsogd/SalesForecastAndAdjustmentTool
+    - efd5621d-b2a7-41bd-8c11-df986ef39d83/638      # microsoftdigitallearning/LORM-CXP
+    - efd5621d-b2a7-41bd-8c11-df986ef39d83/919
+    pipelinesWithMultipleEv2RADeploymentsPerCloud:
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5594     # mpsit/ScrumGitProjects1
+    - 99bd1c70-ead2-4d16-85f3-5d931d0eefc8/5690
+    enableHeraGatingOrgs:
+    - a2fba5bb-e91f-4218-8d9f-3ba6468216b4  # office
+    - 2ce6486e-7d3b-47bb-8e16-5f19a43015c9  # skype
+    - 4a05b22b-56d9-4015-84eb-356e83cc96ca  # intentional
+    - c22e3f6e-2072-467d-9342-214b57c9b8fe  # domoreexp
+    - 4d8bb995-a53e-4bdb-877a-74fa78f6eb5e  # msfast
+    - d1a8f71c-7f64-45ad-9c5c-19c2f469d620  # o365exchange
+    - 41bf5486-7392-4b7a-a7e3-a735c767e3b3  # msazure
+    - c4cc6188-765e-44d7-b2f1-c199b15c3087  # yammer
+    - 3da63ab2-6a4c-484b-8c5f-9df97cc64da8  # onedrive
+    - c8701bf2-aece-44c9-baed-cf8a12ad5bd3  # outlookweb
+    - 9be6001a-e501-4302-b884-b9b777245dfe  # onehrado
+    - c4998c1c-7219-4cff-b906-77bea1f2cf5a  # o365fasttrack
+    - e31be0bd-21bf-4f5e-990a-03f65d42e0a2  # msmesh
+    - 8b119ea1-2e2a-4839-8db7-8c9e8d50f6fa  # msdata
+    - 19422243-19b9-4d85-9ca6-bc961861d287  # msasg
+    - cdcc3dee-d62a-41ee-aded-daf587e1851b  # microsoftit
+    - 48221567-04d0-4937-8ab6-dad06cbde246  # microsoftgraph
+    - 2f63b3b0-4d60-4bf1-8601-e0d74e0b3277  # microsoftdesign
+    - bcb0e485-1b1c-4de0-a114-da3645b9ab1d  # m365cxp-tools
+    - 3b9760d1-c256-4832-a54d-148e660467e6  # inking
+    - 06e859c8-1ecd-438c-8cfe-c6c576521eb2  # a4o-uc-clients
+    - 2c6dbb27-9d38-42f5-addd-8bacfbd97222  # 1edu
+    - 3852f397-56af-481a-81ee-2bef56a90038  # cloudestest
+    - 78a0c1d2-887b-4de2-acac-f42021467e0f  # 1ESPipelineTemplates-OB
+    deploymentLifeCycleHooks:
+    - preDeploy
+    - deploy
+    - routeTraffic
+    - postRouteTraffic
+    prefastAndBinskimRebaselineWaves:
+      wave0:
+        date: 2024-11-13
+        orgs:
+        - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+        - 011b8bdf-6d56-4f87-be0d-0092136884d9  # devdiv
+        - b55de4ed-4b5a-4215-a8e4-0a0a5f71e7d8  # dnceng
+        - 341001b6-62a6-4d7e-aa61-779aea3de100  # monacotools
+        - 19422243-19b9-4d85-9ca6-bc961861d287  # msasg
+      wave4:
+        date: 2025-01-29
+        orgs:
+        - a2fba5bb-e91f-4218-8d9f-3ba6468216b4  # office
+        - d1a8f71c-7f64-45ad-9c5c-19c2f469d620  # o365exchange
+      wave5:
+        date: 2025-01-30
+        orgs:
+        - 2ce6486e-7d3b-47bb-8e16-5f19a43015c9  # skype
+        - c22e3f6e-2072-467d-9342-214b57c9b8fe  # domoreexp
+      wave6:
+        date: 2025-02-06
+        orgs:
+        - c4cc6188-765e-44d7-b2f1-c199b15c3087  # yammer
+        - cb55739e-4afe-46a3-970f-1b49d8ee7564  # microsoft
+        - cdcc3dee-d62a-41ee-aded-daf587e1851b  # microsoftit
+      wave7:
+        date: 2025-02-24
+        orgs:
+        - 0fb41ef4-5012-48a9-bf39-4ee3de03ee35  # azure-sdk
+        - 41bf5486-7392-4b7a-a7e3-a735c767e3b3  # msazure
+      final:
+        date: 2025-03-03
+    enablePrepareFilesForSbomOrgs:
+    # - cbad75f8-022e-4112-a6fb-e5312f755f69  # 1ESPipelineTemplates-PPE
+    enableLinuxContainerFlowV2Orgs:
+    enableWindowsContainerFlowV2Orgs:
+    optimizeCheckoutEnabledOrgs:
+    - a2fba5bb-e91f-4218-8d9f-3ba6468216b4  # office
+    - 0efb4611-d565-4cd1-9a64-7d6cb6d7d5f0  # mseng
+    - 19422243-19b9-4d85-9ca6-bc961861d287  # msasg
+
+- name: featureFlags
+  type: object
+  default: {}
+
+- name: serviceTreeId
+  type: string
+
+- name: sdp
+  type: object
+
+- name: pipelineMetadata
+  type: object
+
+resources:
+  containers:
+  - ${{ each container_pair in parameters.containers }}:
+    - ${{ if container_pair.value.image }}:
+      - container: ${{ container_pair.key }}
+        ${{ each pair in container_pair.value }}:
+          ${{ if notIn(pair.key, 'tenantId', 'identityType', 'registry') }}:
+            ${{ pair.key }}: ${{ pair.value }}
+
+stages:
+    - template: Stages/Stage.yml
+      parameters:
+        stage: ${{ stage }}
+        pool: ${{ parameters.pool }}
+        enforcedSdl: ${{ parameters.enforcedSdl }}
+        spokeEsEnforcedSdl: ${{ parameters.spokeEsEnforcedSdl }}
+        pipelineSdl: ${{ parameters.sdl }}
+        containers: ${{ parameters.containers }}
+        authenticatedContainerRegistries: ${{ parameters.authenticatedContainerRegistries }}
+        settings: ${{ parameters.settings }}
+        isOfficial: ${{ parameters.isOfficial }}
+        featureFlags: ${{ parameters.featureFlags }}
+        globalServiceTreeId: ${{ parameters.serviceTreeId }}
+        sdp: ${{ parameters.sdp }}
+        ${{ if and(containsValue(stage.jobs.*.templateContext.type, 'releaseJob'), ne(parameters.settings.skipSDLSourcesWhenCheckoutIsNoneForAllJobs, true), ne(parameters.settings.skipSdlSourceScan, true)) }}:
+          # CODESYNC: sdlStageRequired @ Stages/SDLSourcesTagStage.yml
+          ${{ if eq(coalesce(parameters.featureFlags.allowCheckoutInReleaseJobs, containsValue(parameters.internalConfig.pipelinesWithDependencyOnCheckout, format('{0}/{1}', variables['System.TeamProjectId'], variables['System.DefinitionId'])), false), true) }}:
+            sdlStageRequired: true  # Pipelines in the allowlist must have SDL source scan.
+          ${{ elseif or(containsValue(parameters.stages.*.jobs.*.templateContext.type, 'cloudBuildJob'), eq(parameters.settings.skipSdlSourceScan, true), and(eq(length(parameters.pipelineMetadata.buildJobs), 0), or(gt(length(parameters.pipelineMetadata.productionReleaseJobs), 0), gt(length(parameters.pipelineMetadata.nonProductionReleaseJobs), 0)) )) }}:
+            sdlStageRequired: false  # CloudBuild, skipSdlSourceScan, or pipelines with release job only (no builds) can skip SDL source scan
+          ${{ else }}:
+            sdlStageRequired: true  # All other cases should run SDL source scan
+        ${{ else }}:
+          sdlStageRequired: false  # Dependency on SDLSources is not required for this stage as it does not have any release jobs
+        ${{ if containsValue(parameters.stages.*.jobs.*.templateContext.type, 'cloudBuildJob') }}:
+          internalConfig:
+            ${{ each config in parameters.internalConfig }}:
+              ${{ config.key }}: ${{ config.value }}
+            skipCGInNonCloudBuildJobs: ${{ coalesce(parameters.settings.skipComponentGovernanceInAllJobsForCloudBuildPipeline, true) }}
+        ${{ else }}:
+          internalConfig:
+            ${{ each config in parameters.internalConfig }}:
+              ${{ config.key }}: ${{ config.value }}
+            skipCGInNonCloudBuildJobs: false
