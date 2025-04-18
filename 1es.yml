@@ -11,10 +11,11 @@ parameters:
   type: object
   default: {}
 
+pool: ${{ parameters.stage.pool }}
+  vmImage: ${{ parameters.stage.pool.image }}
+
 jobs:
 - job: Setup
-  pool: ${{ parameters.stage.pool }}
-    vmImage: ${{ parameters.stage.pool.image }}
 
   ${{ if parameters.containers.default_linux_container.image }}:
     container:
