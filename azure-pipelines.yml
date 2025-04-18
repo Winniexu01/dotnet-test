@@ -8,7 +8,7 @@ trigger:
 
 resources:
   containers:
-    default_linux_container:
+  - container: default_linux_container
     image: wenwen01/preps:ubuntu-sdk-2204
 
 extends:

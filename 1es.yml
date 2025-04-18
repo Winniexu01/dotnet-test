@@ -14,7 +14,7 @@ parameters:
 jobs:
 - job: Setup
   pool: ${{ parameters.stage.pool }}
-  vmImage: ${{ parameters.stage.pool.image }}
+    vmImage: ${{ parameters.stage.pool.image }}
 
   ${{ if parameters.containers.default_linux_container.image }}:
     container:
