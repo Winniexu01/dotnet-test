@@ -1,168 +1,23 @@
 parameters:
-- name: stages
-  type: stageList
-  default: []
+  - name: jobs
+    type: object
 
-- name: pool
-  type: object
-  default: {}
+  - name: vmImage
+    type: string
+    default: 'ubuntu-latest'
 
-- name: containers
-  type: object
-  default: {}
+  - name: container
+    type: string
 
-  # User specified / applied across the pipeline, can be overridden by job specific sdl setting
-- name: sdl
-  type: object
-  default: {}
-
-  # SDL enforcements from Spoke ES teams especially for the tools not enforced by 1ES PT. Spoke ES teams should not be exposing this to their customers
-- name: spokeEsEnforcedSdl
-  type: object
-  default: {}
-
-- name: settings
-  type: object
-  default: {}
-
-- name: authenticatedContainerRegistries
-  type: object
-  default: null
-
-- name: customBuildTags
-  type: object
-  default: null
-
-- name: customLogIssues
-  type: object
-  default: null
-
-- name: featureFlags
-  type: object
-  default: {}
-
-- name: serviceTreeId
-  type: string
-  default: ''
-
-- name: sdp
-  type: object
-  default: {}
-
-extends:
-  template: ./1ES.Pipeline.yml
-  parameters:
-    isOfficial: true
-    stages: ${{ parameters.stages }}
-    pool: ${{ parameters.pool }}
-    containers: ${{ parameters.containers }}
-    settings: ${{ parameters.settings }}
-    sdl: ${{ parameters.sdl }}
-    spokeEsEnforcedSdl: ${{ parameters.spokeEsEnforcedSdl }}
-    authenticatedContainerRegistries: ${{ parameters.authenticatedContainerRegistries }}
-    featureFlags: ${{ parameters.featureFlags }}
-    serviceTreeId: ${{ parameters.serviceTreeId }}
-    sdp: ${{ parameters.sdp }}
-    customBuildTags:
-    - ${{ each tag in parameters.customBuildTags }}:
-      - ${{ tag }}
-    - 1ES.PT.Official
-    - ${{ if or(containsValue(parameters.stages.*.templateContext.sdl.codeSignValidation.enabled, 'false'), containsValue(parameters.stages.*.jobs.*.templateContext.sdl.codeSignValidation.enabled, 'false'), containsValue(parameters.stages.*.jobs.*.templateContext.outputs.*.codeSignValidationEnabled, 'false'), containsValue(parameters.stages.*.jobs.*.steps.*.inputs.codeSignValidationEnabled, 'false')) }}:
-      - 1ES.PT.CodeSignValidation.OptOut
-    customLogIssues:
-    - ${{ each issue in parameters.customLogIssues }}:
-      - ${{ issue }}
-    - ${{ if or(ne('', parameters.sdl.codeSignValidation.useTestSign), ne(convertToJson(parameters.stages.*.jobs.*.templateContext.sdl.codeSignValidation.useTestSign), '[]')) }}:
-      - type: warning
-        message: "1ES PT Warning: sdl.codeSignValidation.useTestSign parameter will soon be deprecated. Note that test sign will not be allowed in official template. Please ensure using valid production certificates, and remove the parameter to avoid this warning."
-    ${{ if or(eq(parameters.sdl.enableAllTools, false), eq(parameters.sdl.enableAllTools, true)) }}:
-      'Cannot use the enableAllTools field in Official Template': error
-    # CODESYNC: 1ES.Unofficial.PipelineTemplate.yml
-    enforcedSdl:
-      antimalwareScan:
-        enabled: true
-        enabledInCloudBuild: true
-      armory:
-        ${{ if or(ne(parameters.sdl.tsa.enabled, true), eq(parameters.sdl.applyOfficialBreakToolPolicyWithTsaEnabled, true)) }}:
-          break: true
-      binskim:
-        enabled: true
-        enabledInCloudBuild: true
-        # ${{ if or(ne(parameters.sdl.tsa.enabled, true), eq(parameters.sdl.applyOfficialBreakToolPolicyWithTsaEnabled, true)) }}:
-        #   break: true #temporarily do not fail on error for BinSkim tool update
-        #   breakInCloudBuild: true
-      cloudBuild:
-        noBreakMode: false
-      codeql:
-        compiled:
-          enabled: true
-        ${{ if or(ne(parameters.sdl.tsa.enabled, true), eq(parameters.sdl.applyOfficialBreakToolPolicyWithTsaEnabled, true)) }}:
-          break: true
-      credscan:
-        enabled: true
-        enabledInCloudBuild: true
-        break: true
-        breakInCloudBuild: true
-      eslint:
-        enabled: true
-        enabledInCloudBuild: true
-        ${{ if or(ne(parameters.sdl.tsa.enabled, true), eq(parameters.sdl.applyOfficialBreakToolPolicyWithTsaEnabled, true)) }}:
-          break: true
-          breakInCloudBuild: true
-      psscriptanalyzer:
-        enabled: true
-        ${{ if or(ne(parameters.sdl.tsa.enabled, true), eq(parameters.sdl.applyOfficialBreakToolPolicyWithTsaEnabled, true)) }}:
-          break: true
-      spotBugs:
-        ${{ if or(ne(parameters.sdl.tsa.enabled, true), eq(parameters.sdl.applyOfficialBreakToolPolicyWithTsaEnabled, true)) }}:
-          break: true
-      componentgovernance:
-        enabled: true
-      # Roslyn, Bandit and Prefast are not enforced by 1ES PT. This option provides
-      # ability to spoke ES teams to enforce. By default in 1ES PT,
-      # any parameter in enforcedSDL should either have true or no value (indicating false).
-      # We should never set the value to false. Check out stage.yml for more details.
-      ${{ if eq(parameters.spokeEsEnforcedSdl.roslyn.enabled, true) }}:
-        roslyn:
-          enabled: true
-          ${{ if eq(parameters.spokeEsEnforcedSdl.roslyn.enabledInCloudBuild, true) }}:
-            enabledInCloudBuild: true
-          ${{ if eq(parameters.spokeEsEnforcedSdl.roslyn.break, true) }}:
-            break: true
-            ${{ if eq(parameters.spokeEsEnforcedSdl.roslyn.breakInCloudBuild, true) }}:
-              breakInCloudBuild: true
-      ${{ if eq(parameters.spokeEsEnforcedSdl.bandit.enabled, true) }}:
-        bandit:
-          enabled: true
-          ${{ if eq(parameters.spokeEsEnforcedSdl.bandit.enabledInCloudBuild, true) }}:
-            enabledInCloudBuild: true
-          ${{ if eq(parameters.spokeEsEnforcedSdl.bandit.break, true) }}:
-            break: true
-            ${{ if eq(parameters.spokeEsEnforcedSdl.bandit.breakInCloudBuild, true) }}:
-              breakInCloudBuild: true
-      ${{ if eq(parameters.spokeEsEnforcedSdl.prefast.enabled, true) }}:
-        prefast:
-          enabled: true
-          ${{ if eq(parameters.spokeEsEnforcedSdl.prefast.enabledInCloudBuild, true) }}:
-            enabledInCloudBuild: true
-          ${{ if eq(parameters.spokeEsEnforcedSdl.prefast.break, true) }}:
-            break: true
-    # CODESYNC: 1ES.Unofficial.PipelineTemplate.yml (except productionReleaseJobs)
-    pipelineMetadata:
-      buildJobs:
-      - ${{ each stage in parameters.stages }}:
-        - ${{ each job in stage.jobs }}:
-          # A build job is one that is explicitly marked with a known build type or one that isn't but uses an agent
-          - ${{ if or(job.templateContext.type, not(eq(job.pool.name, 'server'))) }}:
-            - ${{ if in(coalesce(job.templateContext.type, 'buildJob'), 'agentJob', 'artifactJob', 'buildJob', 'cloudBuildJob', 'containerBuildJob') }}:
-              - ${{ job }}
-      productionReleaseJobs:
-      - ${{ each stage in parameters.stages }}:
-        - ${{ each job in stage.jobs }}:
-          - ${{ if and(eq(job.templateContext.type, 'releaseJob'), eq(coalesce(job.templateContext.isProduction, stage.templateContext.isProduction, 'false'), 'true')) }}:
-            - ${{ job }}
-      nonProductionReleaseJobs:
-      - ${{ each stage in parameters.stages }}:
-        - ${{ each job in stage.jobs }}:
-          - ${{ if and(eq(job.templateContext.type, 'releaseJob'), eq(coalesce(job.templateContext.isProduction, stage.templateContext.isProduction, 'false'), 'false')) }}:
-            - ${{ job }}
+stage:
+  - stage: BuildStage
+    jobs:
+      ${{eacho job in parameters.jobs }}
+      - job: ${{ job.job }}
+        pool:
+          vmImage: ${{ parameters.vmImage }}
+        container:
+          image: ${{ parameters.container }}
+        steps: ${{ job.steps }}
+        ${{ if containsValue(job, 'dependsOn')}}
+          dependsOn: ${{ job.dependsOn }}
