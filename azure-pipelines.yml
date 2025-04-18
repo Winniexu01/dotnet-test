@@ -17,18 +17,18 @@ extends:
     pool:
       os: linux 
       image: ubuntu-latest
-    stage: 
-      name: stage
-      jobs:
-      - job: Setup
-        steps:
-        - script: dotnet --version
-          displayName: 'Setup'
+    stages: 
+      - stage: stage
+        jobs:
+        - job: Setup
+          steps:
+          - script: dotnet --version
+            displayName: 'Setup'
 
-      - job: LicenseScan
-        container: default_linux_container
-        dependsOn: Setup
-        timeoutInMinutes: 420
-        steps:
-        - script: dotnet --version
-          displayName: 'test'
+        - job: LicenseScan
+          container: default_linux_container
+          dependsOn: Setup
+          timeoutInMinutes: 420
+          steps:
+          - script: dotnet --version
+            displayName: 'test'
