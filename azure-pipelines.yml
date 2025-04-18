@@ -22,8 +22,7 @@ jobs:
 
 
 - job: LicenseScan
-  container:
-   image: wenwen01/preps:ubuntu-sdk-2204
+  container: wenwen01/preps:ubuntu-sdk-2204
   dependsOn: Setup
   timeoutInMinutes: 420
   strategy:
