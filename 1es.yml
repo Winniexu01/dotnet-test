@@ -13,11 +13,11 @@ stages:
   - stage: BuildStage
     jobs:
       ${{eacho job in parameters.jobs }}
-      - job: ${{ job.job }}
-        pool:
-          vmImage: ${{ parameters.vmImage }}
-        container:
-          image: ${{ parameters.container }}
-        steps: ${{ job.steps }}
-        ${{ if containsValue(job, 'dependsOn')}}
-          dependsOn: ${{ job.dependsOn }}
+        - job: ${{ job.job }}
+          pool:
+            vmImage: ${{ parameters.vmImage }}
+          container:
+            image: ${{ parameters.container }}
+          steps: ${{ job.steps }}
+          ${{ if containsValue(job, 'dependsOn')}}
+            dependsOn: ${{ job.dependsOn }}
