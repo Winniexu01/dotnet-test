@@ -12,13 +12,9 @@ parameters:
   default: {}
 
 pool: 
-  vmImage: ${{ parameters.pool.image }}
-
+  vmImage: ${{ parameters.pool.vmImage }}
 
 container:
-  ${{ each pair in parameters.containers.default_linux_container }}:
-    ${{ if ne(pair.key, 'name') }}:
-      ${{ pair.key }}: ${{ pair.value }}
   name: default_linux_container
 
 stages: ${{ parameters.stages }}

@@ -15,7 +15,7 @@ extends:
   template: 1es.yml@self
   parameters:
     pool:
-      image: ubuntu-latest
+      vmImage: ubuntu-latest
     stages:
     - stage: stage
       jobs:
