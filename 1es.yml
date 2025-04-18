@@ -11,10 +11,13 @@ parameters:
   type: object
   default: {}
 
-pool: 
-  vmImage: ${{ parameters.pool.vmImage }}
+stages:
+- ${{ each stage in parameters.stages }}:
+  pool: 
+    vmImage: ${{ parameters.pool.vmImage }}
 
-container:
-  name: default_linux_container
-
-stages: ${{ parameters.stages }}
+  container:
+    ${{ each pair in parameters.containers.default_linux_container }}:
+      ${{ if ne(pair.key, 'name') }}:
+        ${{ pair.key }}: ${{ pair.value }}
+    name: default_linux_container
