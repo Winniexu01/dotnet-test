@@ -9,7 +9,7 @@ parameters:
   - name: container
     type: string
 
-stage:
+stages:
   - stage: BuildStage
     jobs:
       ${{eacho job in parameters.jobs }}
