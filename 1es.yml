@@ -17,8 +17,7 @@ stages:
       vmImage: ${{ parameters.pool.image }}
 
     jobs:
-    - job: Setup
-
+    - job: Init
       ${{ if parameters.containers.default_linux_container.image }}:
         container:
           ${{ each pair in parameters.containers.default_linux_container }}:
