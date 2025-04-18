@@ -15,5 +15,3 @@ stages:
         container:
           image: ${{ parameters.container }}
         steps: ${{ job.steps }}
-        ${{ if containsValue(job, 'dependsOn')}}
-          dependsOn: ${{ job.dependsOn }}
