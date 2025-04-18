@@ -419,23 +419,3 @@ stages:
         featureFlags: ${{ parameters.featureFlags }}
         globalServiceTreeId: ${{ parameters.serviceTreeId }}
         sdp: ${{ parameters.sdp }}
-        ${{ if and(containsValue(stage.jobs.*.templateContext.type, 'releaseJob'), ne(parameters.settings.skipSDLSourcesWhenCheckoutIsNoneForAllJobs, true), ne(parameters.settings.skipSdlSourceScan, true)) }}:
-          # CODESYNC: sdlStageRequired @ Stages/SDLSourcesTagStage.yml
-          ${{ if eq(coalesce(parameters.featureFlags.allowCheckoutInReleaseJobs, containsValue(parameters.internalConfig.pipelinesWithDependencyOnCheckout, format('{0}/{1}', variables['System.TeamProjectId'], variables['System.DefinitionId'])), false), true) }}:
-            sdlStageRequired: true  # Pipelines in the allowlist must have SDL source scan.
-          ${{ elseif or(containsValue(parameters.stages.*.jobs.*.templateContext.type, 'cloudBuildJob'), eq(parameters.settings.skipSdlSourceScan, true), and(eq(length(parameters.pipelineMetadata.buildJobs), 0), or(gt(length(parameters.pipelineMetadata.productionReleaseJobs), 0), gt(length(parameters.pipelineMetadata.nonProductionReleaseJobs), 0)) )) }}:
-            sdlStageRequired: false  # CloudBuild, skipSdlSourceScan, or pipelines with release job only (no builds) can skip SDL source scan
-          ${{ else }}:
-            sdlStageRequired: true  # All other cases should run SDL source scan
-        ${{ else }}:
-          sdlStageRequired: false  # Dependency on SDLSources is not required for this stage as it does not have any release jobs
-        ${{ if containsValue(parameters.stages.*.jobs.*.templateContext.type, 'cloudBuildJob') }}:
-          internalConfig:
-            ${{ each config in parameters.internalConfig }}:
-              ${{ config.key }}: ${{ config.value }}
-            skipCGInNonCloudBuildJobs: ${{ coalesce(parameters.settings.skipComponentGovernanceInAllJobsForCloudBuildPipeline, true) }}
-        ${{ else }}:
-          internalConfig:
-            ${{ each config in parameters.internalConfig }}:
-              ${{ config.key }}: ${{ config.value }}
-            skipCGInNonCloudBuildJobs: false
