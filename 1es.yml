@@ -1,7 +1,7 @@
 parameters:
-- name: stage
-  type: stage
-  default: {}
+- name: stages
+  type: stageList
+  default: []
 
 - name: pool
   type: object
@@ -12,7 +12,7 @@ parameters:
   default: {}
 
 stages:
-  - stage: Build
+  - stage: ${{ parameters.stages.stage }}
     pool: 
       vmImage: ${{ parameters.pool.image }}
 
