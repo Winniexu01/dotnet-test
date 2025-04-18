@@ -7,7 +7,7 @@ trigger:
 - main
 
 jobs:
-- job: MultiConatiner
+- job: Setup
   pool:
     vmImage: ubuntu-latest
   steps:
@@ -24,8 +24,10 @@ jobs:
 - job: LicenseScan
   container:
    image: wenwen01/preps:ubuntu-sdk-2204
-  dependsOn: MultiConatiner
+  dependsOn: Setup
   timeoutInMinutes: 420
+  strategy:
+    matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
   steps:
   - script: dotnet --version
     displayName: 'test'
