@@ -15,3 +15,11 @@ jobs:
   steps:
   - script: dotnet --version
     displayName: 'test'
+
+
+- job: LicenseScan
+  dependsOn: MultiConatiner
+  timeoutInMinutes: 420
+  steps:
+  - script: dotnet --version
+    displayName: 'test'
