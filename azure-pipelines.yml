@@ -15,9 +15,7 @@ extends:
   template: 1es.yml@self
   parameters:
     pool:
-      name: 'Azure Pipeline'
       image: ubuntu-latest
-      os: linux 
     stages:
     - stage: stage
       jobs:
