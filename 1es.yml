@@ -3,23 +3,23 @@ parameters:
   type: stageList
   default: []
 
+- name: pool
+  type: object
+  default: {}
+
 - name: containers
   type: object
-  default:
-    name: default_linux_container
-    image: ubuntu:20.04
-
-resources:
-  containers: ${{ parameters.containers }}
+  default: {}
 
 stages:
-- ${{ each stage in parameters.stages }}:
-    jobs:
-    - ${{ each job in stage.jobs }}:
-        container:
-          ${{ each pair in parameters.containers[job.container.alias] }}:
-            ${{ if ne(pair.key, 'name') }}:
-              ${{ pair.key }}: ${{ pair.value }}
-        steps:
-          - ${{ each step in job.steps }}:
-            - script: echo "${{ step.key }} = ${{ step.value }}"
+  - ${{ each stage in parameters.stages }}:
+    - stage: ${{ stage.stage }}
+      jobs:
+        - ${{ each job in stage.jobs }}:
+          - job: ${{ job.job }}
+            displayName: ${{ job.displayName }}
+            container: ${{ parameters.containers[ job.containerKey ] }}
+            steps:
+              - ${{ each step in job.steps }}
+                displayName: ${{ step.displayName }}
+                - ${{ step }}

@@ -7,24 +7,25 @@ trigger:
 - tmp
 
 extends:
-  template: 1es.yml@self
-  parameters:
+  template: 1es.yml
     containers:
-      - name: default_linux_container
-        image: wenwen01/preps:ubuntu-sdk-2204
+      linux1: ubuntu:20.04
+      centos: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
 
     stages:
-    - stage: stage
+    - stage: Test
       jobs:
       - job: Setup
+        displayName: Setup Job
+        containerKey: linux1
         steps:
-        - script: dotnet --version
+        - script: echo "ttt"
           displayName: 'Setup'
 
       - job: LicenseScan
-        container: wenwen01/preps:ubuntu-sdk-2204
+        displayName: LicenseScan Job
+        centos: linux1
         dependsOn: Setup
-        timeoutInMinutes: 420
         steps:
-        - script: dotnet --version
+        - script: echo "ddd"
           displayName: 'test'
