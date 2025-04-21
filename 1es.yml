@@ -6,8 +6,8 @@ parameters:
 - name: containers
   type: object
   default:
-    - name: default_linux_container
-      image: ubuntu:20.04
+    name: default_linux_container
+    image: ubuntu:20.04
 
 resources:
   containers: ${{ parameters.containers }}
