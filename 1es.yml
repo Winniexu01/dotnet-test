@@ -14,8 +14,10 @@ parameters:
 resources:
   containers:
   - ${{ each container in parameters.containers }}:
-    - container: ${{ container.alias }}
-      image: ${{ container.image }}
+    - ${{ if container_pair.value.image }}:
+      - container: ${{ container_pair.key }}
+        ${{ each pair in container_pair.value }}:
+          ${{ pair.key }}: ${{ pair.value }}
 
 stages:
   - ${{ each stage in parameters.stages }}:
@@ -23,8 +25,22 @@ stages:
       jobs:
         - ${{ each job in stage.jobs }}:
           - job: ${{ job.job }}
-            container: ${{ job.container }}
+            ${{ if job.container }}:
+              ${{ if job.container.alias }}:
+                # Skip container definition if container is set to host
+                ${{ if ne(job.container.alias, 'host') }}:
+                  container:
+                    ${{ if parameters.containers[job.container.alias] }}:
+                      ${{ each pair in parameters.containers[job.container.alias] }}:
+                        ${{ if ne(pair.key, 'name') }}:
+                          ${{ pair.key }}: ${{ pair.value }}
+                      name: ${{ job.container.alias }}
             displayName: ${{ job.displayName }}
+                  ${{ else }}:
+                    'Container ${{ job.container.alias }} is not defined. Add container definition to "container" parameter of template.': error
+            ${{ else }}:
+              'Job container value is not supported': error
+
             steps:
               - ${{ each step in job.steps }}:
                 - ${{ step }}
