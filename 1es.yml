@@ -11,14 +11,13 @@ parameters:
   type: object
   default: {}
 
-resources:
-  containers:
-  - ${{ each container_pair in parameters.containers }}:
-    - ${{ if container_pair.value.image }}:
-      - container: ${{ container_pair.key }}
-        ${{ each pair in container_pair.value }}:
-          ${{ if notIn(pair.key, 'tenantId', 'identityType', 'registry') }}:
-            ${{ pair.key }}: ${{ pair.value }}
+# resources:
+#   containers:
+#   - ${{ each container_pair in parameters.containers }}:
+#     - ${{ if container_pair.value.image }}:
+#       - container: ${{ container_pair.key }}
+#         ${{ each pair in container_pair.value }}:
+#           ${{ pair.key }}: ${{ pair.value }}
 
 stages:
   - ${{ each stage in parameters.stages }}:
@@ -29,8 +28,7 @@ stages:
             container:
               ${{ if parameters.containers[job.container.alias] }}:
                 ${{ each pair in parameters.containers[job.container.alias] }}:
-                  ${{ if ne(pair.key, 'name') }}:
-                    ${{ pair.key }}: ${{ pair.value }}
+                  ${{ pair.key }}: ${{ pair.value }}
             displayName: ${{ job.displayName }}
             steps:
               - ${{ each step in job.steps }}:
