@@ -16,7 +16,7 @@ extends:
   parameters:
     containers:
       sdk_container:
-        image: linux-latest
+        vmimage: linux-latest
     stages:
     - stage: stage
       jobs:
