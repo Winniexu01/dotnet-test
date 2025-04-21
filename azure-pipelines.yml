@@ -10,15 +10,15 @@ extends:
   template: 1es.yml@self
   parameters:
     containers:
-      - container: ubuntu1
-        image: ubuntu:20.04
+      - container: fedora1
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-41
       - container: centos1
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
     stages:
       - stage: Test
         jobs:
           - job: Setup
-            container: ubuntu1
+            container: fedora1
             displayName: Setup Job
             steps:
               - script: echo "ttt"
