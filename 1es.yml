@@ -26,12 +26,12 @@ stages:
       jobs:
         - ${{ each job in stage.jobs }}:
           - job: ${{ job.job }}
-              container:
-                ${{ if parameters.containers[job.container.alias] }}:
-                  ${{ each pair in parameters.containers[job.container.alias] }}:
-                    ${{ if ne(pair.key, 'name') }}:
-                      ${{ pair.key }}: ${{ pair.value }}
-                  name: ${{ job.container.alias }}
+            container:
+              ${{ if parameters.containers[job.container.alias] }}:
+                ${{ each pair in parameters.containers[job.container.alias] }}:
+                  ${{ if ne(pair.key, 'name') }}:
+                    ${{ pair.key }}: ${{ pair.value }}
+                name: ${{ job.container.alias }}
             displayName: ${{ job.displayName }}
             steps:
               - ${{ each step in job.steps }}:
