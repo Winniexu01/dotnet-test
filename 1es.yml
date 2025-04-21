@@ -25,7 +25,7 @@ stages:
       jobs:
         - ${{ each job in stage.jobs }}:
           - job: ${{ job.job }}
-            container: ${{ job.container }}
+            container: ${{ job.container.image }}
             displayName: ${{ job.displayName }}
             steps:
               - ${{ each step in job.steps }}:
