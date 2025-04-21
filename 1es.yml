@@ -18,7 +18,7 @@ stages:
         - ${{ each job in stage.jobs }}:
           - job: ${{ job.job }}
             displayName: ${{ job.displayName }}
-            container: ${{ parameters.containers[ job.containerKey ] }}
+            container: ${{ parameters.containers[ job.container ] }}
             steps:
               - ${{ each step in job.steps }}:
                 - ${{ step }}
