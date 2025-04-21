@@ -10,20 +10,22 @@ extends:
   template: 1es.yml@self
   parameters:
     containers:
-      ubuntu1:
+      - container: ubuntu1
         image: ubuntu:20.04
-      centos1:
+      - container: centos1
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
     stages:
       - stage: Test
         jobs:
           - job: Setup
+            container: ubuntu1
             displayName: Setup Job
             steps:
               - script: echo "ttt"
                 displayName: 'Setup'
 
           - job: LicenseScan
+            container: centos1
             displayName: LicenseScan Job
             dependsOn: Setup
             steps:
