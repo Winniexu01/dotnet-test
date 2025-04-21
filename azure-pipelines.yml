@@ -10,9 +10,9 @@ extends:
   template: 1es.yml@self
   parameters:
     containers:
-      - container: fedora1
+      fedora1:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-41
-      - container: centos1
+      centos1: 
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
     stages:
       - stage: Test
