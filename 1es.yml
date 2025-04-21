@@ -26,7 +26,6 @@ stages:
           ${{ each pair in parameters.containers[job.container.alias] }}:
             ${{ if ne(pair.key, 'name') }}:
               ${{ pair.key }}: ${{ pair.value }}
-          name: ${{ job.container.alias }}
         steps:
           - ${{ each step in job.steps }}:
             - script: echo "${{ step.key }} = ${{ step.value }}"
