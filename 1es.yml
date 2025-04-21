@@ -14,10 +14,8 @@ resources:
 
 stages:
 - ${{ each stage in parameters.stages }}:
-  - stage: ${{ stage.stage }}
     jobs:
     - ${{ each job in stage.jobs }}:
-      - job: ${{ job.job }}
         container:
           ${{ each pair in parameters.containers[job.container.alias] }}:
             ${{ if ne(pair.key, 'name') }}:

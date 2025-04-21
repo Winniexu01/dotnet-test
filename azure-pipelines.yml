@@ -6,19 +6,12 @@
 trigger:
 - tmp
 
-resources:
-  repositories:
-  - repository: winniexu01
-    type: git
-    name: winniexu01/pipelines-dotnet-core
-    ref: tmp
-
 extends:
   template: 1es.yml@self
   parameters:
     containers:
-      - name: sdk_container
-        image: ubuntu:20.04
+      - name: default_linux_container
+        image: wenwen01/preps:ubuntu-sdk-2204
 
     stages:
     - stage: stage
