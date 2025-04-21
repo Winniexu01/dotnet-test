@@ -11,13 +11,13 @@ parameters:
   type: object
   default: {}
 
-resources:
-  containers:
-  - ${{ each container in parameters.containers }}:
-    - ${{ if container_pair.value.image }}:
-      - container: ${{ container_pair.key }}
-        ${{ each pair in container_pair.value }}:
-          ${{ pair.key }}: ${{ pair.value }}
+# resources:
+#   containers:
+#   - ${{ each container in parameters.containers }}:
+#     - ${{ if container_pair.value.image }}:
+#       - container: ${{ container_pair.key }}
+#         ${{ each pair in container_pair.value }}:
+#           ${{ pair.key }}: ${{ pair.value }}
 
 stages:
   - ${{ each stage in parameters.stages }}:
