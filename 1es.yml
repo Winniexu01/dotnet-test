@@ -13,11 +13,9 @@ parameters:
 
 resources:
   containers:
-  - ${{ each container_pair in parameters.containers }}:
-    - ${{ if container_pair.value.image }}:
-      - container: ${{ container_pair.key }}
-        ${{ each pair in container_pair.value }}:
-          ${{ pair.key }}: ${{ pair.value }}
+  - ${{ each container in parameters.containers }}:
+    - container: ${{ container.alias }}
+      image: ${{ container.image }}
 
 stages:
   - ${{ each stage in parameters.stages }}:
@@ -25,7 +23,7 @@ stages:
       jobs:
         - ${{ each job in stage.jobs }}:
           - job: ${{ job.job }}
-            container: ${{ job.container.image }}
+            container: ${{ job.container }}
             displayName: ${{ job.displayName }}
             steps:
               - ${{ each step in job.steps }}:
