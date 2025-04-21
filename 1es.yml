@@ -10,14 +10,7 @@ parameters:
       image: ubuntu:20.04
 
 resources:
-  containers:
-  - ${{ each container_pair in parameters.containers }}:
-      ${{ if parameters.containers.default_linux_container.image }}:
-        container:
-          ${{ each pair in parameters.containers.default_linux_container }}:
-            ${{ if ne(pair.key, 'name') }}:
-              ${{ pair.key }}: ${{ pair.value }}
-          name: default_linux_container
+  containers: ${{ parameters.containers }}
 
 stages:
 - ${{ each stage in parameters.stages }}:
