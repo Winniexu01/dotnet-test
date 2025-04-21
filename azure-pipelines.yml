@@ -8,6 +8,7 @@ trigger:
 
 extends:
   template: 1es.yml
+  parameters:
     containers:
       linux1: ubuntu:20.04
       centos: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
