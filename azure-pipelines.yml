@@ -7,27 +7,25 @@ trigger:
 - tmp
 
 extends:
-  template: 1es.yml
+  template: 1es.yml@self
+  parameters:
+    containers:
+      ubuntu1:
+        image: ubuntu:20.04
+      centos1:
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
+    stages:
+      - stage: Test
+        jobs:
+          - job: Setup
+            displayName: Setup Job
+            steps:
+              - script: echo "ttt"
+                displayName: 'Setup'
 
-parameters:
-  containers:
-    linux1: ubuntu:20.04
-    centos: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
-
-  stages:
-    - stage: Test
-      jobs:
-        - job: Setup
-          displayName: Setup Job
-          containerKey: linux1
-          steps:
-            - script: echo "ttt"
-              displayName: 'Setup'
-
-        - job: LicenseScan
-          displayName: LicenseScan Job
-          centos: linux1
-          dependsOn: Setup
-          steps:
-            - script: echo "ddd"
-              displayName: 'test'
+          - job: LicenseScan
+            displayName: LicenseScan Job
+            dependsOn: Setup
+            steps:
+              - script: echo "ddd"
+                displayName: 'test'
