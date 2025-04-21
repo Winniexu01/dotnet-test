@@ -34,7 +34,6 @@ stages:
                       ${{ each pair in parameters.containers[job.container.alias] }}:
                         ${{ if ne(pair.key, 'name') }}:
                           ${{ pair.key }}: ${{ pair.value }}
-                      name: ${{ job.container.alias }}
                     ${{ else }}:
                       'Container ${{ job.container.alias }} is not defined. Add container definition to "container" parameter of template.': error
               ${{ else }}:
