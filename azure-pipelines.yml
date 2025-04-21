@@ -6,35 +6,17 @@
 trigger:
 - tmp
 
-
 resources:
-  repositories:
-  - repository: 1ESPipelineTemplates
-    type: git
-    name: 1ESPipelineTemplates/1ESPipelineTemplates
-    ref: refs/tags/release
   containers:
-    - container: default_linux_container:
+    - container: sdk_container
       image: wenwen01/preps:ubuntu-sdk-2204
 
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  template: 1es.yml@self
   parameters:
-    pool:
-      name: NetCore1ESPool-Svc-Internal
-      image: 1es-ubuntu-2204
-      os: linux 
-    sdl:
-      sourceAnalysisPool:
-          name: NetCore1ESPool-Svc-Internal
-          image: 1es-windows-2022 
-          os: windows
-      binskim:
-        enabled: true
-      policheck:
-        enabled: true
-      tsa:
-        enabled: true
+    containers:
+      sdk_container:
+        image: linux-latest
     stages:
     - stage: stage
       jobs:

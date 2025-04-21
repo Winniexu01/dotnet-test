@@ -1,17 +1,32 @@
 parameters:
-  - name: vmImage
-    type: string
-    default: 'ubuntu-latest'
+- name: stages
+  type: stageList
+  default: []
 
-  - name: container
-    type: string
+- name: containers
+  type: object
+  default: {}
+
+resources:
+  containers:
+  - ${{ each container_pair in parameters.containers }}:
+    - ${{ if container_pair.value.image }}:
+      - container: ${{ container_pair.key }}
+        ${{ each pair in container_pair.value }}:
+          ${{ if notIn(pair.key, 'tenantId', 'identityType', 'registry') }}:
+            ${{ pair.key }}: ${{ pair.value }}
 
 stages:
-  - stage: BuildStage
+- ${{ each stage in parameters.stages }}:
+  - stage: ${{ stage.stage }}
     jobs:
-      - job:
-        pool:
-          vmImage: ${{ parameters.vmImage }}
+    - ${{ each job in stage.jobs }}:
+      - job: ${{ job.job }}
         container:
-          image: ${{ parameters.container }}
-        steps: ${{ job.steps }}
+          ${{ each pair in parameters.containers[job.container.alias] }}:
+            ${{ if ne(pair.key, 'name') }}:
+              ${{ pair.key }}: ${{ pair.value }}
+          name: ${{ job.container.alias }}
+        steps:
+          - ${{ each step in job.steps }}:
+            - script: echo "${{ step.key }} = ${{ step.value }}"
