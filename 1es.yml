@@ -35,11 +35,11 @@ stages:
                         ${{ if ne(pair.key, 'name') }}:
                           ${{ pair.key }}: ${{ pair.value }}
                       name: ${{ job.container.alias }}
+                    ${{ else }}:
+                      'Container ${{ job.container.alias }} is not defined. Add container definition to "container" parameter of template.': error
+              ${{ else }}:
+                'Job container value is not supported': error
             displayName: ${{ job.displayName }}
-                  ${{ else }}:
-                    'Container ${{ job.container.alias }} is not defined. Add container definition to "container" parameter of template.': error
-            ${{ else }}:
-              'Job container value is not supported': error
 
             steps:
               - ${{ each step in job.steps }}:
