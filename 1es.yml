@@ -5,16 +5,19 @@ parameters:
 
 - name: containers
   type: object
-  default: {}
+  default:
+    - name: default_linux_container
+      image: ubuntu:20.04
 
 resources:
   containers:
   - ${{ each container_pair in parameters.containers }}:
-    - ${{ if container_pair.value.image }}:
-      - container: ${{ container_pair.key }}
-        ${{ each pair in container_pair.value }}:
-          ${{ if notIn(pair.key, 'tenantId', 'identityType', 'registry') }}:
-            ${{ pair.key }}: ${{ pair.value }}
+      ${{ if parameters.containers.default_linux_container.image }}:
+        container:
+          ${{ each pair in parameters.containers.default_linux_container }}:
+            ${{ if ne(pair.key, 'name') }}:
+              ${{ pair.key }}: ${{ pair.value }}
+          name: default_linux_container
 
 stages:
 - ${{ each stage in parameters.stages }}:
