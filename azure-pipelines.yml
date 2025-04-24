@@ -28,12 +28,32 @@ extends:
                   scancode --version
                 displayName: 'Setup'
 
-          # - job: LicenseScan
-          #   displayName: LicenseScan Job
-          #   dependsOn: Setup
-          #   steps:
-          #     - script: echo "ddd"
-          #       displayName: 'test'
+          - job: LicenseScan1
+            displayName: LicenseScan Job1
+            dependsOn: Setup
+            steps:
+              - script: |
+                  echo "scancode --version"
+                  scancode --version
+                displayName: 'test1'
+
+          - job: LicenseScan2
+            displayName: LicenseScan Job2
+            dependsOn: Setup
+            steps:
+              - script: |
+                  echo "scancode --version"
+                  scancode --version
+                displayName: 'test2'
+
+          - job: LicenseScan3
+            displayName: LicenseScan Job3
+            dependsOn: Setup
+            steps:
+              - script: |
+                  echo "scancode --version"
+                  scancode --version
+                displayName: 'test3'
 # pool:
 #   vmImage: Ubuntu-latest
 
