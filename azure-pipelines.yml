@@ -26,6 +26,7 @@ extends:
               - script: |
                   echo "scancode --version"
                   scancode --version
+                  scancode --version
                 displayName: 'Setup'
 
           # - job: LicenseScan1
