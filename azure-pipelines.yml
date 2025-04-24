@@ -29,6 +29,7 @@ extends:
                 displayName: 'Setup'
 
           - job: LicenseScan1
+            container: azurelinuxSourceBuildTestContainer
             displayName: LicenseScan Job1
             dependsOn: Setup
             steps:
@@ -38,6 +39,7 @@ extends:
                 displayName: 'test1'
 
           - job: LicenseScan2
+            container: azurelinuxSourceBuildTestContainer
             displayName: LicenseScan Job2
             dependsOn: Setup
             steps:
@@ -47,6 +49,7 @@ extends:
                 displayName: 'test2'
 
           - job: LicenseScan3
+            container: azurelinuxSourceBuildTestContainer
             displayName: LicenseScan Job3
             dependsOn: Setup
             steps:
