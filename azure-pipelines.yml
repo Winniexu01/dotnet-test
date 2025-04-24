@@ -15,7 +15,7 @@ extends:
   parameters:
     containers:
       azurelinuxSourceBuildTestContainer:
-        image: wenwen01/preps:azurelinux-source
+        image: wenwen01/preps:azurelinux-3.0-net10.0-source-build-test-amd64
     stages:
       - stage: Stage
         jobs:
