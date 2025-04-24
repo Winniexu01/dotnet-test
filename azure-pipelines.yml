@@ -15,7 +15,7 @@ extends:
   parameters:
     containers:
       azurelinuxSourceBuildTestContainer:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net9.0-build-amd64
     stages:
       - stage: Stage
         jobs:
