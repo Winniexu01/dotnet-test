@@ -10,23 +10,23 @@ extends:
   template: 1es.yml@self
   parameters:
     containers:
-      fedora1:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-41
-      centos1: 
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9
+      azurelinuxSourceBuildTestContainer:
+        image: wenwen01/preps:azurelinux-3.0-net10.0-source-build-test-amd64
     stages:
-      - stage: Test
+      - stage: Stage
         jobs:
           - job: Setup
+            container: azurelinuxSourceBuildTestContainer
             displayName: Setup Job
             steps:
-              - script: echo "ttt"
+              - script: |
+                  echo "scancode --version"
+                  scancode --version
                 displayName: 'Setup'
 
-          - job: LicenseScan
-            container: centos1
-            displayName: LicenseScan Job
-            dependsOn: Setup
-            steps:
-              - script: echo "ddd"
-                displayName: 'test'
+          # - job: LicenseScan
+          #   displayName: LicenseScan Job
+          #   dependsOn: Setup
+          #   steps:
+          #     - script: echo "ddd"
+          #       displayName: 'test'
