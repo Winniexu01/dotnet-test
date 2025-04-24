@@ -41,7 +41,7 @@ stages:
   - stage: Stage
     jobs:
     - job: Steup
-      container: mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net9.0-opt-amd64
+      container: wenwen01/preps:azurelinux-source
       displayName: Setup Job
       steps:
       - script: |
