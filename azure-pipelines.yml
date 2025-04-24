@@ -4,9 +4,11 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-branches:
-  include:
-  - tmp
+  branches:
+    include:
+    - tmp
+
+pr: none
 
 extends:
   template: 1es.yml@self
