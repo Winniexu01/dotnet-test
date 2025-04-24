@@ -15,7 +15,7 @@ extends:
   parameters:
     containers:
       azurelinuxSourceBuildTestContainer:
-        image: wenwen01/preps:azurelinux-source
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-helix-amd64
     stages:
       - stage: Stage
         jobs:
