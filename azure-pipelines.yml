@@ -41,7 +41,7 @@ stages:
   - stage: Stage
     jobs:
     - job: Steup
-      container: mcr.microsoft.com/dotnet/sdk:10.0-preview-azurelinux3.0
+      container: mcr.microsoft.com/azurelinux/base/core:3.0
       displayName: Setup Job
       steps:
       - script: |
