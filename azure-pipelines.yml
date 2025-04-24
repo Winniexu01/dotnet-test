@@ -24,8 +24,8 @@ extends:
             displayName: Setup Job
             steps:
               - script: |
-                  echo "dotnet -v"
-                  dotnet -v
+                  echo "dotnet --version"
+                  dotnet --version
                   echo "scancode --version"
                   scancode --version
                 displayName: 'Setup'
