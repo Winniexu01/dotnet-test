@@ -10,25 +10,23 @@ trigger:
 
 pr: none
 
-extends:
-  template: 1es.yml@self
-  parameters:
-    containers:
-      azurelinuxSourceBuildTestContainer:
-        image: mcr.microsoft.com/dotnet/sdk:10.0-preview-azurelinux3.0
-    stages:
-      - stage: Stage
-        jobs:
-          - job: Setup
-            container: azurelinuxSourceBuildTestContainer
-            displayName: Setup Job
-            steps:
-              - script: |
-                  echo "dotnet --version"
-                  dotnet --version
-                  echo "scancode --version"
-                  scancode --version
-                displayName: 'Setup'
+# extends:
+#   template: 1es.yml@self
+#   parameters:
+#     containers:
+#       azurelinuxSourceBuildTestContainer:
+#         image: wenwen01/preps:azurelinux-source
+#     stages:
+#       - stage: Stage
+#         jobs:
+#           - job: Setup
+#             container: azurelinuxSourceBuildTestContainer
+#             displayName: Setup Job
+#             steps:
+#               - script: |
+#                   echo "scancode --version"
+#                   scancode --version
+#                 displayName: 'Setup'
 
           # - job: LicenseScan
           #   displayName: LicenseScan Job
@@ -36,3 +34,16 @@ extends:
           #   steps:
           #     - script: echo "ddd"
           #       displayName: 'test'
+pool:
+  vmImage: Ubuntu-latest
+
+stages:
+  - stage: Stage
+    jobs:
+    - job: Steup
+      container: mcr.microsoft.com/dotnet/sdk:10.0-preview-azurelinux3.0
+      displayName: Setup Job
+      steps:
+      - script: |
+          echo "test"
+        displayName: 'Steup'
