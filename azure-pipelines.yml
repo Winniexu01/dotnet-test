@@ -24,6 +24,7 @@ extends:
             displayName: Setup Job
             steps:
               - script: |
+                  whoami
                   echo "ls -l scancode"
                   ls -l /usr/local/bin/scancode
                   echo "su root"
