@@ -25,6 +25,7 @@ extends:
             steps:
               - script: |
                   echo "scancode --version"
+                  chmod +x /usr/local/bin/scancode
                   scancode --version
                   scancode --version
                 displayName: 'Setup'
