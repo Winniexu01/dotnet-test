@@ -24,8 +24,12 @@ extends:
             displayName: Setup Job
             steps:
               - script: |
+                  echo "ls -l scancode"
+                  ls -l scancode
+                  echo "su root"
+                  su root -c "chmod 755 /usr/local/bin/scancode"
                   echo "scancode --version"
-                  su scancode --version
+                  scancode --version
                 displayName: 'Setup'
 
           # - job: LicenseScan1
