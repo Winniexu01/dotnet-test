@@ -25,6 +25,7 @@ extends:
             steps:
               - script: |
                   whoami
+                  sudo -n true && echo "sudo available" || echo "no sudo or password required"
                   echo "ls -l scancode"
                   ls -l /usr/local/bin/scancode
                   echo "su root"
