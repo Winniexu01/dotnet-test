@@ -25,9 +25,7 @@ extends:
             steps:
               - script: |
                   echo "scancode --version"
-                  su chmod +x /usr/local/bin/scancode
-                  scancode --version
-                  scancode --version
+                  su scancode --version
                 displayName: 'Setup'
 
           # - job: LicenseScan1
