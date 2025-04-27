@@ -25,7 +25,7 @@ extends:
             steps:
               - script: |
                   echo "ls -l scancode"
-                  ls -l scancode
+                  ls -l /usr/local/bin/scancode
                   echo "su root"
                   su root -c "chmod 755 /usr/local/bin/scancode"
                   echo "scancode --version"
