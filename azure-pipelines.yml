@@ -24,22 +24,17 @@ extends:
             displayName: Setup Job
             steps:
               - script: |
-                  whoami
-                  sudo -n true && echo "sudo available" || echo "no sudo or password required"
                   echo "ls -l scancode"
-                  ls -l /usr/local/bin
                   ls -l /usr/local/bin/scancode
-                  # echo "su root"
-                  # su root -c "chmod 755 /usr/local/bin/scancode"
                   echo "scancode --version"
                   scancode --version
                 displayName: 'Setup'
-          - job: docker
-            displayName: docker Job
-            steps:
-              - script: 
-                  docker version
-                displayName: 'docker'
+          # - job: docker
+          #   displayName: docker Job
+          #   steps:
+          #     - script: 
+          #         docker version
+          #       displayName: 'docker'
 
           # - job: LicenseScan1
           #   container: azurelinuxSourceBuildTestContainer
