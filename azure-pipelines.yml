@@ -19,16 +19,17 @@ extends:
     stages:
       - stage: Stage
         jobs:
-          - job: Setup
+          - job: Test
             container: azurelinuxSourceBuildTestContainer
-            displayName: Setup Job
+            displayName: Test Job
             steps:
               - script: |
-                  echo "ls -l scancode"
-                  ls -l /usr/local/bin/scancode
+                  tdnf install procps -y
                   echo "scancode --version"
                   scancode --version
-                displayName: 'Setup'
+                  echo "get memory"
+                  free -h
+                displayName: 'Test'
           # - job: docker
           #   displayName: docker Job
           #   steps:
