@@ -24,10 +24,14 @@ extends:
             displayName: Test Job
             steps:
               - script: |
-                  python3 -m venv /tmp/env
-                  source /tmp/env/bin/activate
-                  tdnf install procps -y
-                  deactivate
+                  mkdir -p /tmp/procps
+                  cd /tmp/procps
+                  wget https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.3.tar.xz
+                  tar -xf procps-ng-4.0.3.tar.xz
+                  cp procps-ng-4.0.3
+                  ./configure --prefix=$HOME/.local
+                  make && make install
+                  export PATH="$HOME/.local/bin:$PATH"
                 displayName: 'Config'
               - script: |
                   echo "scancode --version"
