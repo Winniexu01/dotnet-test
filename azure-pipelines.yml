@@ -24,7 +24,12 @@ extends:
             displayName: Test Job
             steps:
               - script: |
+                  python3 -m venv /tmp/env
+                  source /tmp/env/bin/activate
                   tdnf install procps -y
+                  deactivate
+                displayName: 'Config'
+              - script: |
                   echo "scancode --version"
                   scancode --version
                   echo "get memory"
