@@ -16,7 +16,7 @@ extends:
     containers:
       azurelinuxSourceBuildTestContainer:
         image: wenwen01/prereqs:linux
-        options: --memory=12g
+        # options: --memory=12g
     stages:
       - stage: Stage
         jobs:
