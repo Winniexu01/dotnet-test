@@ -15,7 +15,7 @@ extends:
   parameters:
     containers:
       azurelinuxSourceBuildTestContainer:
-        image: wenwen01/prereqs:linux 
+        image: wenwen01/prereqs:linux
         options: --memory=12g
     stages:
       - stage: Stage
@@ -27,6 +27,8 @@ extends:
               - script: |
                   echo "get memory"
                   free -h
+                displayName: 'Test'
+              - script: |
                   echo "scancode --version"
                   scancode --version
                 displayName: 'Test'
