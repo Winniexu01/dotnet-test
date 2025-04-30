@@ -15,7 +15,7 @@ extends:
   parameters:
     containers:
       azurelinuxSourceBuildTestContainer:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-24.04
+        image: wenwen01/prereqs:linux 
         options: --memory=12g
     stages:
       - stage: Stage
@@ -24,21 +24,11 @@ extends:
             container: azurelinuxSourceBuildTestContainer
             displayName: Test Job
             steps:
-              # - script: |
-              #     mkdir -p /tmp/procps
-              #     cd /tmp/procps
-              #     wget https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.3.tar.xz
-              #     tar -xf procps-ng-4.0.3.tar.xz
-              #     cp procps-ng-4.0.3
-              #     ./configure --prefix=$HOME/.local
-              #     make && make install
-              #     export PATH="$HOME/.local/bin:$PATH"
-              #   displayName: 'Config'
               - script: |
+                  echo "get memory"
+                  free -h
                   echo "scancode --version"
                   scancode --version
-                  echo "get memory"
-                  grep MemTotal /proc/meminfo
                 displayName: 'Test'
           # - job: docker
           #   displayName: docker Job
