@@ -16,7 +16,7 @@ extends:
     containers:
       azurelinuxSourceBuildTestContainer:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-24.04
-        options: --memory=6g
+        options: --memory=12g
     stages:
       - stage: Stage
         jobs:
