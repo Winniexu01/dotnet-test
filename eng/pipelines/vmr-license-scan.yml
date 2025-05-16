@@ -24,6 +24,7 @@ stages:
         # Trim leading/trailing spaces from the repo name
         if [[ "${{ parameters.specificRepoName }}" == " " ]]; then
           ${{ parameters.specificRepoName }} = "arcade"
+        fi
 
         specificRepoName=$(echo "${{ parameters.specificRepoName }}" | awk '{$1=$1};1')
 
