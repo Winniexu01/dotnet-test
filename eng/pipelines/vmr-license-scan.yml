@@ -12,39 +12,39 @@ parameters:
 stages:
 - stage: stage
   jobs:
-  - job: Setup
-    steps:
-    - script: |
-        vmrSrcDir="$(Build.SourcesDirectory)/src"
-        # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
-        # allowing a job to be run for each src repo.
-        matrix=""
+  # - job: Setup
+  #   steps:
+  #   - script: |
+  #       vmrSrcDir="$(Build.SourcesDirectory)/src"
+  #       # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
+  #       # allowing a job to be run for each src repo.
+  #       matrix=""
 
-        # Trim leading/trailing spaces from the repo name
-        specificRepoName=$(echo "${{ parameters.specificRepoName }}" | awk '{$1=$1};1')
+  #       # Trim leading/trailing spaces from the repo name
+  #       specificRepoName=$(echo "${{ parameters.specificRepoName }}" | awk '{$1=$1};1')
 
-        # If the repo name is provided, only scan that repo.
-        if [ ! -z "$specificRepoName" ]; then
-          matrix="\"$specificRepoName\": { \"repoPath\": \"$vmrSrcDir/$specificRepoName\" }"
-        else
-          for dir in $vmrSrcDir/*/
-          do
-            if [ ! -z "$matrix" ]; then
-              matrix="$matrix,"
-            fi
-            repoName=$(basename $dir)
-            matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
-          done
-        fi
+  #       # If the repo name is provided, only scan that repo.
+  #       if [ ! -z "$specificRepoName" ]; then
+  #         matrix="\"$specificRepoName\": { \"repoPath\": \"$vmrSrcDir/$specificRepoName\" }"
+  #       else
+  #         for dir in $vmrSrcDir/*/
+  #         do
+  #           if [ ! -z "$matrix" ]; then
+  #             matrix="$matrix,"
+  #           fi
+  #           repoName=$(basename $dir)
+  #           matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
+  #         done
+  #       fi
 
-        matrix="{ $matrix }"
+  #       matrix="{ $matrix }"
 
-        echo "##vso[task.setvariable variable=matrix;isOutput=true]$matrix"
-      name: GetMatrix
-      displayName: Get Matrix
+  #       echo "##vso[task.setvariable variable=matrix;isOutput=true]$matrix"
+  #     name: GetMatrix
+  #     displayName: Get Matrix
 
   - job: LicenseScan
-    dependsOn: Setup
+    # dependsOn: Setup
     pool:
       vmImage: ubuntu-latest
     container:
@@ -142,7 +142,7 @@ stages:
     - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
       parameters:
         pipeline: license
-        repo: winniexu01/dotnet
+        repo: Winniexu01/dotnet-test
         originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
         updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
         pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
