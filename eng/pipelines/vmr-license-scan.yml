@@ -23,7 +23,6 @@ stages:
 
         # Trim leading/trailing spaces from the repo name
         if [[ "${{ parameters.specificRepoName }}" == " " ]]; then
-          Test....
           repo="arcade"
         else
           repo=${{ parameters.specificRepoName }}
@@ -125,7 +124,7 @@ stages:
 
   - job: Publish_Test_Results_PR
     dependsOn: LicenseScan
-    condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/dotnet-main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
     variables:
     - template: /eng/pipelines/templates/variables/pipelines.yml@self
     steps:
