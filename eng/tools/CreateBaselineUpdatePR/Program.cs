@@ -71,7 +71,7 @@ public class Program
         {
             Log.LogInformation($"args: {arg}");
         }
-        return;
+        return 0;
         var sdkDiffTestsCommand = CreateCommand("sdk", "Creates a PR that updates baselines and exclusion files published by the sdk diff tests.");
         var licenseScanTestsCommand = CreateCommand("license", "Creates a PR that updates baselines and exclusion files published by the license scan tests.");
 
