@@ -31,7 +31,7 @@ steps:
 
       branchName=$(echo "$(Build.SourceBranch)" | sed 's/refs\/heads\///g')
 
-      .dotnet/dotnet run \
+      echo '.dotnet/dotnet run \
         --project eng/tools/CreateBaselineUpdatePR/ \
         --property:RestoreSources="$restoreSources" \
         "${{ parameters.pipeline }}" \
@@ -40,7 +40,7 @@ steps:
         "${{ parameters.updatedFilesDirectory }}" \
         "$(Build.BuildId)" \
         --title "${{ parameters.pullRequestTitle }}" \
-        --branch "$branchName"
+        --branch "$branchName"'
     displayName: Publish Test Results PR
     workingDirectory: $(Build.SourcesDirectory)
     condition: succeededOrFailed()

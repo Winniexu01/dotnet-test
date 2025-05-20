@@ -66,6 +66,11 @@ public class Program
 
     public static async Task<int> Main(string[] args)
     {
+        foreach (var arg in args)
+        {
+            Console.WriteLine(arg);
+        }
+        return;
         var sdkDiffTestsCommand = CreateCommand("sdk", "Creates a PR that updates baselines and exclusion files published by the sdk diff tests.");
         var licenseScanTestsCommand = CreateCommand("license", "Creates a PR that updates baselines and exclusion files published by the license scan tests.");
 
