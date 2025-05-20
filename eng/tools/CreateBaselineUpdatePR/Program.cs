@@ -68,7 +68,7 @@ public class Program
     {
         foreach (var arg in args)
         {
-            Console.WriteLine(arg);
+            Log.LogInformation($"args: {arg}");
         }
         return;
         var sdkDiffTestsCommand = CreateCommand("sdk", "Creates a PR that updates baselines and exclusion files published by the sdk diff tests.");
