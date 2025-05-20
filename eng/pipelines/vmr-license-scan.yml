@@ -130,7 +130,7 @@ stages:
     steps:
     - script: |
         set -x
-        echo '$(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)'
+        echo $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
         source ./eng/common/tools.sh
         InitializeDotNetCli true
       displayName: Install .NET SDK

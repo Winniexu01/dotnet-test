@@ -66,6 +66,7 @@ public class Program
 
     public static async Task<int> Main(string[] args)
     {
+        Log.LogInformation($"Start");
         foreach (var arg in args)
         {
             Log.LogInformation($"args: {arg}");
