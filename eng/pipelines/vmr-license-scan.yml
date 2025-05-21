@@ -147,8 +147,7 @@ stages:
         pipeline: $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
         buildId: $(Build.BuildId)
         artifact: ''
-        patterns: '**/Updated*'
-        displayName: Download Updated Test Files
+        displayName: Download Test Files
 
     - script: |
         find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
