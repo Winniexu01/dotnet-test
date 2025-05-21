@@ -47,7 +47,6 @@ stages:
             else
                 break
             fi
-            done
           done
         fi
 
