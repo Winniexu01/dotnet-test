@@ -148,6 +148,11 @@ stages:
         find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
       displayName: Move Artifacts to root
 
+    - script: |
+        set -x
+        dir $(Pipeline.Workspace)/Artifacts
+      displayName: List files
+
     - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
       parameters:
         pipeline: license
