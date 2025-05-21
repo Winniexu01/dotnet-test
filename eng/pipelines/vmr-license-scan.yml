@@ -156,7 +156,7 @@ stages:
 
     - script: |
         set -x
-        dir $(Pipeline.Workspace)/Artifacts
+        find $(Pipeline.Workspace)/Artifacts -type f
       displayName: List files
 
     - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
