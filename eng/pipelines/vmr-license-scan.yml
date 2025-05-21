@@ -24,7 +24,7 @@ stages:
 
         # Trim leading/trailing spaces from the repo name
         if [[ "${{ parameters.specificRepoName }}" == " " ]]; then
-          repo=" "
+          repo="arcade"
         else
           repo=${{ parameters.specificRepoName }}
         fi
