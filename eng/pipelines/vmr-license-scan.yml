@@ -20,10 +20,11 @@ stages:
         # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
         # allowing a job to be run for each src repo.
         matrix=""
+        count=0
 
         # Trim leading/trailing spaces from the repo name
         if [[ "${{ parameters.specificRepoName }}" == " " ]]; then
-          repo="arcade"
+          repo=" "
         else
           repo=${{ parameters.specificRepoName }}
         fi
@@ -41,6 +42,12 @@ stages:
             fi
             repoName=$(basename $dir)
             matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
+            if [ "$count" != "1" ]; then
+                count=$((count+1))
+            else
+                break
+            fi
+            done
           done
         fi
 
