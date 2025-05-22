@@ -135,7 +135,8 @@ stages:
     condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/dotnet-main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
     variables:
     - template: /eng/pipelines/templates/variables/pipelines.yml@self
-    - matrixs: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
+    - name: matrixs
+      value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
         for item in $(matrixs); do
