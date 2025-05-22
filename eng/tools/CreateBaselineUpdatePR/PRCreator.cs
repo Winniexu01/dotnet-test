@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 namespace CreateBaselineUpdatePR;
@@ -48,8 +48,18 @@ public class PRCreator
         TreeResponse originalTreeResponse = await ApiRequestWithRetries(() => _client.Git.Tree.Get(_repoOwner, _repoName, targetBranch));
         List<NewTreeItem> originalTreeItems = await FetchOriginalTreeItemsAsync(originalTreeResponse, targetBranch, originalFilesDirectory);
 
+        foreach (var item in originalTreeItems)
+        {
+            Log.LogInformation($"Original Tree item: {item.Path} - {item.Sha}");
+        }
+
         // Update the test results tree based on the pipeline
         originalTreeItems = await UpdateAllFilesAsync(updatedTestsFiles, originalTreeItems, pipeline);
+        
+        foreach (var item in originalTreeItems)
+        {
+            Log.LogInformation($"Original Tree item: {item.Path} - {item.Sha}");
+        }
         var testResultsTreeResponse = await CreateTreeFromItemsAsync(originalTreeItems);
         var parentTreeResponse = await CreateParentTreeAsync(testResultsTreeResponse, originalTreeResponse, originalFilesDirectory);
 
@@ -216,6 +226,7 @@ public class PRCreator
 
     private async Task<List<NewTreeItem>> UpdateFileAsync(List<NewTreeItem> tree, string? content, string searchFileName, string updatedPath)
     {
+        Log.LogInformation($"Original Tree item: {originalTreeItem.Path} - {originalTreeItem.Sha}");
         var originalTreeItem = tree
             .Where(item => item.Path.Contains(searchFileName))
             .FirstOrDefault();
@@ -304,6 +315,12 @@ public class PRCreator
         {
             newTree.Tree.Add(item);
         }
+        
+        foreach (var item in newTree.Tree)
+        {
+            Log.LogInformation($"Tree item: {item.Path} - {item.Sha}");
+        }
+        
         return await ApiRequestWithRetries(() => _client.Git.Tree.Create(_repoOwner, _repoName, newTree));
     }
 
@@ -409,9 +426,8 @@ public class PRCreator
         {
             Body = body
         };
-        // await ApiRequestWithRetries(() => _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate));
+        await ApiRequestWithRetries(() => _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate));
 
-        Log.LogInformation($"Created pull request #{_repoOwner}. URL: {_repoName}");
         Log.LogInformation($"Updated existing pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
     }
 
@@ -423,10 +439,9 @@ public class PRCreator
         {
             Body = body
         };
-        // var pullRequest = await ApiRequestWithRetries(() => _client.PullRequest.Create(_repoOwner, _repoName, newPullRequest));
+        var pullRequest = await ApiRequestWithRetries(() => _client.PullRequest.Create(_repoOwner, _repoName, newPullRequest));
 
-        Log.LogInformation($"Created pull request #{_repoOwner}. URL: {_repoName}");
-        // Log.LogInformation($"Created pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
+        Log.LogInformation($"Created pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
     }
 
     private async Task<string> GetHeadShaAsync(string branchName)

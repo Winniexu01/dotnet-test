@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -66,12 +66,6 @@ public class Program
 
     public static async Task<int> Main(string[] args)
     {
-        // Log.LogInformation($"Start");
-        // foreach (var arg in args)
-        // {
-        //     Log.LogInformation($"args: {arg}");
-        // }
-        // return 0;
         var sdkDiffTestsCommand = CreateCommand("sdk", "Creates a PR that updates baselines and exclusion files published by the sdk diff tests.");
         var licenseScanTestsCommand = CreateCommand("license", "Creates a PR that updates baselines and exclusion files published by the license scan tests.");
 
