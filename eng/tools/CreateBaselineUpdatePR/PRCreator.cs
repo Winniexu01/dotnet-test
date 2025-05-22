@@ -226,10 +226,10 @@ public class PRCreator
 
     private async Task<List<NewTreeItem>> UpdateFileAsync(List<NewTreeItem> tree, string? content, string searchFileName, string updatedPath)
     {
-        Log.LogInformation($"Original Tree item: {originalTreeItem.Path} - {originalTreeItem.Sha}");
         var originalTreeItem = tree
             .Where(item => item.Path.Contains(searchFileName))
             .FirstOrDefault();
+        Log.LogInformation($"Original Tree item: {originalTreeItem.Path} - {originalTreeItem.Sha}");
 
         if (content == null)
         {
