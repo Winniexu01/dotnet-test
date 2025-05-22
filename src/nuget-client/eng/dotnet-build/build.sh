@@ -5,11 +5,13 @@ git config --global protocol.file.allow always
 
 source="${BASH_SOURCE[0]}"
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
+args=()
 configuration='Release'
 verbosity='minimal'
 source_build=false
 product_build=false
-properties=''
+from_vmr=false
+properties=()
 
 # resolve $SOURCE until the file is no longer a symlink
 while [[ -h $source ]]; do
@@ -38,10 +40,12 @@ while [[ $# > 0 ]]; do
         --source-build|--sourcebuild|-sb)
             source_build=true
             product_build=true
-            shift
             ;;
         --product-build|--productbuild|-pb)
             product_build=true
+            ;;
+        --from-vmr|--fromvmr)
+            from_vmr=true
             shift
             ;;
         -*)
@@ -49,7 +53,7 @@ while [[ $# > 0 ]]; do
             export DOTNET_CORESDK_NOPRETTYPRINT=1
             ;;
         *)
-            args="$args $1"
+            args+=("$1")
             ;;
     esac
     shift
@@ -94,10 +98,11 @@ ReadGlobalVersion Microsoft.DotNet.Arcade.Sdk
 export ARCADE_VERSION=$_ReadGlobalVersion
 export NUGET_PACKAGES=${repo_root}artifacts/.packages/
 
-properties="$properties /p:DotNetBuild=$product_build"
-properties="$properties /p:DotNetBuildSourceOnly=$source_build"
+properties+=("/p:DotNetBuild=$product_build")
+properties+=("/p:DotNetBuildSourceOnly=$source_build")
+properties+=("/p:DotNetBuildFromVMR=$from_vmr")
 
-properties="$properties /p:Configuration=$configuration"
-properties="$properties /p:RepoRoot=$repo_root"
+properties+=("/p:Configuration=$configuration")
+properties+=("/p:RepoRoot=$repo_root")
 
-"$DOTNET" msbuild -v:$verbosity "$scriptroot/dotnet-build.proj" "/bl:${repo_root}artifacts/log/${configuration}/Build.binlog" $properties $args
+"$DOTNET" msbuild -v:$verbosity "$scriptroot/dotnet-build.proj" "/bl:${repo_root}artifacts/log/${configuration}/Build.binlog" "${properties[@]}" "${args[@]}"
