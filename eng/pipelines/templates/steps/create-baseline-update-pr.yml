@@ -40,7 +40,7 @@ steps:
       "${{ parameters.updatedFilesDirectory }}" \
       "$(Build.BuildId)" \
       --title "${{ parameters.pullRequestTitle }}" \
-      --branch "$branchName"
+      --branch "$branchName" \
       --verbosity d
     displayName: Publish Test Results PR
     workingDirectory: $(Build.SourcesDirectory)

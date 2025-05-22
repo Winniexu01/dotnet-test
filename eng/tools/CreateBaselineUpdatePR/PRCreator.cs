@@ -409,8 +409,9 @@ public class PRCreator
         {
             Body = body
         };
-        await ApiRequestWithRetries(() => _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate));
+        // await ApiRequestWithRetries(() => _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate));
 
+        Log.LogInformation($"Created pull request #{_repoOwner}. URL: {_repoName}");
         Log.LogInformation($"Updated existing pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
     }
 
@@ -422,8 +423,9 @@ public class PRCreator
         {
             Body = body
         };
-        var pullRequest = await ApiRequestWithRetries(() => _client.PullRequest.Create(_repoOwner, _repoName, newPullRequest));
+        // var pullRequest = await ApiRequestWithRetries(() => _client.PullRequest.Create(_repoOwner, _repoName, newPullRequest));
 
+        Log.LogInformation($"Created pull request #{_repoOwner}. URL: {_repoName}");
         Log.LogInformation($"Created pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
     }
 
