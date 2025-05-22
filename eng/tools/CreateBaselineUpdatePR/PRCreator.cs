@@ -426,7 +426,7 @@ public class PRCreator
         // var pullRequest = await ApiRequestWithRetries(() => _client.PullRequest.Create(_repoOwner, _repoName, newPullRequest));
 
         Log.LogInformation($"Created pull request #{_repoOwner}. URL: {_repoName}");
-        Log.LogInformation($"Created pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
+        // Log.LogInformation($"Created pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
     }
 
     private async Task<string> GetHeadShaAsync(string branchName)
