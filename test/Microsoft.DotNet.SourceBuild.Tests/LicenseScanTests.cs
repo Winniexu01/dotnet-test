@@ -140,7 +140,7 @@ public class LicenseScanTests : TestBase
         // Indicates how long until a timeout occurs for scanning a given file
         const int FileScanTimeoutSeconds = 1;
 
-        string scancodeResultsPath = Path.Combine(Config.LogsDirectory, "scancode-results.json");
+        string scancodeResultsPath = Path.Combine(Config.LogsDirectory, $"scancode-results.{_targetRepo}.json");
 
         // Scancode Doc: https://scancode-toolkit.readthedocs.io/en/latest/index.html
         string ignoreOptions = string.Join(" ", s_ignoredFilePatterns.Select(pattern => $"--ignore {pattern}"));

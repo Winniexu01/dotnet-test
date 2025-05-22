@@ -24,7 +24,7 @@ stages:
 
         # Trim leading/trailing spaces from the repo name
         if [[ "${{ parameters.specificRepoName }}" == " " ]]; then
-          repo="arcade"
+          repo=" "
         else
           repo=${{ parameters.specificRepoName }}
         fi
@@ -129,11 +129,20 @@ stages:
         testRunTitle: $(Agent.JobName)
 
   - job: Publish_Test_Results_PR
-    dependsOn: LicenseScan
+    dependsOn: 
+      - Setup
+      - LicenseScan
     condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/dotnet-main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
     variables:
     - template: /eng/pipelines/templates/variables/pipelines.yml@self
     steps:
+    - script: |
+        for item in $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]; do
+          echo $item
+        done
+      displayName: Get Matrix
+      workingDirectory: $(Build.SourcesDirectory)
+
     - script: |
         set -x
         echo $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)

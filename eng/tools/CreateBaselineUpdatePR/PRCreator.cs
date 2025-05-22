@@ -1,5 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// 1. Get all tested repos
+// download all files: *update*, *scancode.json*
+// 2. get all update files and matrix: arcade, runtime...
+//     check if miss any repos
+// 3. check the missed repo, if they are timedout
+
+
 
 namespace CreateBaselineUpdatePR;
 
