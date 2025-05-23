@@ -44,7 +44,7 @@ stages:
               repos="$repos,"
             fi
             repoName=$(basename $dir)
-            repos="$repos \"$repoName\"
+            repos="$repos \"$repoName\""
             matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
             if [ "$count" != "1" ]; then
                 count=$((count+1))
