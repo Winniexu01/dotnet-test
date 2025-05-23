@@ -1,12 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// 1. Get all tested repos
-// download all files: *update*, *scancode.json*
-// 2. get all update files and matrix: arcade, runtime...
-//     check if miss any repos
-// 3. check the missed repo, if they are timedout
-
-
 
 namespace CreateBaselineUpdatePR;
 
@@ -43,6 +36,7 @@ public class PRCreator
         int buildId,
         string title,
         string targetBranch,
+        string matrix,
         Pipelines pipeline)
     {
         DateTime startTime = DateTime.Now.ToUniversalTime();
@@ -50,6 +44,7 @@ public class PRCreator
         Log.LogInformation($"Starting PR creation at {startTime} UTC for pipeline {pipeline}.");
 
         var updatedTestsFiles = GetUpdatedFiles(updatedFilesDirectory);
+        var missedScannedRepos = GetMissedScannedRepos(matrix, updatedTestsFiles["Licenses"]);
 
         // Fetch the files within the desired path from the original tree
         TreeResponse originalTreeResponse = await ApiRequestWithRetries(() => _client.Git.Tree.Get(_repoOwner, _repoName, targetBranch));
@@ -57,15 +52,15 @@ public class PRCreator
 
         foreach (var item in originalTreeItems)
         {
-            Log.LogInformation($"Original Tree item: {item.Path} - {item.Sha}");
+            Log.LogInformation($"Original Tree item1: {item.Path} - {item.Sha}");
         }
 
         // Update the test results tree based on the pipeline
         originalTreeItems = await UpdateAllFilesAsync(updatedTestsFiles, originalTreeItems, pipeline);
-        
+
         foreach (var item in originalTreeItems)
         {
-            Log.LogInformation($"Original Tree item: {item.Path} - {item.Sha}");
+            Log.LogInformation($"Original Tree item2: {item.Path} - {item.Sha}");
         }
         var testResultsTreeResponse = await CreateTreeFromItemsAsync(originalTreeItems);
         var parentTreeResponse = await CreateParentTreeAsync(testResultsTreeResponse, originalTreeResponse, originalFilesDirectory);
@@ -107,6 +102,7 @@ public class PRCreator
 
             if (item.Type == TreeType.Tree)
             {
+                Log.LogInformation(item.Path);
                 TreeResponse subTree = await ApiRequestWithRetries(() => _client.Git.Tree.Get(_repoOwner, _repoName, item.Sha));
                 await FetchOriginalTreeItemsAsync(subTree, treeItems, targetBranch, desiredPath, path);
             }
@@ -135,6 +131,14 @@ public class PRCreator
                 group => group.Key,
                 group => new HashSet<string>(group)
             );
+
+    private List<string> GetMissedScannedRepos(string matrix, HashSet<string> updatedTestsFiles)
+    {
+        List<string> scannedRepos = [];
+        string[] matrixRepos = matrix.Split(',');
+        string new1=matrix.Join(",",matrix.Split(',').Except(updatedTestsFiles.se))
+        return scannedRepos;
+    }
 
     private async Task<List<NewTreeItem>> UpdateAllFilesAsync(Dictionary<string, HashSet<string>> updatedFiles, List<NewTreeItem> tree, Pipelines pipeline)
     {
@@ -236,7 +240,8 @@ public class PRCreator
         var originalTreeItem = tree
             .Where(item => item.Path.Contains(searchFileName))
             .FirstOrDefault();
-        Log.LogInformation($"Original Tree item: {originalTreeItem.Path} - {originalTreeItem.Sha}");
+        if (originalTreeItem != null)
+            Log.LogInformation($"Original Tree item3: {originalTreeItem.Path} - {originalTreeItem.Sha}");
 
         if (content == null)
         {
@@ -322,12 +327,12 @@ public class PRCreator
         {
             newTree.Tree.Add(item);
         }
-        
+
         foreach (var item in newTree.Tree)
         {
-            Log.LogInformation($"Tree item: {item.Path} - {item.Sha}");
+            Log.LogInformation($"Tree item1: {item.Path} - {item.Sha}");
         }
-        
+
         return await ApiRequestWithRetries(() => _client.Git.Tree.Create(_repoOwner, _repoName, newTree));
     }
 
