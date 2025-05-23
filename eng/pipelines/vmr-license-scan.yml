@@ -139,8 +139,10 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
+        count=0
         for item in $(matrixs); do
-          echo "reponame" - $(repoName)
+          count=$((count+1))
+          echo "$count" - $item
         done
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
