@@ -140,7 +140,9 @@ stages:
     steps:
     - script: |
         for item in $(matrixs); do
-          echo $(repoName)
+          echo $item
+          echo $(basename $item)
+          echo $(basename $(repoPath))
         done
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
@@ -158,8 +160,16 @@ stages:
         pipeline: $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
         buildId: $(Build.BuildId)
         artifact: ''
-        patterns: ''
+        patterns: '**/Updated*'
         displayName: Download Updated Test Files
+
+    - template: /eng/pipelines/templates/steps/download-pipeline-artifact.yml@self
+      parameters:
+        pipeline: $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
+        buildId: $(Build.BuildId)
+        artifact: ''
+        patterns: '**/scancode-results*'
+        displayName: Download Scancode Results Files
 
     - script: |
         find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
