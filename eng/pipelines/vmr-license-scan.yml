@@ -20,6 +20,7 @@ stages:
         # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
         # allowing a job to be run for each src repo.
         matrix=""
+        repo=""
         count=0
 
         # Trim leading/trailing spaces from the repo name
@@ -34,15 +35,17 @@ stages:
         # If the repo name is provided, only scan that repo.
         if [ ! -z "$specificRepoName" ]; then
           matrix="\"$specificRepoName\": { \"repoPath\": \"$vmrSrcDir/$specificRepoName\" }"
+          repo="$specificRepoName"
         else
           for dir in $vmrSrcDir/*/
           do
             if [ ! -z "$matrix" ]; then
               matrix="$matrix,"
+              repo="$repo,"
             fi
             repoName=$(basename $dir)
+            repo="$matrix \"$repoName\"
             matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
-            yq '$matrix | type'
             if [ "$count" != "1" ]; then
                 count=$((count+1))
             else
@@ -52,8 +55,10 @@ stages:
         fi
 
         matrix="{ $matrix }"
+        repo="{ $repo }"
 
         echo "##vso[task.setvariable variable=matrix;isOutput=true]$matrix"
+        echo "##vso[task.setvariable variable=repo;isOutput=true]$repo"
       name: GetMatrix
       displayName: Get Matrix
 
@@ -138,15 +143,11 @@ stages:
     condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/dotnet-main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
     variables:
     - template: /eng/pipelines/templates/variables/pipelines.yml@self
-    - name: matrixs
-      value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
+    - name: repos
+      value: $[ dependencies.Setup.outputs['GetMatrix.repo'] ]
     steps:
     - script: |
-        yq '$(matrixs) | type'
-        echo "TTT" - $(matrixs)
-        for (( i=0; i<10; i+=5 )); do
-          echo "$i" - ${matrixs[i]}
-        done
+        echo "$repos
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
 
