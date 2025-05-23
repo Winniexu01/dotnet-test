@@ -129,8 +129,8 @@ stages:
   #       testRunTitle: $(Agent.JobName)
 
   - job: Publish_Test_Results_PR
-    strategy:
-      matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
+    # strategy:
+    #   matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     dependsOn: 
       - Setup
       # - LicenseScan
@@ -141,12 +141,9 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
-        echo "AAA" - $(repoPath)
         echo "TTT" - $(matrixs)
-        count=0
-        for item in $(matrixs); do
-          count=$((count+1))
-          echo "$count" - $item
+        for (( i=0; i<10; i+=5 )); do
+          echo "$i" - ${matrixs[i]}
         done
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
