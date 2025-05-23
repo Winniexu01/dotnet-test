@@ -143,6 +143,11 @@ stages:
     - script: |
         mm=$(echo "$(matrixs)" | tr -d '"' | grep -oP '\b\w+(?=: { repoPath:)')
         echo $mm
+
+        for item in $(matrixs)
+        do
+          echo "111" - $(echo "$item | tr -d '"' | awk -F":")
+        done
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
 
