@@ -140,7 +140,7 @@ stages:
     steps:
     - script: |
         for item in $(matrixs); do
-          echo "reponame" - $repoName
+          echo "reponame" - $(repoName)
         done
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
