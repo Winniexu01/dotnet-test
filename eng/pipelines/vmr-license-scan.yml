@@ -141,7 +141,7 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
-        echo "$(matrix)" | jq -r 'keys[]'
+        echo '$(matrix)' | jq -r 'keys[]'
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
 
