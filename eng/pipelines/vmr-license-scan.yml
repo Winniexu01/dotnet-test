@@ -139,7 +139,7 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
-        for item in $(matrixs); do
+        for item in $(repoName); do
           echo $item
         done
       displayName: Get Matrix
