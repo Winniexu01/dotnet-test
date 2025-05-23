@@ -146,7 +146,7 @@ stages:
 
         for item in $(matrixs)
         do
-          echo "111" - $(echo "$item | tr -d '"' | awk -F":")
+          echo "111" - $(echo "$item" | tr -d '"' | awk -F":")
         done
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
