@@ -175,7 +175,7 @@ stages:
       parameters:
         pipeline: license
         repo: Winniexu01/dotnet-test
-        matrixRepo: $(echo '$(matrix)' | jq -r 'keys | join(",")')
+        matrix: $(echo '$(matrix)' | jq -r 'keys | join(",")')
         originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
         updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
         pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
