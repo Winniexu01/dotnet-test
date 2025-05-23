@@ -141,7 +141,7 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
-        mm=$(echo "$matrix" | tr -d '"' | grep -oP '\b\w+(?=: { repoPath:)')
+        mm=$(echo "$matrixs" | tr -d '"' | grep -oP '\b\w+(?=: { repoPath:)')
         echo $mm
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
