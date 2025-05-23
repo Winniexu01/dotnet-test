@@ -15,7 +15,6 @@ stages:
   - job: Setup
     steps:
     - script: |
-        set -x
         vmrSrcDir="$(Build.SourcesDirectory)/src"
         # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
         # allowing a job to be run for each src repo.
@@ -141,7 +140,8 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
-        echo '$(matrix)' | jq -r 'keys[]'
+        matrixs=$(echo '$(matrix)' | jq -r 'keys[]')
+        echo $matrixs
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
 
