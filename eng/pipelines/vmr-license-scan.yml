@@ -42,6 +42,7 @@ stages:
             fi
             repoName=$(basename $dir)
             matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
+            yq '$matrix | type'
             if [ "$count" != "1" ]; then
                 count=$((count+1))
             else
@@ -141,6 +142,7 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
+        yq '$(matrixs) | type'
         echo "TTT" - $(matrixs)
         for (( i=0; i<10; i+=5 )); do
           echo "$i" - ${matrixs[i]}
