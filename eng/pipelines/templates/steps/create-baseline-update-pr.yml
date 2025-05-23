@@ -10,6 +10,10 @@ parameters:
 - name: repo
   type: string
 
+# The repository that is scanned.
+- name: matrixRepo
+  type: string
+
 # Path to the directory containing the original test files
 # Should be relative to the "repo" parameter
 - name: originalFilesDirectory
@@ -26,23 +30,28 @@ parameters:
 
 steps:
   - script: |
-      restoreSources="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json"
-      restoreSources+="%3Bhttps://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-libraries/nuget/v3/index.json"
-
-      branchName=$(echo "$(Build.SourceBranch)" | sed 's/refs\/heads\///g')
-
-      .dotnet/dotnet run \
-      --project eng/tools/CreateBaselineUpdatePR/ \
-      --property:RestoreSources="$restoreSources" \
-      "${{ parameters.pipeline }}" \
-      "${{ parameters.repo }}" \
-      "${{ parameters.originalFilesDirectory }}" \
-      "${{ parameters.updatedFilesDirectory }}" \
-      "$(Build.BuildId)" \
-      --title "${{ parameters.pullRequestTitle }}" \
-      --branch "$branchName"
-    displayName: Publish Test Results PR
+      echo "${{ parameters.matrixRepo }}
+    displayName: Set up matrix repo
     workingDirectory: $(Build.SourcesDirectory)
     condition: succeededOrFailed()
-    env:
-      GH_TOKEN: $(BotAccount-dotnet-sb-bot-pat)
+  # - script: |
+  #     restoreSources="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json"
+  #     restoreSources+="%3Bhttps://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-libraries/nuget/v3/index.json"
+
+  #     branchName=$(echo "$(Build.SourceBranch)" | sed 's/refs\/heads\///g')
+
+  #     .dotnet/dotnet run \
+  #     --project eng/tools/CreateBaselineUpdatePR/ \
+  #     --property:RestoreSources="$restoreSources" \
+  #     "${{ parameters.pipeline }}" \
+  #     "${{ parameters.repo }}" \
+  #     "${{ parameters.originalFilesDirectory }}" \
+  #     "${{ parameters.updatedFilesDirectory }}" \
+  #     "$(Build.BuildId)" \
+  #     --title "${{ parameters.pullRequestTitle }}" \
+  #     --branch "$branchName"
+  #   displayName: Publish Test Results PR
+  #   workingDirectory: $(Build.SourcesDirectory)
+  #   condition: succeededOrFailed()
+  #   env:
+  #     GH_TOKEN: $(BotAccount-dotnet-sb-bot-pat)
