@@ -147,7 +147,7 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.repos'] ]
     steps:
     - script: |
-        echo "$repos
+        echo "$repos"
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
 
