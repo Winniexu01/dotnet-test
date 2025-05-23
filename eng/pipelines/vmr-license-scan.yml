@@ -139,8 +139,8 @@ stages:
       value: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
     - script: |
-        for item in $(repoName); do
-          echo $item
+        for item in $(matrixs); do
+          echo $(repoName)
         done
       displayName: Get Matrix
       workingDirectory: $(Build.SourcesDirectory)
