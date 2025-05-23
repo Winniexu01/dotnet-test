@@ -140,6 +140,7 @@ stages:
     steps:
     - script: |
         count=0
+        echo $(repoPath)
         for item in $(matrixs); do
           count=$((count+1))
           echo "$count" - $item
