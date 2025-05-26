@@ -36,7 +36,6 @@ public class PRCreator
         int buildId,
         string title,
         string targetBranch,
-        string matrix,
         Pipelines pipeline)
     {
         DateTime startTime = DateTime.Now.ToUniversalTime();
@@ -44,7 +43,6 @@ public class PRCreator
         Log.LogInformation($"Starting PR creation at {startTime} UTC for pipeline {pipeline}.");
 
         var updatedTestsFiles = GetUpdatedFiles(updatedFilesDirectory);
-        var missedScannedRepos = GetMissedScannedRepos(matrix, updatedTestsFiles["Licenses"]);
 
         // Fetch the files within the desired path from the original tree
         TreeResponse originalTreeResponse = await ApiRequestWithRetries(() => _client.Git.Tree.Get(_repoOwner, _repoName, targetBranch));
@@ -131,14 +129,6 @@ public class PRCreator
                 group => group.Key,
                 group => new HashSet<string>(group)
             );
-
-    private List<string> GetMissedScannedRepos(string matrix, HashSet<string> updatedTestsFiles)
-    {
-        List<string> scannedRepos = [];
-        string[] matrixRepos = matrix.Split(',');
-        string new1=matrix.Join(",",matrix.Split(',').Except(updatedTestsFiles.se))
-        return scannedRepos;
-    }
 
     private async Task<List<NewTreeItem>> UpdateAllFilesAsync(Dictionary<string, HashSet<string>> updatedFiles, List<NewTreeItem> tree, Pipelines pipeline)
     {

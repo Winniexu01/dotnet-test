@@ -146,17 +146,16 @@ public class LicenseScanTests : TestBase
         string ignoreOptions = string.Join(" ", s_ignoredFilePatterns.Select(pattern => $"--ignore {pattern}"));
         try
         {
-        ExecuteHelper.ExecuteProcessValidateExitCode(
-            "scancode",
-            $"--license --processes 4 --timeout {FileScanTimeoutSeconds} --strip-root --only-findings {ignoreOptions} --json-pp {scancodeResultsPath} {Config.LicenseScanPath}",
-            OutputHelper);
+            ExecuteHelper.ExecuteProcessValidateExitCode(
+                "scancode",
+                $"--license --processes 4 --timeout {FileScanTimeoutSeconds} --strip-root --only-findings {ignoreOptions} --json-pp {scancodeResultsPath} {Config.LicenseScanPath}",
+                OutputHelper);
         }
         catch (InvalidOperationException ex)
         {
-            // If the scancode tool is not installed, we will get an exception here.
-            // This is expected if the test is not run in a CI environment.
-            OutputHelper.WriteLine($"Scancode tool not found or failed to execute: {ex.Message}");
-            return;
+            // If the scancode tool exit with invalid operation exception, it means that the scan timed out.
+            File.Create(Path.Combine(Config.LogsDirectory, $"timeout.{_targetRepo}.txt")).Dispose();
+            return 1;
         }
         JsonDocument doc = JsonDocument.Parse(File.ReadAllText(scancodeResultsPath));
         ScancodeResults? scancodeResults = doc.Deserialize<ScancodeResults>();

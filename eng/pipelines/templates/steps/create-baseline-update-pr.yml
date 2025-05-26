@@ -10,10 +10,6 @@ parameters:
 - name: repo
   type: string
 
-# The repository that is scanned.
-- name: matrix
-  type: string
-
 # Path to the directory containing the original test files
 # Should be relative to the "repo" parameter
 - name: originalFilesDirectory
@@ -44,8 +40,7 @@ steps:
       "${{ parameters.updatedFilesDirectory }}" \
       "$(Build.BuildId)" \
       --title "${{ parameters.pullRequestTitle }}" \
-      --branch "$branchName" \
-      --matrix "${{ parameters.matrix }}"
+      --branch "$branchName"
     displayName: Publish Test Results PR
     workingDirectory: $(Build.SourcesDirectory)
     condition: succeededOrFailed()

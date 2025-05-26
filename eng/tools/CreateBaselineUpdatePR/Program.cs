@@ -47,12 +47,6 @@ public class Program
         DefaultValueFactory = _ => "main"
     };
 
-    public static readonly Option<string> Matrix = new("--matrix", "-m")
-    {
-        Description = "The scanned repos.",
-        Arity = ArgumentArity.ExactlyOne
-    };
-
     public static readonly Option<string> GitHubToken = new("--github-token", "-g")
     {
         Description = "The GitHub token to use to create the PR.",
@@ -73,7 +67,7 @@ public class Program
     public static async Task<int> Main(string[] args)
     {
         args = new string[] { "license", "Winniexu01/dotnet-test", @"test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests",
-            @"E:\dd\dotnet-test\Artifacts", "417", "--title", "Update Source-Build License Scan Baselines and Exclusions", "--branch", "dotnet-main", "--matrix", "arcade,aspire,runtime" };
+            @"E:\dd\dotnet-test\Artifacts", "417", "--title", "Update Source-Build License Scan Baselines and Exclusions", "--branch", "dotnet-main" };
         var sdkDiffTestsCommand = CreateCommand("sdk", "Creates a PR that updates baselines and exclusion files published by the sdk diff tests.");
         var licenseScanTestsCommand = CreateCommand("license", "Creates a PR that updates baselines and exclusion files published by the license scan tests.");
 
@@ -102,7 +96,6 @@ public class Program
             BuildId,
             Title,
             Branch,
-            Matrix,
             GitHubToken
         };
     }
@@ -121,7 +114,6 @@ public class Program
                 result.GetValue(BuildId)!,
                 result.GetValue(Title)!,
                 result.GetValue(Branch)!,
-                result.GetValue(Matrix)!,
                 pipeline);
         });
     }
