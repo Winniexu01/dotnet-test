@@ -56,14 +56,10 @@ public class PRCreator
         // Update the test results tree based on the pipeline
         originalTreeItems = await UpdateAllFilesAsync(updatedTestsFiles, originalTreeItems, pipeline);
 
-        foreach (var item in originalTreeItems)
-        {
-            Log.LogInformation($"Original Tree item2: {item.Path} - {item.Sha}");
-        }
         var testResultsTreeResponse = await CreateTreeFromItemsAsync(originalTreeItems);
         var parentTreeResponse = await CreateParentTreeAsync(testResultsTreeResponse, originalTreeResponse, originalFilesDirectory);
 
-        await CreateOrUpdatePullRequestAsync(parentTreeResponse, buildId, title, targetBranch);
+        //await CreateOrUpdatePullRequestAsync(parentTreeResponse, buildId, title, targetBranch);
 
         return Log.GetExitCode();
     }
@@ -85,6 +81,7 @@ public class PRCreator
         string desiredPath,
         string relativePath = "")
     {
+        desiredPath = desiredPath.Replace('/', '\\');
         if (treeResponse == null)
         {
             return;
@@ -100,7 +97,6 @@ public class PRCreator
 
             if (item.Type == TreeType.Tree)
             {
-                Log.LogInformation(item.Path);
                 TreeResponse subTree = await ApiRequestWithRetries(() => _client.Git.Tree.Get(_repoOwner, _repoName, item.Sha));
                 await FetchOriginalTreeItemsAsync(subTree, treeItems, targetBranch, desiredPath, path);
             }
@@ -139,10 +135,18 @@ public class PRCreator
             if (updatedFile.Key.Contains("Exclusions"))
             {
                 tree = await UpdateExclusionFileAsync(updatedFile.Key, updatedFile.Value, tree, union: isSdkPipeline);
+                foreach (var item in tree)
+                {
+                    Log.LogInformation($"Exclusions: {item.Path} - {item.Sha}");
+                }
             }
             else
             {
                 tree = await UpdateRegularFilesAsync(updatedFile.Value, tree, defaultContent);
+                foreach (var item in tree)
+                {
+                    Log.LogInformation($"Exclusions2: {item.Path} - {item.Sha}");
+                }
             }
         }
         return tree;
@@ -286,7 +290,7 @@ public class PRCreator
                 // These items are in the current directory, so add them to the new tree items
                 foreach (var item in group)
                 {
-                    if(item.Type != TreeType.Tree)
+                    if (item.Type != TreeType.Tree)
                     {
                         newTreeItems.Add(new NewTreeItem
                         {

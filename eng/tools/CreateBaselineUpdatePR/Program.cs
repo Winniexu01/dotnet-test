@@ -51,7 +51,7 @@ public class Program
     {
         Description = "The GitHub token to use to create the PR.",
         Arity = ArgumentArity.ZeroOrOne,
-        DefaultValueFactory = _ => ""
+        DefaultValueFactory = _ => Environment.GetEnvironmentVariable("GH_TOKEN") ?? throw new ArgumentException("GitHub token not provided.")
     };
 
     public static readonly Option<LogLevel> Level = new("--log-level", "-l")
@@ -66,8 +66,6 @@ public class Program
 
     public static async Task<int> Main(string[] args)
     {
-        args = new string[] { "license", "Winniexu01/dotnet-test", @"test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests",
-            @"E:\dd\dotnet-test\Artifacts", "417", "--title", "Update Source-Build License Scan Baselines and Exclusions", "--branch", "dotnet-main" };
         var sdkDiffTestsCommand = CreateCommand("sdk", "Creates a PR that updates baselines and exclusion files published by the sdk diff tests.");
         var licenseScanTestsCommand = CreateCommand("license", "Creates a PR that updates baselines and exclusion files published by the license scan tests.");
 
