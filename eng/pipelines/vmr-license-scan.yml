@@ -27,7 +27,7 @@ stages:
 
         # Trim leading/trailing spaces from the repo name
         if [[ "${{ parameters.specificRepoName }}" == " " ]]; then
-          repo=" "
+          repo="source-build-externals"
         else
           repo=${{ parameters.specificRepoName }}
         fi
