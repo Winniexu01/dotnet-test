@@ -1,0 +1,70 @@
+parameters:
+  targetArchitecture: ''
+  targetOS: ''
+  osSubgroup: ''
+  isMono: ''
+  isBrowser: ''
+  isAndroid: ''
+  clrVersion: latest
+
+jobs:
+- template: /eng/pipelines/templates/xplat-job.yml
+  parameters:
+    targetArchitecture: ${{ parameters.targetArchitecture }}
+    targetOS: ${{ parameters.targetOS }}
+    osSubgroup: ${{ parameters.osSubgroup }}
+    isMono: ${{ parameters.isMono }}
+    isBrowser: ${{ parameters.isBrowser }}
+    isAndroid: ${{ parameters.isAndroid }}
+    variables:
+    - name: crossArg
+      value: ''
+    - ${{ if and(eq(parameters.targetOS, 'linux'), ne(parameters.isAndroid, 'true')) }}:
+      - name: crossArg
+        value: '-cross'
+    - name: msbuildExtraParams
+      value: ''
+    - ${{ if eq(parameters.osSubgroup, '_musl') }}:
+      - name: msbuildExtraParams
+        value: -msbuildExtraParams '/p:OSSubgroup=musl'
+    steps:
+    # Build the test assets.
+    - ${{ if eq(parameters.isAndroid, 'true') }}:
+      - script: $(Build.SourcesDirectory)$(dir)build$(scriptExt) -arch ${{ parameters.targetArchitecture }} -clrversion ${{ parameters.clrVersion }} -isMono ${{ parameters.isMono }} -isAndroid ${{ parameters.isAndroid }} $(crossArg) $(msbuildExtraParams)
+        displayName: Build - ${{ parameters.targetOS }}${{ parameters.osSubgroup }} ${{ parameters.targetArchitecture }} ${{ parameters.clrVersion }} - Android
+    - ${{ else }}:
+      - ${{ if eq(parameters.isBrowser, 'true') }}:
+        - script: $(Build.SourcesDirectory)$(dir)build$(scriptExt) -arch ${{ parameters.targetArchitecture }} -clrversion ${{ parameters.clrVersion }} -isMono ${{ parameters.isMono }} -isBrowser ${{ parameters.isBrowser }} $(crossArg) $(msbuildExtraParams)
+          displayName: Build - ${{ parameters.targetOS }}${{ parameters.osSubgroup }} ${{ parameters.targetArchitecture }} ${{ parameters.clrVersion }} - WASM
+      - ${{ else }}:
+        - ${{ if eq(parameters.isMono, 'true') }}:
+          - script: $(Build.SourcesDirectory)$(dir)build$(scriptExt) -arch ${{ parameters.targetArchitecture }} -clrversion ${{ parameters.clrVersion }} -isMono ${{ parameters.isMono }} $(crossArg) $(msbuildExtraParams)
+            displayName: Build - ${{ parameters.targetOS }}${{ parameters.osSubgroup }} ${{ parameters.targetArchitecture }} ${{ parameters.clrVersion }} - Mono
+        - ${{ else }}:
+          - script: $(Build.SourcesDirectory)$(dir)build$(scriptExt) -arch ${{ parameters.targetArchitecture }} -clrversion ${{ parameters.clrVersion }} -isMono ${{ parameters.isMono }} $(crossArg) $(msbuildExtraParams)
+            displayName: Build - ${{ parameters.targetOS }}${{ parameters.osSubgroup }} ${{ parameters.targetArchitecture }} ${{ parameters.clrVersion }}
+
+    # Save the binary logs for build diagnostics.
+    - task: PublishBuildArtifacts@1
+      inputs:
+        ${{ if eq(parameters.isAndroid, 'true') }}:
+          ArtifactName:  'Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}-Android'
+        ${{ else }}:
+          ${{ if eq(parameters.isBrowser, 'true') }}:
+            ArtifactName:  'Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}-WASM'
+          ${{ else }}:
+            ${{ if eq(parameters.isMono, 'true') }}:
+              ArtifactName:  'Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}-Mono'
+            ${{ else }}:
+              ArtifactName:  'Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}'
+        PublishLocation: Container
+        PathtoPublish: $(Build.SourcesDirectory)/artifacts/log
+      displayName: Save logs
+      continueOnError: true
+      condition: always()
+
+    # Save the build artifacts.
+    - publish: $(_configuredBinFolder)
+      artifact: $(BuildArtifactName)
+      displayName: Save build
+      condition: always()

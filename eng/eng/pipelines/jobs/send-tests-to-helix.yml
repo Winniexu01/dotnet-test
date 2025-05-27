@@ -1,0 +1,66 @@
+parameters:
+  targetArchitecture: ''
+  targetOS: ''
+  isMono: ''
+  isBrowser: ''
+  isAndroid: ''
+  osSubgroup: ''
+
+jobs:
+- template: /eng/pipelines/templates/xplat-job.yml
+  parameters:
+    targetArchitecture: ${{ parameters.targetArchitecture }}
+    targetOS: ${{ parameters.targetOS }}
+    isMono: ${{ parameters.isMono }}
+    isBrowser: ${{ parameters.isBrowser }}
+    isAndroid: ${{ parameters.isAndroid }}
+    osSubgroup: ${{ parameters.osSubgroup }}
+    testJob: true
+    timeoutInMinutes: 80
+    variables:
+    - ${{ if eq(parameters.targetOS, 'Windows') }}:
+      - MsBuildScript: 'powershell -ExecutionPolicy ByPass -NoProfile $(Build.SourcesDirectory)\eng\common\msbuild.ps1 -warnaserror:0 -ci /restore'
+    - ${{ else }}:
+      - MsBuildScript: '$(Build.SourcesDirectory)/eng/common/msbuild.sh --warnaserror false --ci /restore'
+    - CorrelationPayloadDir: '$(Build.SourcesDirectory)/Payload'
+    - group: DotNet-HelixApi-Access
+
+    steps:
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        artifactName: $(BuildArtifactName)
+        targetPath: $(CorrelationPayloadDir)
+      displayName: Download tests and harness artifacts.
+    # Send to helix and wait. We determine the queues in the project.
+    - script: $(MsBuildScript) $(Build.SourcesDirectory)/eng/Helix/SendToHelix.proj /bl:SendToHelix.binlog
+      displayName: Send tests to Helix
+      env:
+        _HelixAccessToken: $(HelixApiAccessToken)
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        OfficialBuildId: $(Build.BuildNumber)
+        ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+          Outerloop: true
+        TestDir: $(CorrelationPayloadDir)
+        TargetArch: ${{ parameters.targetArchitecture }}
+        TargetOS: ${{ parameters.targetOS }}
+        IsMono: ${{ parameters.isMono }}
+        IsBrowser: ${{ parameters.isBrowser }}
+        IsAndroid: ${{ parameters.isAndroid }}
+        OSSubGroup: ${{ parameters.osSubgroup }}
+    - task: PublishBuildArtifacts@1
+      inputs:
+        ${{ if eq(parameters.isAndroid, 'true') }}:
+          ArtifactName: Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}-Android
+        ${{ else }}:
+          ${{ if eq(parameters.isBrowser, 'true') }}:
+            ArtifactName: Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}-WASM
+          ${{ else }}:
+            ${{ if eq(parameters.isMono, 'true') }}:
+              ArtifactName: Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}-Mono
+            ${{ else }}:
+              ArtifactName: Logs-${{ parameters.targetOS }}${{ parameters.osSubgroup }}-${{ parameters.targetArchitecture }}
+        PublishLocation: Container
+        PathtoPublish: SendToHelix.binlog
+      displayName: Save helix logs
+      continueOnError: true
+      condition: always()

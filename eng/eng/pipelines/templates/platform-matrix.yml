@@ -1,0 +1,70 @@
+parameters:
+  platformList:
+  - targetOS: windows
+    supportedArchitectures:
+    - x86
+    - x64
+    - arm64
+  - targetOS: osx
+    supportedArchitectures:
+    - x64
+    - arm64
+  - targetOS: linux
+    supportedArchitectures:
+    - x64
+    - arm
+    - arm64
+  - targetOS: linux
+    osSubgroup: _musl
+    supportedArchitectures:
+    - x64
+    - arm
+    - arm64
+  jobTemplate: ''
+  isMono: ''
+  isBrowser: ''
+  isAndroid: ''
+  
+
+jobs:
+- ${{ each platform in parameters.platformList }}:
+  - ${{ each architecture in platform.supportedArchitectures }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        targetArchitecture: ${{ architecture }}
+        targetOS: ${{ platform.targetOS }}
+        osSubgroup: ${{ platform.osSubgroup }}
+        clrVersion: ${{ parameters.clrVersion }}
+        isMono: false
+        isBrowser: false
+        isAndroid: false
+    - ${{ if and(ne(platform.osSubgroup, '_musl'), not(and(eq(platform.targetOS, 'windows'), eq(architecture, 'arm64'))))}}:
+      - template: ${{ parameters.jobTemplate }}
+        parameters:
+          targetArchitecture: ${{ architecture }}
+          targetOS: ${{ platform.targetOS }}
+          osSubgroup: ${{ platform.osSubgroup }}
+          clrVersion: ${{ parameters.clrVersion }}
+          isMono: true
+          isBrowser: false
+          isAndroid: false
+    - ${{ if and(and(eq(platform.targetOS, 'windows'), ne(architecture, 'arm64')), ne(architecture, 'x86'))}}:
+      - template: ${{ parameters.jobTemplate }}
+        parameters:
+          targetArchitecture: ${{ architecture }}
+          targetOS: ${{ platform.targetOS }}
+          osSubgroup: ${{ platform.osSubgroup }}
+          clrVersion: ${{ parameters.clrVersion }}
+          isMono: true
+          isBrowser: true
+          isAndroid: false
+    - ${{ if and(ne(platform.osSubgroup, '_musl'), eq(platform.targetOS, 'linux'))}}:
+      - template: ${{ parameters.jobTemplate }}
+        parameters:
+          targetArchitecture: ${{ architecture }}
+          targetOS: ${{ platform.targetOS }}
+          osSubgroup: ${{ platform.osSubgroup }}
+          clrVersion: ${{ parameters.clrVersion }}
+          isMono: false
+          isBrowser: false
+          isAndroid: true

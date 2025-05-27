@@ -1,0 +1,137 @@
+parameters:
+  # Target achitecture for the build
+  condition: ''
+  continueOnError: false
+  dependsOn: ''
+  displayName: ''
+  name: ''
+  runAsPublic: false
+  steps: []
+  # Target architecture (runs the build on this OS always).
+  targetArchitecture: ''
+  # Target OS (Supports Windows, Linux, Linux-musl, OSX)
+  targetOS: ''
+  osSubgroup: ''
+  testJob: false
+  timeoutInMinutes: 30
+  variables: []
+  isMono: ''
+  isBrowser: ''
+  isAndroid: ''
+
+jobs:
+- template: /eng/common/templates/job/job.yml
+  parameters:
+    # Arcade parameters
+    ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
+      enableTelemetry: true
+    ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
+      enableTelemetry: false
+    runAsPublic: ${{ parameters.runAsPublic }}
+    # We don't need SBOM since we are not shipping anything out of here.
+    enableSbom: false
+    ${{ if or(eq(parameters.isBrowser, 'true'), eq(parameters.isAndroid, 'true')) }}:
+      timeoutInMinutes: 120
+    ${{ else }}:
+      ${{ if eq(parameters.isMono, 'true') }}:
+        timeoutInMinutes: 60
+      ${{ else }}:
+        timeoutInMinutes: ${{ parameters.timeoutInMinutes }}      
+    helixRepo: dotnet/diagnostictests
+    dependsOn: ${{ parameters.dependsOn }}
+    ${{ if eq(parameters.testJob, 'true') }}:
+      helixType: test/diagnostictests/
+      ${{ if eq(parameters.isAndroid, 'true') }}:
+        name: ${{ coalesce(parameters.name, format('test_{0}{1}_{2}_Android', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+        displayName: ${{ coalesce(parameters.displayName, format('Test {0}{1} {2} - Android', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+      ${{ else }}:
+        ${{ if eq(parameters.isBrowser, 'true') }}:
+          name: ${{ coalesce(parameters.name, format('test_{0}{1}_{2}_WASM', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+          displayName: ${{ coalesce(parameters.displayName, format('Test {0}{1} {2} - WASM', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+        ${{ else }}:
+          ${{ if eq(parameters.isMono, 'true') }}:
+            name: ${{ coalesce(parameters.name, format('test_{0}{1}_{2}_Mono', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+            displayName: ${{ coalesce(parameters.displayName, format('Test {0}{1} {2} - Mono', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+          ${{ else }}:
+            name: ${{ coalesce(parameters.name, format('test_{0}{1}_{2}', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+            displayName: ${{ coalesce(parameters.displayName, format('Test {0}{1} {2}', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+    ${{ if ne(parameters.testJob, 'true') }}:
+      helixType: build/diagnostictests/
+      ${{ if eq(parameters.isAndroid, 'true') }}:
+        name: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}_Android', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+        displayName: ${{ coalesce(parameters.displayName, format('Build {0}{1} {2} - Android', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+      ${{ else }}:
+        ${{ if eq(parameters.isBrowser, 'true') }}:
+          name: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}_WASM', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+          displayName: ${{ coalesce(parameters.displayName, format('Build {0}{1} {2} - WASM', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+        ${{ else }}:
+          ${{ if eq(parameters.isMono, 'true') }}:
+            name: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}_Mono', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+            displayName: ${{ coalesce(parameters.displayName, format('Build {0}{1} {2} - Mono', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+          ${{ else }}:
+            name: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+            displayName: ${{ coalesce(parameters.displayName, format('Build {0}{1} {2}', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+        
+
+    pool:
+      ${{ if eq(parameters.targetOS, 'OSX') }}:
+        vmImage: 'macOS-latest'
+      ${{ else }}:
+        name: $[ replace( replace( eq(contains(coalesce(variables['System.PullRequest.TargetBranch'], variables['Build.SourceBranch'], 'refs/heads/main'), 'release'), 'true'), True, 'NetCore1ESPool-Svc-Internal' ), False, 'NetCore1ESPool-Internal' ) ]
+        ${{ if startsWith(parameters.targetOS, 'Linux') }}:
+          demands: ImageOverride -equals Build.Ubuntu.2204.Amd64
+        ${{ if eq(parameters.targetOS, 'Windows') }}:
+          demands: ImageOverride -equals windows.vs2022.amd64
+
+    ${{ if and(startsWith(parameters.targetOS, 'Linux'), ne(parameters.isAndroid, 'true')) }}:
+      container: ${{ format('{0}{1}_{2}', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture) }}
+
+    steps:
+    - checkout: self
+      fetchDepth: 5
+    - ${{ if eq(parameters.targetOS, 'Windows') }}:
+      - task: PowerShell@2
+        displayName: Setup Private Feeds Credentials
+        inputs:
+          filePath: $(Build.SourcesDirectory)\eng\common\SetupNugetSources.ps1
+          arguments: -ConfigFile $(Build.SourcesDirectory)\NuGet.config -Password $Env:Token
+        env:
+          Token: $(dn-bot-dnceng-artifact-feeds-rw)
+    - ${{ else }}:
+      - task: Bash@3
+        displayName: Setup Private Feeds Credentials
+        inputs:
+          filePath: $(Build.SourcesDirectory)/eng/common/SetupNugetSources.sh
+          arguments: $(Build.SourcesDirectory)/NuGet.config $Token
+        env:
+          Token: $(dn-bot-dnceng-artifact-feeds-rw)
+    - ${{ parameters.steps }}
+
+    variables:
+    # disable CodeQL here, we don't ship any code. This is just a testing repository.
+    - name: Codeql.Enabled
+      value: False
+    - ${{ if eq(parameters.isAndroid, 'true') }}:
+      - BuildArtifactName: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}_Android', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+    - ${{ else }}:
+      - ${{ if eq(parameters.isBrowser, 'true') }}:
+        - BuildArtifactName: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}_WASM', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+      - ${{ else }}:
+        - ${{ if eq(parameters.isMono, 'true') }}:
+          - BuildArtifactName: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}_Mono', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+        - ${{ else }}:
+          - BuildArtifactName: ${{ coalesce(parameters.name, format('build_{0}{1}_{2}', parameters.targetOS, parameters.osSubgroup, parameters.targetArchitecture)) }}
+    - name: _configuredBinFolder
+      value: '$(Build.SourcesDirectory)/artifacts/bin/${{parameters.targetOS}}.${{parameters.targetArchitecture}}.Debug'
+    - group: AzureDevOps-Artifact-Feeds-Pats
+    - ${{ if eq(parameters.targetOS, 'Windows') }}:
+      - name: scriptExt
+        value: '.cmd'
+      - name: dir
+        value: '\'
+    - ${{ else }}:
+      - name: scriptExt
+        value: '.sh'
+      - name: dir
+        value: '/'
+    - ${{ parameters.variables }}

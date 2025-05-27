@@ -1,0 +1,164 @@
+<!-- 
+  Helix Testing.
+
+  To use private local runs
+    Set the following env variables:
+    - _HelixAccessToken: Token obtained from Helix.dot.net
+    - BUILD_SOURCEBRANCH: full branch. i.e. refs/head/main
+    - BUILD_REPOSITORY_NAME: dotnet-diagnostictests
+    - SYSTEM_TEAMPROJECT: internal
+    - BUILD_REASON: Manual
+
+    Pass the following properties:
+    - TargetOS - One of { Windows, Linux, Linux-musl, OSX }
+    - TargetArch - One of { x86, x64, arm, arm64 }
+    - IsMono - One of { true, false }
+    - IsBrowser - One of { true, false }
+    - IsAndroid - One of { true, false }
+    - TestDir: Where the runtests.cmd script lives. That directory must be the root of all that's needed to test.
+              Otherwise it will asume by default it's <ROOT>/bin/$(TargetOS).$(TargetArch).Debug
+ -->
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
+  <!-- Helix required properties. -->
+  <!-- All these assume we are running from a pipeline to obtain these. -->
+  <!-- HelixAccessToken is injected from teh environment so it's not here. -->
+  <PropertyGroup>
+    <HelixAccessToken>$(_HelixAccessToken)</HelixAccessToken>
+    <HelixArchitecture>$(TargetArch)</HelixArchitecture> 
+    <HelixBuild>$(OfficialBuildId)</HelixBuild>
+    <HelixBuild Condition="'$(HelixBuild)' == ''">99999999.99</HelixBuild>
+    <HelixConfiguration>Release</HelixConfiguration>
+    <HelixSource Condition="'$(Outerloop)' == 'true'">official/dotnet/diagnostic-tests</HelixSource>
+    <HelixSource Condition="'$(SYSTEM_ACCESSTOKEN)' != '' and '$(HelixSource)' == ''">pr/dotnet/diagnostic-tests</HelixSource>
+    <HelixSource Condition="'$(HelixSource)' == ''">agent/dotnet/diagnostic-tests</HelixSource>
+    <HelixType>tests/diagnostictests-internal/</HelixType>
+    <OsAndArch>$(TargetOs)|$(TargetArch)</OsAndArch>
+    <OsAndArch Condition="'$(OSSubGroup)' != ''">$(TargetOs)$(OSSubGroup)|$(TargetArch)</OsAndArch>
+    <TestDir Condition="'$(TestDir)' == ''">$(MSBuildThisFileDirectory)../../bin/$(TargetOS).$(TargetArch).Debug</TestDir>
+  </PropertyGroup>
+
+  <!-- Determine the best queues to run in -->
+  <!-- TODO: Add queues on Outerloop for full coverage. -->
+  <Choose>
+    <When Condition="('$(OsAndArch)' == 'windows|x64' or '$(OsAndArch)' == 'windows|x86') and '$(IsBrowser)' == 'false'">
+      <ItemGroup>
+        <HelixTargetQueue Include="Windows.10.Amd64" />
+      </ItemGroup>
+    </When>
+    <When Condition="('$(OsAndArch)' == 'windows|x64' or '$(OsAndArch)' == 'windows|x86') and '$(IsBrowser)' == 'true'">
+      <ItemGroup>
+        <HelixTargetQueue Include="Windows.11.Amd64.client" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux|x64' and '$(IsAndroid)' == 'true'">
+      <ItemGroup>
+        <HelixTargetQueue Include="Ubuntu.2204.Amd64.Android.34" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux|arm64' and '$(IsAndroid)' == 'true'">
+      <ItemGroup>
+        <HelixTargetQueue Include="Ubuntu.2204.Arm64.Android.34" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'windows|arm64'">
+      <ItemGroup>
+        <HelixTargetQueue Include="Windows.11.Arm64" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'osx|x64'">
+      <ItemGroup>
+        <HelixTargetQueue Include="OSX.13.Amd64" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'osx|arm64'">
+      <ItemGroup>
+        <HelixTargetQueue Include="OSX.13.ARM64" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux|x64'">
+      <ItemGroup>
+        <HelixTargetQueue Include="Ubuntu.2204.Amd64" />
+      </ItemGroup>
+      <!-- ItemGroup Condition="'$(Outerloop)' == 'true'">
+        <HelixTargetQueue Include="(Centos.8.Amd64)Ubuntu.1804.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:centos-8-helix" />
+        <HelixTargetQueue Include="(Debian.11.Amd64)Ubuntu.1804.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:debian-11-helix-amd64" />
+        <HelixTargetQueue Include="RedHat.7.Amd64"/>
+      </ItemGroup -->
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux|arm'">
+      <ItemGroup>
+        <HelixTargetQueue Include="(Ubuntu.1804.Arm32)Ubuntu.1804.Armarch@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-helix-arm32v7" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux|arm64'">
+      <ItemGroup>
+        <HelixTargetQueue Include="(Ubuntu.1804.Arm64)Ubuntu.1804.ArmArch@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-helix-arm64v8" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux_musl|x64'">
+      <ItemGroup>
+        <HelixTargetQueue Include="(Alpine.315.Amd64)Ubuntu.2204.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.15-helix-amd64" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux_musl|arm'">
+      <ItemGroup>
+        <HelixTargetQueue Include="(Alpine.315.Arm32)Ubuntu.1804.ArmArch@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.15-helix-arm32v7" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(OsAndArch)' == 'linux_musl|arm64'">
+      <ItemGroup>
+        <HelixTargetQueue Include="(Alpine.315.Arm64)Ubuntu.1804.ArmArch@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.15-helix-arm64v8" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <PropertyGroup Condition="'$(IsMono)' == 'true' and '$(IsBrowser)' == 'false'">
+    <MonoDesc>Mono </MonoDesc>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsMono)' == 'true' and '$(IsBrowser)' == 'true'">
+    <MonoDesc>WASM </MonoDesc>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsAndroid)' == 'true'">
+    <MonoDesc>Android </MonoDesc>
+  </PropertyGroup>
+
+  <!-- Helix features for test reporting. -->
+  <PropertyGroup Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">
+    <EnableXUnitReporter>true</EnableXUnitReporter>
+    <TestRunNamePrefix>$(TargetOS)$(OSSubGroup) $(TargetArch) $(MonoDesc) @ </TestRunNamePrefix>
+  </PropertyGroup>
+
+  <PropertyGroup>  
+    <FailOnWorkItemFailure>true</FailOnWorkItemFailure>
+    <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TimeoutPerTestCollectionInMinutes Condition="'$(TimeoutPerTestCollectionInMinutes)' == ''">60</TimeoutPerTestCollectionInMinutes>
+    <TimeoutPerTestCollectionInMinutes Condition="'$(IsMono)' == 'true' and '$(IsBrowser)' == 'true'">180</TimeoutPerTestCollectionInMinutes>
+    <TimeoutPerTestCollectionInMinutes Condition="'$(IsAndroid)' == 'true'">180</TimeoutPerTestCollectionInMinutes>
+    <XUnitRunnerArgs>-nocolor -nologo -noshadow -xml testResults.xml</XUnitRunnerArgs>
+    <!-- 
+      Do NOT run the Android tests in parallel. It will cause all sorts of issues as many
+      of the tests use the same app. The last thing you want is for a previous test to 
+      uninstall the app while another test is running, or move the app to the background so 
+      it doesn't run. 
+     -->
+    <XUnitRunnerArgs Condition="'$(IsAndroid)' == 'true'">-parallel none $(XUnitRunnerArgs)</XUnitRunnerArgs>
+    <EnvVar Condition="'$(TargetOS)' == 'linux' And '$(IsAndroid)' == 'true'">ANDROID_SDK_ROOT=/usr/local/android-sdk/ </EnvVar>
+    <HelixPreCommands Condition="'$(TargetOS)' == 'Windows'">taskkill.exe /f /im corerun.exe</HelixPreCommands>
+    <HelixPostCommands Condition="'$(TargetOS)' == 'Windows'">taskkill.exe /f /im corerun.exe</HelixPostCommands>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- For now, there's only one workitem, when we move to multiplexing it would be good to use this as a correlation payload -->
+    <HelixWorkItem Include="DiagnosticTests">
+      <PayloadDirectory>$(TestDir)</PayloadDirectory>
+      <Command Condition="'$(TargetOS)' == 'Windows'">call .\runtests.cmd $(XUnitRunnerArgs)</Command>
+      <Command Condition="'$(TargetOS)' != 'Windows'">$(EnvVar)./runtests.sh $(XUnitRunnerArgs)</Command>
+      <Timeout Condition=" '$(TimeoutPerTestCollectionInMinutes)' != '' ">$([System.TimeSpan]::FromMinutes($(TimeoutPerTestCollectionInMinutes)))</Timeout>
+    </HelixWorkItem>
+  </ItemGroup>
+</Project>
