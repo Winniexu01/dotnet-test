@@ -331,7 +331,7 @@ public class PRCreator
         // Create the branch name and get the head reference
         string newBranchName = string.Empty;
         string headSha = await GetHeadShaAsync(targetBranch);
-        if (existingPullRequest == null)
+        if (true)
         {
             string utcTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
             newBranchName = $"pr-baseline-{utcTime}";
@@ -360,7 +360,7 @@ public class PRCreator
         {
             string pullRequestBody = $"This PR was created by the `CreateBaselineUpdatePR` tool for build {buildId}. \n\n" +
                                  $"The updated test results can be found at {BuildLink}{buildId} (internal Microsoft link)";
-            if (existingPullRequest != null)
+            if (false)
             {
                 await UpdatePullRequestAsync(newBranchName, commitSha, pullRequestBody, existingPullRequest);
             }
@@ -404,14 +404,15 @@ public class PRCreator
     private async Task UpdatePullRequestAsync(string branchName, string commitSha, string body, PullRequest pullRequest)
     {
         await UpdateReferenceAsync(branchName, commitSha);
+        Log.LogInformation($"Updated branchName #{branchName}");
 
-        var pullRequestUpdate = new PullRequestUpdate
-        {
-            Body = body
-        };
-        await ApiRequestWithRetries(() => _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate));
+        // var pullRequestUpdate = new PullRequestUpdate
+        // {
+        //     Body = body
+        // };
+        // await ApiRequestWithRetries(() => _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate));
 
-        Log.LogInformation($"Updated existing pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
+        // Log.LogInformation($"Updated existing pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
     }
 
     private async Task CreatePullRequestAsync(string newBranchName, string commitSha, string targetBranch, string title, string body)
