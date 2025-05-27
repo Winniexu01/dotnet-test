@@ -10,6 +10,7 @@ parameters:
   default: " " # Set it to an empty string to allow it be an optional parameter
 
 variables:
+  # GH access token for SB bot - BotAccount-dotnet-sb-bot-pat
 - group: Dotnet-sourcebuild-auth
 
 stages:
@@ -44,7 +45,7 @@ stages:
             fi
             repoName=$(basename $dir)
             matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
-            if [ "$count" != "2" ]; then
+            if [ "$count" != "1" ]; then
                 count=$((count+1))
             else
                 break
@@ -59,12 +60,12 @@ stages:
       displayName: Get Matrix
 
   - job: LicenseScan
-    dependsOn: Setup
     pool:
       vmImage: ubuntu-latest
     container:
       image: mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-source-build-test-amd64
       options: '--memory=6g'
+    dependsOn: Setup
     timeoutInMinutes: 420
     strategy:
       matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
@@ -131,16 +132,12 @@ stages:
         testRunTitle: $(Agent.JobName)
 
   - job: Publish_Test_Results_PR
-    dependsOn: 
-      - Setup
+    dependsOn: LicenseScan
     condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/dotnet-main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
     variables:
     - template: /eng/pipelines/templates/variables/pipelines.yml@self
     steps:
-
     - script: |
-        set -x
-        echo $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
         source ./eng/common/tools.sh
         InitializeDotNetCli true
       displayName: Install .NET SDK
