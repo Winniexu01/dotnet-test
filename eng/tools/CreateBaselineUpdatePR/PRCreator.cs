@@ -6,7 +6,6 @@ namespace CreateBaselineUpdatePR;
 using Octokit;
 using System.Text;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 public class PRCreator
@@ -17,7 +16,6 @@ public class PRCreator
     private const string BuildLink = "https://dev.azure.com/dnceng/internal/_build/results?buildId=";
     private const string DefaultLicenseBaselineContent = "{\n  \"files\": []\n}";
     private const string TreeMode = "040000";
-    private const int MaxRetries = 10;
     public PRCreator(string repo, string gitHubToken)
     {
         // Create a new GitHub client
@@ -28,7 +26,7 @@ public class PRCreator
         _repoName = repo.Split('/')[1];
     }
 
-    public async Task ExecuteAsync(
+    public async Task<int> ExecuteAsync(
         string originalFilesDirectory,
         string updatedFilesDirectory,
         int buildId,
@@ -42,66 +40,27 @@ public class PRCreator
 
         var updatedTestsFiles = GetUpdatedFiles(updatedFilesDirectory);
 
-        // Fetch the files within the desired path from the original tree
-        TreeResponse originalTreeResponse = await ApiRequestWithRetries(() => _client.Git.Tree.Get(_repoOwner, _repoName, targetBranch));
-        List<NewTreeItem> originalTreeItems = await FetchOriginalTreeItemsAsync(originalTreeResponse, targetBranch, originalFilesDirectory);
+        // Create a new tree for the originalFilesDirectory based on the target branch
+        var originalTreeResponse = await _client.Git.Tree.GetRecursive(_repoOwner, _repoName, targetBranch);
+        var testResultsTreeItems = originalTreeResponse.Tree
+            .Where(file => file.Path.Contains(originalFilesDirectory) && file.Path != originalFilesDirectory)
+            .Select(file => new NewTreeItem
+            {
+                Path = Path.GetRelativePath(originalFilesDirectory, file.Path),
+                Mode = file.Mode,
+                Type = file.Type.Value,
+                Sha = file.Sha
+            })
+            .ToList();
 
         // Update the test results tree based on the pipeline
-        originalTreeItems = await UpdateAllFilesAsync(updatedTestsFiles, originalTreeItems, pipeline);
-        var testResultsTreeResponse = await CreateTreeFromItemsAsync(originalTreeItems);
+        testResultsTreeItems = await UpdateAllFilesAsync(updatedTestsFiles, testResultsTreeItems, pipeline);
+        var testResultsTreeResponse = await CreateTreeFromItemsAsync(testResultsTreeItems);
         var parentTreeResponse = await CreateParentTreeAsync(testResultsTreeResponse, originalTreeResponse, originalFilesDirectory);
 
         await CreateOrUpdatePullRequestAsync(parentTreeResponse, buildId, title, targetBranch);
-    }
 
-    private async Task<List<NewTreeItem>> FetchOriginalTreeItemsAsync(
-        TreeResponse? treeResponse,
-        string targetBranch,
-        string desiredPath)
-    {
-        ConcurrentBag<NewTreeItem> treeItems = [];
-        await FetchOriginalTreeItemsAsync(treeResponse, treeItems, targetBranch, desiredPath);
-        return treeItems.ToList();
-    }
-
-    private async Task FetchOriginalTreeItemsAsync(
-        TreeResponse? treeResponse,
-        ConcurrentBag<NewTreeItem> treeItems,
-        string targetBranch,
-        string desiredPath,
-        string relativePath = "")
-    {
-        if (treeResponse == null)
-        {
-            return;
-        }
-
-        await Parallel.ForEachAsync(treeResponse.Tree, async (item, cancellationToken) =>
-        {
-            string path = Path.Combine(relativePath, item.Path);
-            if (!path.StartsWith(desiredPath) && !desiredPath.StartsWith(path))
-            {
-                return;
-            }
-
-            if (item.Type == TreeType.Tree)
-            {
-                TreeResponse subTree = await ApiRequestWithRetries(() => _client.Git.Tree.Get(_repoOwner, _repoName, item.Sha));
-                await FetchOriginalTreeItemsAsync(subTree, treeItems, targetBranch, desiredPath, path);
-            }
-            else
-            {
-                var newItem = new NewTreeItem
-                {
-                    Path = Path.GetRelativePath(desiredPath, path),
-                    Mode = item.Mode,
-                    Type = item.Type.Value,
-                    Sha = item.Sha
-                };
-
-                treeItems.Add(newItem);
-            }
-        });
+        return Log.GetExitCode();
     }
 
     // Return a dictionary using the filename without the 
@@ -167,7 +126,7 @@ public class PRCreator
 
             if (originalTreeItem != null)
             {
-                var originalBlob = await ApiRequestWithRetries(() => _client.Git.Blob.Get(_repoOwner, _repoName, originalTreeItem.Sha));
+                var originalBlob = await _client.Git.Blob.Get(_repoOwner, _repoName, originalTreeItem.Sha);
                 content = Encoding.UTF8.GetString(Convert.FromBase64String(originalBlob.Content));
                 var originalContent = content.Split("\n");
 
@@ -252,14 +211,14 @@ public class PRCreator
             Content = content,
             Encoding = EncodingType.Utf8
         };
-        return await ApiRequestWithRetries(() => _client.Git.Blob.Create(_repoOwner, _repoName, blob));
+        return await _client.Git.Blob.Create(_repoOwner, _repoName, blob);
     }
 
     private string ParseUpdatedFileName(string updatedFile) => updatedFile.Split("Updated")[1];
 
     private async Task<TreeResponse> CreateTreeFromItemsAsync(List<NewTreeItem> items, string path = "")
     {
-        List<NewTreeItem> newTreeItems = [];
+        var newTreeItems = new List<NewTreeItem>();
 
         var groups = items.GroupBy(item => Path.GetDirectoryName(item.Path));
         foreach (var group in groups)
@@ -269,7 +228,7 @@ public class PRCreator
                 // These items are in the current directory, so add them to the new tree items
                 foreach (var item in group)
                 {
-                    if (item.Type != TreeType.Tree)
+                    if(item.Type != TreeType.Tree)
                     {
                         newTreeItems.Add(new NewTreeItem
                         {
@@ -300,7 +259,7 @@ public class PRCreator
         {
             newTree.Tree.Add(item);
         }
-        return await ApiRequestWithRetries(() => _client.Git.Tree.Create(_repoOwner, _repoName, newTree));
+        return await _client.Git.Tree.Create(_repoOwner, _repoName, newTree);
     }
 
     private async Task<TreeResponse> CreateParentTreeAsync(TreeResponse testResultsTreeResponse, TreeResponse originalTreeResponse, string originalFilesDirectory)
@@ -317,7 +276,7 @@ public class PRCreator
             Sha = testResultsTreeResponse.Sha
         });
 
-        return await ApiRequestWithRetries(() => _client.Git.Tree.Create(_repoOwner, _repoName, parentTree));
+        return await _client.Git.Tree.Create(_repoOwner, _repoName, parentTree);
     }
 
     private async Task CreateOrUpdatePullRequestAsync(TreeResponse parentTreeResponse, int buildId, string title, string targetBranch)
@@ -327,43 +286,16 @@ public class PRCreator
         // Create the branch name and get the head reference
         string newBranchName = string.Empty;
         string headSha = await GetHeadShaAsync(targetBranch);
-        if (true)
-        {
-            string utcTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-            newBranchName = $"pr-baseline-{utcTime}";
-        }
-        else
-        {
-            newBranchName = existingPullRequest.Head.Ref;
-
-            try
-            {
-                // Merge the target branch into the existing pull request
-                var merge = new NewMerge(newBranchName, headSha);
-                await ApiRequestWithRetries(() => _client.Repository.Merging.Create(_repoOwner, _repoName, merge));
-            }
-            catch (Exception e)
-            {
-                Log.LogWarning($"Failed to merge the target branch into the existing pull request: {e.Message}");
-                Log.LogWarning("Continuing with updating the existing pull request. You may need to resolve conflicts manually in the PR.");
-            }
-
-            headSha = await GetHeadShaAsync(newBranchName);
-        }
+        
+        string utcTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+        newBranchName = $"pr-baseline-{utcTime}";
 
         var commitSha = await CreateCommitAsync(parentTreeResponse.Sha, headSha, $"Update baselines for build {BuildLink}{buildId} (internal Microsoft link)");
         if (await ShouldMakeUpdatesAsync(headSha, commitSha))
         {
             string pullRequestBody = $"This PR was created by the `CreateBaselineUpdatePR` tool for build {buildId}. \n\n" +
                                  $"The updated test results can be found at {BuildLink}{buildId} (internal Microsoft link)";
-            if (false)
-            {
-                await UpdatePullRequestAsync(newBranchName, commitSha, pullRequestBody, existingPullRequest);
-            }
-            else
-            {
-                await CreatePullRequestAsync(newBranchName, commitSha, targetBranch, title, pullRequestBody);
-            }
+            await CreatePullRequestAsync(newBranchName, commitSha, targetBranch, title, pullRequestBody);
         }
     }
 
@@ -373,20 +305,20 @@ public class PRCreator
         {
             Base = targetBranch
         };
-        var existingPullRequest = await ApiRequestWithRetries(() => _client.PullRequest.GetAllForRepository(_repoOwner, _repoName, request));
+        var existingPullRequest = await _client.PullRequest.GetAllForRepository(_repoOwner, _repoName, request);
         return existingPullRequest.FirstOrDefault(pr => pr.Title == title);
     }
 
     private async Task<string> CreateCommitAsync(string newSha, string headSha, string commitMessage)
     {
         var newCommit = new NewCommit(commitMessage, newSha, headSha);
-        var commit = await ApiRequestWithRetries(() => _client.Git.Commit.Create(_repoOwner, _repoName, newCommit));
+        var commit = await _client.Git.Commit.Create(_repoOwner, _repoName, newCommit);
         return commit.Sha;
     }
 
     private async Task<bool> ShouldMakeUpdatesAsync(string headSha, string commitSha)
     {
-        var comparison = await ApiRequestWithRetries(() => _client.Repository.Commit.Compare(_repoOwner, _repoName, headSha, commitSha));
+        var comparison = await _client.Repository.Commit.Compare(_repoOwner, _repoName, headSha, commitSha);
         if (!comparison.Files.Any())
         {
             Log.LogInformation("No changes to commit. Skipping PR creation/updates.");
@@ -395,77 +327,48 @@ public class PRCreator
         return true;
     }
 
-    private async Task UpdatePullRequestAsync(string branchName, string commitSha, string body, PullRequest pullRequest)
-    {
-        await UpdateReferenceAsync(branchName, commitSha);
-        Log.LogInformation($"Updated branchName #{branchName}");
+    // private async Task UpdatePullRequestAsync(string branchName, string commitSha, string body, PullRequest pullRequest)
+    // {
+    //     await UpdateReferenceAsync(branchName, commitSha);
 
-        // var pullRequestUpdate = new PullRequestUpdate
-        // {
-        //     Body = body
-        // };
-        // await ApiRequestWithRetries(() => _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate));
+    //     var pullRequestUpdate = new PullRequestUpdate
+    //     {
+    //         Body = body
+    //     };
+    //     await _client.PullRequest.Update(_repoOwner, _repoName, pullRequest.Number, pullRequestUpdate);
 
-        // Log.LogInformation($"Updated existing pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
-    }
+    //     Log.LogInformation($"Updated existing pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
+    // }
 
     private async Task CreatePullRequestAsync(string newBranchName, string commitSha, string targetBranch, string title, string body)
     {
         await CreateReferenceAsync(newBranchName, commitSha);
+        Log.LogInformation($"Created new branch #{newBranchName}");
 
-        var newPullRequest = new NewPullRequest(title, newBranchName, targetBranch)
-        {
-            Body = body
-        };
-        var pullRequest = await ApiRequestWithRetries(() => _client.PullRequest.Create(_repoOwner, _repoName, newPullRequest));
+        // var newPullRequest = new NewPullRequest(title, newBranchName, targetBranch)
+        // {
+        //     Body = body
+        // };
+        // var pullRequest = await _client.PullRequest.Create(_repoOwner, _repoName, newPullRequest);
 
-        Log.LogInformation($"Created pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
+        // Log.LogInformation($"Created pull request #{pullRequest.Number}. URL: {pullRequest.HtmlUrl}");
     }
 
     private async Task<string> GetHeadShaAsync(string branchName)
     {
-        var reference = await ApiRequestWithRetries(() => _client.Git.Reference.Get(_repoOwner, _repoName, $"heads/{branchName}"));
+        var reference = await _client.Git.Reference.Get(_repoOwner, _repoName, $"heads/{branchName}");
         return reference.Object.Sha;
     }
 
     private async Task UpdateReferenceAsync(string branchName, string commitSha)
     {
         var referenceUpdate = new ReferenceUpdate(commitSha);
-        await ApiRequestWithRetries(() => _client.Git.Reference.Update(_repoOwner, _repoName, $"heads/{branchName}", referenceUpdate));
+        await _client.Git.Reference.Update(_repoOwner, _repoName, $"heads/{branchName}", referenceUpdate);
     }
 
     private async Task CreateReferenceAsync(string branchName, string commitSha)
     {
         var newReference = new NewReference($"refs/heads/{branchName}", commitSha);
-        await ApiRequestWithRetries(() => _client.Git.Reference.Create(_repoOwner, _repoName, newReference));
-    }
-
-    private async Task<T> ApiRequestWithRetries<T>(Func<Task<T>> action)
-    {
-        int attempt = 0;
-        int delayMilliseconds = 1000;
-        while (true)
-        {
-            try
-            {
-                return await action();
-            }
-            catch (RateLimitExceededException ex)
-            {
-                var resetTime = ex.Reset.UtcDateTime;
-                var delay = resetTime - DateTime.UtcNow;
-                Log.LogWarning($"Rate limit exceeded. Retrying after {delay.TotalSeconds} seconds...");
-                await Task.Delay(delay);
-            }
-            catch (Exception ex) when (
-                attempt < MaxRetries
-                && (ex is ApiException || ex is HttpRequestException)
-                && (ex.InnerException is TaskCanceledException))
-            {
-                attempt++;
-                Log.LogWarning($"Attempt {attempt} failed: {ex.Message}. Retrying in {delayMilliseconds}ms...");
-                await Task.Delay(delayMilliseconds * attempt); // Exponential backoff
-            }
-        }
+        await _client.Git.Reference.Create(_repoOwner, _repoName, newReference);
     }
 }

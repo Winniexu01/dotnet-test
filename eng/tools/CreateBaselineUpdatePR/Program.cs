@@ -62,6 +62,8 @@ public class Program
         Recursive = true
     };
 
+    public static int ExitCode = 0;
+
     public static async Task<int> Main(string[] args)
     {
         var sdkDiffTestsCommand = CreateCommand("sdk", "Creates a PR that updates baselines and exclusion files published by the sdk diff tests.");
@@ -79,7 +81,7 @@ public class Program
 
         await rootCommand.Parse(args).InvokeAsync();
 
-        return Log.GetExitCode();
+        return ExitCode;
     }
 
     private static Command CreateCommand(string name, string description)
@@ -102,22 +104,15 @@ public class Program
         {
             Log.Level = result.GetValue(Level);
 
-            try
-            {
-                var creator = new PRCreator(result.GetValue(Repo)!, result.GetValue(GitHubToken)!);
+            var creator = new PRCreator(result.GetValue(Repo)!, result.GetValue(GitHubToken)!);
 
-                await creator.ExecuteAsync(
-                    result.GetValue(OriginalFilesDirectory)!,
-                    result.GetValue(UpdatedFilesDirectory)!,
-                    result.GetValue(BuildId)!,
-                    result.GetValue(Title)!,
-                    result.GetValue(Branch)!,
-                    pipeline);
-            }
-            catch (Exception ex)
-            {
-                Log.LogError(ex.Message);
-            }
+            ExitCode = await creator.ExecuteAsync(
+                result.GetValue(OriginalFilesDirectory)!,
+                result.GetValue(UpdatedFilesDirectory)!,
+                result.GetValue(BuildId)!,
+                result.GetValue(Title)!,
+                result.GetValue(Branch)!,
+                pipeline);
         });
     }
 }
