@@ -45,7 +45,7 @@ stages:
             fi
             repoName=$(basename $dir)
             matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
-            if [ "$count" != "300" ]; then
+            if [ "$count" != "3" ]; then
                 count=$((count+1))
             else
                 break
@@ -114,7 +114,8 @@ stages:
         # find artifacts/TestResults/ -type f -name "Updated*.json"
         # find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
         # echo "Results:"
-        # find artifacts/TestResults/ -type f -name "scancode-results*.json" -exec cp {} --parents -t ${targetFolder} \;
+        # find artifacts/TestResults/ -type f -name "scancode*.*" -exec cp {} --parents -t ${targetFolder} \;
+        # find artifacts/TestResults/ -type f -name "timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
         # echo "All:"
         # ls -R artifacts/TestResults/
         # echo "BuildLogs:"
@@ -160,8 +161,10 @@ stages:
         pipeline: $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
         buildId: $(Build.BuildId)
         artifact: ''
-        patterns: '**/Updated*'
-        displayName: Download Updated Test Files
+        patterns: |
+          **/Updated*
+          **/timeout*
+        displayName: Download Test Files
 
     - script: |
         find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
@@ -172,10 +175,10 @@ stages:
         find $(Pipeline.Workspace)/Artifacts -type f
       displayName: List files
 
-    - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
-      parameters:
-        pipeline: license
-        repo: Winniexu01/dotnet-test
-        originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
-        updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
-        pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
+    # - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
+    #   parameters:
+    #     pipeline: license
+    #     repo: Winniexu01/dotnet-test
+    #     originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
+    #     updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
+    #     pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
