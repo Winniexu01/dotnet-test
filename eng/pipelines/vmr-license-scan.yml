@@ -116,8 +116,7 @@ stages:
     #     find artifacts/TestResults/ -type f -name "Updated*.json"
     #     find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
     #     echo "Results:"
-    #     find artifacts/TestResults/ -type f -name "scancode*.*" -exec cp {} --parents -t ${targetFolder} \;
-    #     find artifacts/TestResults/ -type f -name "Timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "scancode-results*.json" -exec cp {} --parents -t ${targetFolder} \;
     #     echo "All:"
     #     ls -R artifacts/TestResults/
     #     echo "BuildLogs:"
@@ -162,15 +161,13 @@ stages:
         pipeline: $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
         buildId: $(Build.BuildId)
         artifact: ''
-        patterns: |
-          **/Updated*
-          **/Timeout*
+        patterns: '**/Updated*'
         displayName: Download Test Files
 
     - script: |
         set -x
         find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
-        find $(Pipeline.Workspace)/Artifacts -type f
+        ls -R $(Pipeline.Workspace)/Artifacts
       displayName: Move Artifacts to root
 
     - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self

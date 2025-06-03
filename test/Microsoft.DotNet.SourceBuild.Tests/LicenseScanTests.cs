@@ -138,35 +138,16 @@ public class LicenseScanTests : TestBase
         Assert.NotNull(Config.LicenseScanPath);
 
         // Indicates how long until a timeout occurs for scanning a given file
-        const int FileScanTimeoutSeconds = 2;
+        const int FileScanTimeoutSeconds = 1;
 
         string scancodeResultsPath = Path.Combine(Config.LogsDirectory, "scancode-results.json");
 
         // Scancode Doc: https://scancode-toolkit.readthedocs.io/en/latest/index.html
         string ignoreOptions = string.Join(" ", s_ignoredFilePatterns.Select(pattern => $"--ignore {pattern}"));
-        try
-        {
-            ExecuteHelper.ExecuteProcessValidateExitCode(
-                "scancode",
-                $"--license --processes 4 --timeout {FileScanTimeoutSeconds} --strip-root --only-findings {ignoreOptions} --json-pp {scancodeResultsPath} {Config.LicenseScanPath}",
-                OutputHelper);
-        }
-        catch (InvalidOperationException ex)
-        {
-            string errorMessage = null;
-            if (File.ReadAllText(scancodeResultsPath).Contains($@"ERROR: for scanner: licenses:\nERROR: Processing interrupted: timeout after {FileScanTimeoutSeconds} seconds."))
-            {
-                errorMessage = $"Scancode timed out while scanning {_targetRepo}.";
-                File.Create(Path.Combine(Config.LogsDirectory, $"Timeout.{_targetRepo}.txt")).Dispose();
-            }
-            else
-            {
-                errorMessage = $"Scancode failed to run on {_targetRepo}.";
-                File.Create(Path.Combine(Config.LogsDirectory, "scancode-failed.txt")).Dispose();
-            }
-
-            throw new InvalidOperationException($"{errorMessage} \r\n{ex.Message}");
-        }
+        ExecuteHelper.ExecuteProcessValidateExitCode(
+            "scancode",
+            $"--license --processes 4 --timeout {FileScanTimeoutSeconds} --strip-root --only-findings {ignoreOptions} --json-pp {scancodeResultsPath} {Config.LicenseScanPath}",
+            OutputHelper);
 
         JsonDocument doc = JsonDocument.Parse(File.ReadAllText(scancodeResultsPath));
         ScancodeResults? scancodeResults = doc.Deserialize<ScancodeResults>();
