@@ -49,10 +49,25 @@ public class PRCreator
                 Path = Path.GetRelativePath(originalFilesDirectory, file.Path),
                 Mode = file.Mode,
                 Type = file.Type.Value,
-                Sha = file.Sha
+                Sha = file.Sha,
+                Log.LogInformation($"FilePath: {file.Path}")
             })
             .ToList();
-
+        
+        foreach (var file in originalTreeResponse.Tree)
+        {
+            if( file.Path.Contains(originalFilesDirectory) && file.Path != originalFilesDirectory)
+            {
+                var tree = new NewTreeItem
+                {
+                    Path = Path.GetRelativePath(originalFilesDirectory, file.Path),
+                    Mode = file.Mode,
+                    Type = file.Type.Value,
+                    Sha = file.Sha
+                };
+            }
+        }
+        Log.LogInformation($"Found {testResultsTreeItems.Count} files in the original tree for {originalFilesDirectory}.");
         // Update the test results tree based on the pipeline
         testResultsTreeItems = await UpdateAllFilesAsync(updatedTestsFiles, testResultsTreeItems, pipeline);
         var testResultsTreeResponse = await CreateTreeFromItemsAsync(testResultsTreeItems);

@@ -115,7 +115,7 @@ stages:
         # find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
         # echo "Results:"
         # find artifacts/TestResults/ -type f -name "scancode*.*" -exec cp {} --parents -t ${targetFolder} \;
-        # find artifacts/TestResults/ -type f -name "timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
+        # find artifacts/TestResults/ -type f -name "Timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
         # echo "All:"
         # ls -R artifacts/TestResults/
         # echo "BuildLogs:"
@@ -163,7 +163,7 @@ stages:
         artifact: ''
         patterns: |
           **/Updated*
-          **/timeout*
+          **/Timeout*
         displayName: Download Test Files
 
     - script: |

@@ -157,7 +157,7 @@ public class LicenseScanTests : TestBase
             if (File.ReadAllText(scancodeResultsPath).Contains($@"ERROR: for scanner: licenses:\nERROR: Processing interrupted: timeout after {FileScanTimeoutSeconds} seconds."))
             {
                 errorMessage = $"Scancode timed out while scanning {_targetRepo}.";
-                File.Create(Path.Combine(Config.LogsDirectory, $"timeout.{_targetRepo}.txt")).Dispose();
+                File.Create(Path.Combine(Config.LogsDirectory, $"Timeout.{_targetRepo}.txt")).Dispose();
             }
             else
             {
