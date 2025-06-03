@@ -49,9 +49,9 @@ public class PRCreator
                 Path = Path.GetRelativePath(originalFilesDirectory, file.Path),
                 Mode = file.Mode,
                 Type = file.Type.Value,
-                Sha = file.Sha,
-                Log.LogInformation($"FilePath: {file.Path}")
+                Sha = file.Sha
             })
+            .Select(file => Log.LogInformation($"FilePath: {file.Path}"))
             .ToList();
         
         foreach (var file in originalTreeResponse.Tree)
