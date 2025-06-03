@@ -101,26 +101,25 @@ stages:
 
     - script: |
         set -x
-        # targetFolder=$(Build.StagingDirectory)/BuildLogs/
-        # mkdir -p ${targetFolder}
-        # cd "$(Build.SourcesDirectory)"
-        # find artifacts/log/ -type f -name "BuildTests*.binlog" -exec cp {} --parents -t ${targetFolder} \;
-        # find artifacts/log/ -type f -name "BuildTests*.log" -exec cp {} --parents -t ${targetFolder} \;
-        # find artifacts/TestResults/ -type f -name "*.binlog" -exec cp {} --parents -t ${targetFolder} \;
-        # find artifacts/TestResults/ -type f -name "*.log" -exec cp {} --parents -t ${targetFolder} \;
-        # echo "Updated:"
-        # find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt"
-        # find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt" -exec cp {} --parents -t ${targetFolder} \;
-        # find artifacts/TestResults/ -type f -name "Updated*.json"
-        # find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
-        # echo "Results:"
-        # find artifacts/TestResults/ -type f -name "scancode*.*" -exec cp {} --parents -t ${targetFolder} \;
-        # find artifacts/TestResults/ -type f -name "Timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
-        # echo "All:"
-        # ls -R artifacts/TestResults/
-        # echo "BuildLogs:"
-        # ls -R ${targetFolder}
-        ls -R $(Build.SourcesDirectory)
+        targetFolder=$(Build.StagingDirectory)/BuildLogs/
+        mkdir -p ${targetFolder}
+        cd "$(Build.SourcesDirectory)"
+        find artifacts/log/ -type f -name "BuildTests*.binlog" -exec cp {} --parents -t ${targetFolder} \;
+        find artifacts/log/ -type f -name "BuildTests*.log" -exec cp {} --parents -t ${targetFolder} \;
+        find artifacts/TestResults/ -type f -name "*.binlog" -exec cp {} --parents -t ${targetFolder} \;
+        find artifacts/TestResults/ -type f -name "*.log" -exec cp {} --parents -t ${targetFolder} \;
+        echo "Updated:"
+        find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt"
+        find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt" -exec cp {} --parents -t ${targetFolder} \;
+        find artifacts/TestResults/ -type f -name "Updated*.json"
+        find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
+        echo "Results:"
+        find artifacts/TestResults/ -type f -name "scancode*.*" -exec cp {} --parents -t ${targetFolder} \;
+        find artifacts/TestResults/ -type f -name "Timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
+        echo "All:"
+        ls -R artifacts/TestResults/
+        echo "BuildLogs:"
+        ls -R ${targetFolder}
       displayName: Prepare BuildLogs staging directory
       continueOnError: true
       condition: succeededOrFailed()
@@ -175,10 +174,10 @@ stages:
         find $(Pipeline.Workspace)/Artifacts -type f
       displayName: List files
 
-    # - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
-    #   parameters:
-    #     pipeline: license
-    #     repo: Winniexu01/dotnet-test
-    #     originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
-    #     updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
-    #     pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
+    - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
+      parameters:
+        pipeline: license
+        repo: Winniexu01/dotnet-test
+        originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
+        updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
+        pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
