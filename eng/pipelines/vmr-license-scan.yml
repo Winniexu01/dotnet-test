@@ -66,7 +66,7 @@ stages:
       image: mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-source-build-test-amd64
       options: '--memory=6g'
     dependsOn: Setup
-    timeoutInMinutes: 2
+    timeoutInMinutes: 420
     strategy:
       matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
@@ -89,40 +89,42 @@ stages:
       workingDirectory: $(Build.SourcesDirectory)
 
     - task: CopyFiles@2
-      displayName: Prepare BuildLogs staging directory1
+      displayName: Prepare BuildLogs staging directory
       inputs:
         SourceFolder: '$(Build.SourcesDirectory)'
         Contents: |
           artifacts/log/**
+          artifacts/TestResults/**
+          ls -R $(Build.StagingDirectory)/BuildLogs
         TargetFolder: '$(Build.StagingDirectory)/BuildLogs'
         CleanTargetFolder: true
       continueOnError: true
       condition: succeededOrFailed()
 
-    - script: |
-        set -x
-        targetFolder=$(Build.StagingDirectory)/BuildLogs/
-        mkdir -p ${targetFolder}
-        cd "$(Build.SourcesDirectory)"
-        find artifacts/log/ -type f -name "BuildTests*.binlog" -exec cp {} --parents -t ${targetFolder} \;
-        find artifacts/log/ -type f -name "BuildTests*.log" -exec cp {} --parents -t ${targetFolder} \;
-        find artifacts/TestResults/ -type f -name "*.binlog" -exec cp {} --parents -t ${targetFolder} \;
-        find artifacts/TestResults/ -type f -name "*.log" -exec cp {} --parents -t ${targetFolder} \;
-        echo "Updated:"
-        find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt"
-        find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt" -exec cp {} --parents -t ${targetFolder} \;
-        find artifacts/TestResults/ -type f -name "Updated*.json"
-        find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
-        echo "Results:"
-        find artifacts/TestResults/ -type f -name "scancode*.*" -exec cp {} --parents -t ${targetFolder} \;
-        find artifacts/TestResults/ -type f -name "Timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
-        echo "All:"
-        ls -R artifacts/TestResults/
-        echo "BuildLogs:"
-        ls -R ${targetFolder}
-      displayName: Prepare BuildLogs staging directory
-      continueOnError: true
-      condition: succeededOrFailed()
+    # - script: |
+    #     set -x
+    #     targetFolder=$(Build.StagingDirectory)/BuildLogs/
+    #     mkdir -p ${targetFolder}
+    #     cd "$(Build.SourcesDirectory)"
+    #     find artifacts/log/ -type f -name "BuildTests*.binlog" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/log/ -type f -name "BuildTests*.log" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "*.binlog" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "*.log" -exec cp {} --parents -t ${targetFolder} \;
+    #     echo "Updated:"
+    #     find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt"
+    #     find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "Updated*.json"
+    #     find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
+    #     echo "Results:"
+    #     find artifacts/TestResults/ -type f -name "scancode*.*" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "Timeout.*.txt" -exec cp {} --parents -t ${targetFolder} \;
+    #     echo "All:"
+    #     ls -R artifacts/TestResults/
+    #     echo "BuildLogs:"
+    #     ls -R ${targetFolder}
+    #   displayName: Prepare BuildLogs staging directory
+    #   continueOnError: true
+    #   condition: succeededOrFailed()
 
     - task: PublishPipelineArtifact@1
       displayName: 'Publish BuildLogs'
@@ -131,17 +133,17 @@ stages:
         targetPath: '$(Build.StagingDirectory)/BuildLogs'
         artifactName: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
 
-    - task: PublishTestResults@2
-      displayName: Publish Test Results
-      condition: succeededOrFailed()
-      continueOnError: true
-      inputs:
-        testRunner: vSTest
-        testResultsFiles: '**/*.trx'
-        searchFolder: $(Build.SourcesDirectory)/artifacts/TestResults
-        mergeTestResults: true
-        publishRunAttachments: true
-        testRunTitle: $(Agent.JobName)
+    # - task: PublishTestResults@2
+    #   displayName: Publish Test Results
+    #   condition: succeededOrFailed()
+    #   continueOnError: true
+    #   inputs:
+    #     testRunner: vSTest
+    #     testResultsFiles: '**/*.trx'
+    #     searchFolder: $(Build.SourcesDirectory)/artifacts/TestResults
+    #     mergeTestResults: true
+    #     publishRunAttachments: true
+    #     testRunTitle: $(Agent.JobName)
 
   - job: Publish_Test_Results_PR
     dependsOn: LicenseScan
@@ -166,13 +168,10 @@ stages:
         displayName: Download Test Files
 
     - script: |
-        find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
-      displayName: Move Artifacts to root
-
-    - script: |
         set -x
+        find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
         find $(Pipeline.Workspace)/Artifacts -type f
-      displayName: List files
+      displayName: Move Artifacts to root
 
     - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
       parameters:
