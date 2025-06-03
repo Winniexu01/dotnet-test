@@ -51,12 +51,16 @@ public class PRCreator
                 Type = file.Type.Value,
                 Sha = file.Sha
             })
-            .Select(file => Log.LogInformation($"FilePath: {file.Path}"))
             .ToList();
+        
+        foreach (var file in testResultsTreeItems)
+        {
+            Log.LogInformation($"Found {file.Count} updated files for {file.Path}.");
+        }
         
         foreach (var file in originalTreeResponse.Tree)
         {
-            if( file.Path.Contains(originalFilesDirectory) && file.Path != originalFilesDirectory)
+            if (file.Path.Contains(originalFilesDirectory) && file.Path != originalFilesDirectory)
             {
                 var tree = new NewTreeItem
                 {
