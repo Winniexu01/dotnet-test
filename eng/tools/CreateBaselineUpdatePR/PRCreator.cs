@@ -253,14 +253,14 @@ public class PRCreator
 
         foreach (var item in originalRepositoryContent)
         {
-            if (item.Type == ContentType.File && item.Name.ToLowerInvariant().Contains("json"))
+            if (item.Type == ContentType.File)
             {
                 originalLicenseFile.Add(Path.Combine(path,item.Name));
             }
         }
         foreach(var item in updatedTestsFiles)
         {
-            originalLicenseFile.RemoveAll(file => item.Value.Any(v => v.Contains(Path.GetFileName(file))));
+            originalLicenseFile.RemoveAll(file => item.Value.Any(v => v.Contains(Path.GetFileNameWithoutExtension(file))));
         }
         
         if (originalLicenseFile.Count > 0)
