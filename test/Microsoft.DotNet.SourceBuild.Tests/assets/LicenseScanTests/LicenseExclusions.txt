@@ -9,7 +9,7 @@
 #     <vmr-file-path>|<license-expression>[,<license-expression>...]
 
 #
-# arcade
+# arcade1
 #
 
 # False positive
