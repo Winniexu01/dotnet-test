@@ -1,9 +1,7 @@
 name: 'Check Markdown Links'
 
 on:
-  pull_request:
-    paths:
-      - "**/*.md"
+  workflow_dispatch:
 
 permissions:
   pull-requests: read
