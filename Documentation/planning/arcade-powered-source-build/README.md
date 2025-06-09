@@ -119,7 +119,7 @@ into the Arcade SDK proper to reuse the code.
 
 * [in-arcade.md]
 * [Source code location in Arcade SDK
-  (`Microsoft.DotNet.Arcade.Sdk/tools/SourceBuild`)](https://github.com/dotnet/arcade/tree/master/src/Microsoft.DotNet.Arcade.Sdk/tools/SourceBuild)
+  (`Microsoft.DotNet.Arcade.Sdk/tools/TrackPrebuiltUsage.targets`)](https://github.com/dotnet/arcade/blob/main/src/Microsoft.DotNet.Arcade.Sdk/tools/TrackPrebuiltUsage.targets)
 * [Source-build-specific MSBuild tool source in Arcade SDK
   (`Microsoft.DotNet.SourceBuild`)](https://github.com/dotnet/arcade/tree/master/src/Microsoft.DotNet.SourceBuild)
 
