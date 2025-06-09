@@ -1,1 +1,0 @@
-Moved to [target-framework-strategy.md](docs/contributing/target-framework-strategy.md)

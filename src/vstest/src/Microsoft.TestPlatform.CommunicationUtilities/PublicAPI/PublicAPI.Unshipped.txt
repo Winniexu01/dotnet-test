@@ -1,2 +1,0 @@
-#nullable enable
-const Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel.MessageType.TelemetryEventMessage = "TestPlatform.TelemetryEvent" -> string!
