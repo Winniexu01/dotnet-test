@@ -18,3 +18,7 @@ steps:
     echo "Done waiting."
     exit 0
   displayName: Wait for 1 minutes
+- script: |
+    echo "Error"
+    exit 1
+  displayName: Error
