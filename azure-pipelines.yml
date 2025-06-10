@@ -3,6 +3,7 @@
 # Add steps that run tests, create a NuGet package, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
+pr: none
 trigger: none
 
 pool:
@@ -12,5 +13,8 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- script: dotnet --version
-  displayName: 'dotnet build $(buildConfiguration)'
+- script: |
+    echo "Waiting for 5 minutes."
+    slep 300
+    echo "Done waiting."
+  displayName: Wait for 5 minutes

@@ -1,0 +1,80 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+resources:
+  pipelines:
+  - pipeline: Example
+    source: Example
+    # For releases branches only run on internal/release branches because that's where dependencies flow.
+    # Previews don't have internal/release branches so they must be run from non-internal release branches.
+    trigger:
+      branches:
+        include:
+        - test
+
+pr: none
+trigger: none
+
+pool:
+  vmImage: ubuntu-latest
+
+parameters:
+- name: dotnetDotnetRunId
+  displayName: 'Specific dotnet-dotnet run ID number (e.g `2108850`)'
+  type: string
+  default: ' '
+
+- name: buildName
+  type: string
+  default: 'Offline_MsftSdk'
+
+- name: targetRid
+  type: string
+  default: 'centos.9-x64'
+
+- name: architecture
+  type: string
+  default: 'x64'
+
+- name: publishTestResultsPr
+  type: boolean
+  default: false
+
+
+steps:
+- script: |
+    echo "Waiting for 10 minutes."
+    slep 600
+    echo "Done waiting."
+  displayName: Wait for 10 minutes
+
+- script: |
+    dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
+    dotnet_dotnet_sha=''
+
+    if [[ -z "$dotnet_dotnet_build" ]]; then
+      dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
+    fi
+
+    if [[ -z "$dotnet_dotnet_build" ]]; then
+      echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
+      exit 1
+    fi
+
+    if [[ -z "$dotnet_dotnet_sha" ]]; then
+      dotnet_dotnet_sha=$(az pipelines build show --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
+    fi
+
+    if [[ -z "$dotnet_dotnet_sha" ]]; then
+      echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
+      exit 1
+    fi
+    
+    echo "Dotnet-dotnet build: https://dev.azure.com/dnceng/internal/_build/results?buildId=$dotnet_dotnet_build&view=results"
+
+    echo "##vso[build.addbuildtag]dotnet $dotnet_dotnet_sha"
+    echo "##vso[task.setvariable variable=DotnetDotnetBuildId]$dotnet_dotnet_build"
+  displayName: Find associated build
+  name: Get_Build_Id
