@@ -45,10 +45,9 @@ parameters:
 
 steps:
 - script: |
-    echo "Waiting for 4 minutes."
-    sleep 240
+    sleep 120
     echo "Done waiting."
-  displayName: Wait for 10 minutes
+  displayName: Wait for 2 minutes
 
 - script: |
     dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'

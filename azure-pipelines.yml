@@ -14,8 +14,7 @@ variables:
 
 steps:
 - script: |
-    echo "Waiting for 2 minutes."
-    sleep 120
+    sleep 60
     echo "Done waiting."
-    exit 1
-  displayName: Wait for 5 minutes
+    exit 0
+  displayName: Wait for 1 minutes
