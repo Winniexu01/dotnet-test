@@ -46,7 +46,7 @@ parameters:
 steps:
 - script: |
     echo "Waiting for 10 minutes."
-    slep 600
+    sleep 600
     echo "Done waiting."
   displayName: Wait for 10 minutes
 

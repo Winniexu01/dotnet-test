@@ -15,6 +15,6 @@ variables:
 steps:
 - script: |
     echo "Waiting for 5 minutes."
-    slep 300
+    sleep 300
     echo "Done waiting."
   displayName: Wait for 5 minutes
