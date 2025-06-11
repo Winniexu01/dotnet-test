@@ -19,6 +19,10 @@ steps:
     exit 0
   displayName: Wait for 1 minutes
 - script: |
-    echo "Error"
-    exit 1
+    if [ "$(System.JobAttemptCount)" -gt 1 ]; then
+      echo "This is not the first attempt, skipping the rest of the steps."
+      exit 0
+    else
+      exit 1
+    fi
   displayName: Error
