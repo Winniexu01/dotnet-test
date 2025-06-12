@@ -13,16 +13,22 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- script: |
-    sleep 60
-    echo "Done waiting."
-    exit 0
-  displayName: Wait for 1 minutes
-- script: |
-    if [ "$(System.JobAttemptCount)" -gt 1 ]; then
-      echo "This is not the first attempt, skipping the rest of the steps."
-      exit 0
-    else
-      exit 1
-    fi
-  displayName: Error
+# - script: |
+#     sleep 60
+#     echo "Done waiting."
+#     exit 0
+#   displayName: Wait for 1 minutes
+# - script: |
+#     if [ "$(System.JobAttemptCount)" -gt 1 ]; then
+#       echo "This is not the first attempt, skipping the rest of the steps."
+#       exit 0
+#     else
+#       exit 1
+#     fi
+#   displayName: Error
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: $(Build.SourcesDirectory)\MergedManifest.xml
+    artifactName: AssetManifests
+  displayName: List all linux*-x64.tar.gz files
