@@ -80,8 +80,17 @@ steps:
 #   env:
 #     AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
 
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: $(Build.SourcesDirectory)\MergedManifest.xml
-    artifactName: AssetManifests
-  displayName: List all linux*-x64.tar.gz files
+
+- template: ../download-pipeline-artifact.yml
+  parameters:
+    patterns: 'MergedManifest.xml'
+    displayName: Download MergedManifest Xml
+
+- script: |
+    patterns='**/dotnet-sdk-+([0-9]).+([0-9]).+([0-9])?(-@(alpha|preview|rc|rtm)*)-linux*-x64.tar.gz'
+    baseXmlPath="$(Pipeline.Workspace)/Artifacts/MergedManifest.xml"
+    elementValue=$(xmllint --xpath "string(//Package[@Name='Microsoft.NETCore.App']/Version)" "$baseXmlPath")
+    echo "##vso[task.setvariable variable=DotnetDotnetBuildId]$(DotnetDotnetBuildId)"
+    echo "##vso[task.setvariable variable=DotnetDotnetSha]$(DotnetDotnetSha)"
+  displayName: Get associated build variables
+  name: Get_Build_Variables

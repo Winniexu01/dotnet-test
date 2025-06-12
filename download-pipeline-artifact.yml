@@ -1,0 +1,35 @@
+parameters:
+- name: pipeline
+  type: string
+  default: 1
+
+- name: buildId
+  type: string
+  default: 552
+
+- name: artifact
+  type: string
+  default: AssetManifests
+
+- name: patterns
+  type: string
+
+- name: displayName
+  type: string
+  default: Download Pipeline Artifact
+
+steps:
+- task: DownloadPipelineArtifact@2
+  inputs:
+    buildType: specific
+    buildVersionToDownload: specific
+    project: Test
+    pipeline: ${{ parameters.pipeline }}
+    buildId: ${{ parameters.buildId }}
+    artifact: ${{ parameters.artifact }}
+    patterns: ${{ parameters.patterns }}
+    allowPartiallySucceededBuilds: true
+    allowFailedBuilds: true
+    downloadPath: $(Pipeline.Workspace)/Artifacts
+    checkDownloadedFiles: true
+  displayName: ${{ parameters.displayName }}
