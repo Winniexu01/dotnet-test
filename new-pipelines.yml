@@ -79,3 +79,18 @@ steps:
   name: Get_Build_Id
   env:
     AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
+
+- task: DownloadPipelineArtifact@2
+  inputs:
+    buildType: specific
+    buildVersionToDownload: specific
+    project: internal
+    pipeline: 1330
+    buildId: '2727197'
+    artifact: ${{ parameters.artifact }}
+    patterns: '**/dotnet-sdk-+([0-9]).+([0-9]).+([0-9])?(-@(alpha|preview|rc|rtm)*)-linux*-${{ parameters.architecture }}.tar.gz'
+    allowPartiallySucceededBuilds: true
+    allowFailedBuilds: true
+    downloadPath: $(Pipeline.Workspace)/Artifacts
+    checkDownloadedFiles: true
+  displayName: List all linux*-x64.tar.gz files
