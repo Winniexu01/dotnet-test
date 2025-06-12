@@ -29,6 +29,6 @@ steps:
 
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: $(Build.SourcesDirectory)\MergedManifest.xml
+    targetPath: $(Build.SourcesDirectory)/MergedManifest.xml
     artifactName: AssetManifests
   displayName: List all linux*-x64.tar.gz files
