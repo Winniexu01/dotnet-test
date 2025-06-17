@@ -37,19 +37,24 @@ stages:
     steps:
 
     - script: |
-        echo "projectID: $(resources.pipeline.Example.projectID)"
-        echo "pipelineID: $(resources.pipeline.Example.pipelineID)"
-        echo "runID: $(resources.pipeline.Example.runID)"
-        echo "runURI: $(resources.pipeline.Example.runURI)"
-        echo "sourceBranch: $(resources.pipeline.Example.sourceBranch)"
-        echo "sourceCommit: $(resources.pipeline.Example.sourceCommit)"
+        echo "ExampleprojectID: $(resources.pipeline.Example.projectID)"
+        echo "ExamplepipelineID: $(resources.pipeline.Example.pipelineID)"
+        echo "ExamplerunID: $(resources.pipeline.Example.runID)"
+        echo "ExamplerunURI: $(resources.pipeline.Example.runURI)"
+        echo "ExamplesourceBranch: $(resources.pipeline.Example.sourceBranch)"
+        echo "ExamplesourceCommit: $(resources.pipeline.Example.sourceCommit)"
 
-        echo "projectID: $(resources.pipeline.EEEEEEEEEEEE.projectID)"
-        echo "pipelineID: $(resources.pipeline.EEEEEEEEEEEE.pipelineID)"
-        echo "runID: $(resources.pipeline.EEEEEEEEEEEE.runID)"
-        echo "runURI: $(resources.pipeline.EEEEEEEEEEEE.runURI)"
-        echo "sourceBranch: $(resources.pipeline.EEEEEEEEEEEE.sourceBranch)"
-        echo "sourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)"
+        echo "EEEEEEEEEEEEprojectID: $(resources.pipeline.EEEEEEEEEEEE.projectID)"
+        echo "EEEEEEEEEEEEpipelineID: $(resources.pipeline.EEEEEEEEEEEE.pipelineID)"
+        echo "EEEEEEEEEEEErunID: $(resources.pipeline.EEEEEEEEEEEE.runID)"
+        echo "EEEEEEEEEEEErunURI: $(resources.pipeline.EEEEEEEEEEEE.runURI)"
+        echo "EEEEEEEEEEEEsourceBranch: $(resources.pipeline.EEEEEEEEEEEE.sourceBranch)"
+        echo "EEEEEEEEEEEEsourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)"
+
+        echo "Build Reason: $(Build.Reason)"
+        echo "Triggered name: $(Build.TriggeredBy.BuildPipelineName)"
+        echo "Triggered ID: $(Build.TriggeredBy.BuildPipelineId)"
+        echo "Triggered project: $(Build.TriggeredBy.ProjectId)"
 
         echo "$(Build.SourceBranch)"
 
