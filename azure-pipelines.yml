@@ -13,11 +13,11 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- script: |
-    sleep 60
-    echo "Done waiting."
-    exit 0
-  displayName: Wait for 1 minutes
+# - script: |
+#     sleep 60
+#     echo "Done waiting."
+#     exit 0
+#   displayName: Wait for 1 minutes
 - script: |
     if [ "$(System.JobAttempt)" -gt 1 ]; then
       echo "This is not the first attempt, skipping the rest of the steps."

@@ -44,10 +44,10 @@ parameters:
 
 
 steps:
-- script: |
-    sleep 120
-    echo "Done waiting."
-  displayName: Wait for 2 minutes
+# - script: |
+#     sleep 120
+#     echo "Done waiting."
+#   displayName: Wait for 2 minutes
 
 - script: |
     echo $(Build.SourceBranchName)
