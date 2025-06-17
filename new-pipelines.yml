@@ -50,8 +50,10 @@ steps:
 #   displayName: Wait for 2 minutes
 
 - script: |
-    echo $(Build.SourceBranchName)
-    echo $(Build.SourceVersion)
+    echo $(resources.pipeline.Example.projectID)
+    echo $(resources.pipeline.Example.pipelineID)
+    echo $(resources.pipeline.Example.runID)
+    echo $(resources.pipeline.Example.runURI)
     echo $(resources.pipeline.Example.sourceBranch)
     echo $(resources.pipeline.Example.sourceCommit)
   workingDirectory: '$(Build.SourcesDirectory)'
