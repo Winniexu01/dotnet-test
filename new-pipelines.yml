@@ -17,9 +17,6 @@ resources:
 pr: none
 trigger: none
 
-pool:
-  vmImage: ubuntu-latest
-
 parameters:
 - name: dotnetDotnetRunId
   displayName: 'Specific dotnet-dotnet run ID number (e.g `2108850`)'
@@ -43,19 +40,27 @@ parameters:
   default: false
 
 
-steps:
-# - script: |
-#     sleep 120
-#     echo "Done waiting."
-#   displayName: Wait for 2 minutes
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: BuildJob
+    displayName: Build Job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    # - script: |
+    #     sleep 120
+    #     echo "Done waiting."
+    #   displayName: Wait for 2 minutes
 
-- script: |
-    echo $(resources.pipeline.Example.projectID)
-    echo $(resources.pipeline.Example.pipelineID)
-    echo $(resources.pipeline.Example.runID)
-    echo $(resources.pipeline.Example.runURI)
-    echo $(resources.pipeline.Example.sourceBranch)
-    echo $(resources.pipeline.Example.sourceCommit)
-  workingDirectory: '$(Build.SourcesDirectory)'
-  displayName: Find associated build
-  name: Get_Build_Id
+    - script: |
+        echo $(resources.pipeline.Example.projectID)
+        echo $(resources.pipeline.Example.pipelineID)
+        echo $(resources.pipeline.Example.runID)
+        echo $(resources.pipeline.Example.runURI)
+        echo $(resources.pipeline.Example.sourceBranch)
+        echo $(resources.pipeline.Example.sourceCommit)
+      workingDirectory: '$(Build.SourcesDirectory)'
+      displayName: Find associated build
+      name: Get_Build_Id
