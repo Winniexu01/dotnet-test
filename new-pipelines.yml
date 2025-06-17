@@ -13,6 +13,7 @@ resources:
       branches:
         include:
         - test
+
   - pipeline: EEEEEEEEEEEE
     source: EEEEEEEEEEEE
     # For releases branches only run on internal/release branches because that's where dependencies flow.
@@ -43,12 +44,12 @@ stages:
         echo "sourceBranch: $(resources.pipeline.Example.sourceBranch)"
         echo "sourceCommit: $(resources.pipeline.Example.sourceCommit)"
 
-        echo "projectID: $(resources.pipeline.Example.projectID)"
-        echo "pipelineID: $(resources.pipeline.Example.pipelineID)"
-        echo "runID: $(resources.pipeline.Example.runID)"
-        echo "runURI: $(resources.pipeline.Example.runURI)"
-        echo "sourceBranch: $(resources.pipeline.Example.sourceBranch)"
-        echo "sourceCommit: $(resources.pipeline.Example.sourceCommit)"
+        echo "projectID: $(resources.pipeline.EEEEEEEEEEEE.projectID)"
+        echo "pipelineID: $(resources.pipeline.EEEEEEEEEEEE.pipelineID)"
+        echo "runID: $(resources.pipeline.EEEEEEEEEEEE.runID)"
+        echo "runURI: $(resources.pipeline.EEEEEEEEEEEE.runURI)"
+        echo "sourceBranch: $(resources.pipeline.EEEEEEEEEEEE.sourceBranch)"
+        echo "sourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)"
 
         echo "$(Build.SourceBranch)"
 
