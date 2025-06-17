@@ -13,6 +13,14 @@ resources:
       branches:
         include:
         - test
+  - pipeline: EEEEEEEEEEEE
+    source: EEEEEEEEEEEE
+    # For releases branches only run on internal/release branches because that's where dependencies flow.
+    # Previews don't have internal/release branches so they must be run from non-internal release branches.
+    trigger:
+      branches:
+        include:
+        - test
 
 pr: none
 trigger: none
@@ -34,6 +42,15 @@ stages:
         echo "runURI: $(resources.pipeline.Example.runURI)"
         echo "sourceBranch: $(resources.pipeline.Example.sourceBranch)"
         echo "sourceCommit: $(resources.pipeline.Example.sourceCommit)"
+
+        echo "projectID: $(resources.pipeline.Example.projectID)"
+        echo "pipelineID: $(resources.pipeline.Example.pipelineID)"
+        echo "runID: $(resources.pipeline.Example.runID)"
+        echo "runURI: $(resources.pipeline.Example.runURI)"
+        echo "sourceBranch: $(resources.pipeline.Example.sourceBranch)"
+        echo "sourceCommit: $(resources.pipeline.Example.sourceCommit)"
+
+        echo "$(Build.SourceBranch)"
 
         if [[ -z "$dotnet_dotnet_build" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
