@@ -28,12 +28,12 @@ stages:
     steps:
 
     - script: |
-        echo "projectID: $(resources.pipeline.<Alias>.projectID)"
-        echo "pipelineID: $(resources.pipeline.<Alias>.pipelineID)"
-        echo "runID: $(resources.pipeline.<Alias>.runID)"
-        echo "runURI: $(resources.pipeline.<Alias>.runURI)"
-        echo "sourceBranch: $(resources.pipeline.<Alias>.sourceBranch)"
-        echo "sourceCommit: $(resources.pipeline.<Alias>.sourceCommit)"
+        echo "projectID: $(resources.pipeline.Example.projectID)"
+        echo "pipelineID: $(resources.pipeline.Example.pipelineID)"
+        echo "runID: $(resources.pipeline.Example.runID)"
+        echo "runURI: $(resources.pipeline.Example.runURI)"
+        echo "sourceBranch: $(resources.pipeline.Example.sourceBranch)"
+        echo "sourceCommit: $(resources.pipeline.Example.sourceCommit)"
 
         if [[ -z "$dotnet_dotnet_build" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)

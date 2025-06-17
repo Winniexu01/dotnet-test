@@ -1,0 +1,41 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+pr: none
+trigger: 
+- test
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: BuildJob
+    displayName: Build Job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        if [ "$(System.JobAttempt)" -gt 1 ]; then
+          echo "This is not the first attempt, skipping the rest of the steps."
+          exit 0
+        else
+          exit 0
+        fi
+      displayName: Check Job Attempt
+
+- stage: Test
+  displayName: Test Stage
+  jobs:
+  - job: TestJob
+    displayName: Test Job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        echo "This is the Test Job."
+      displayName: Run Test Job
