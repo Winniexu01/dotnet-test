@@ -17,29 +17,6 @@ resources:
 pr: none
 trigger: none
 
-parameters:
-- name: dotnetDotnetRunId
-  displayName: 'Specific dotnet-dotnet run ID number (e.g `2108850`)'
-  type: string
-  default: ' '
-
-- name: buildName
-  type: string
-  default: 'Offline_MsftSdk'
-
-- name: targetRid
-  type: string
-  default: 'centos.9-x64'
-
-- name: architecture
-  type: string
-  default: 'x64'
-
-- name: publishTestResultsPr
-  type: boolean
-  default: false
-
-
 stages:
 - stage: Build
   displayName: Build Stage
