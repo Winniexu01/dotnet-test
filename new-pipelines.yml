@@ -52,8 +52,8 @@ steps:
 - script: |
     echo $(Build.SourceBranchName)
     echo $(Build.SourceVersion)
-    echo $(resources.pipeline.PIPELINE-A.sourceBranch)
-    echo $(resources.pipeline.PIPELINE-A.sourceCommit)
+    echo $(resources.pipeline.Example.sourceBranch)
+    echo $(resources.pipeline.Example.sourceCommit)
   workingDirectory: '$(Build.SourcesDirectory)'
   displayName: Find associated build
   name: Get_Build_Id
