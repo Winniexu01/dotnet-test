@@ -24,7 +24,7 @@ stages:
           echo "This is not the first attempt, skipping the rest of the steps."
           exit 0
         else
-          exit 1
+          exit 0
         fi
       displayName: Check Job Attempt
 
