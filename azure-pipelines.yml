@@ -19,11 +19,6 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    # - script: |
-    #     sleep 60
-    #     echo "Done waiting."
-    #     exit 0
-    #   displayName: Wait for 1 minutes
     - script: |
         if [ "$(System.JobAttempt)" -gt 1 ]; then
           echo "This is not the first attempt, skipping the rest of the steps."
@@ -31,10 +26,16 @@ stages:
         else
           exit 1
         fi
-      displayName: Error1
+      displayName: Check Job Attempt
 
-    # - task: PublishPipelineArtifact@1
-    #   inputs:
-    #     targetPath: $(Build.SourcesDirectory)/MergedManifest.xml
-    #     artifactName: AssetManifests
-    #   displayName: List all linux*-x64.tar.gz files
+- stage: Test
+  displayName: Test Stage
+  jobs:
+  - job: TestJob
+    displayName: Test Job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        echo "This is the Test Job."
+      displayName: Run Test Job
