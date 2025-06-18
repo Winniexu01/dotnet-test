@@ -43,12 +43,16 @@ stages:
         runURI="resources.pipeline.$(Resources.TriggeringAlias).runURI"
         sourceBranch="resources.pipeline.$(Resources.TriggeringAlias).sourceBranch"
         sourceCommit="resources.pipeline.$(Resources.TriggeringAlias).sourceCommit"
-        echo "$(Resources.TriggeringAlias) - projectID: $(projectID)"
-        echo "$(Resources.TriggeringAlias) - pipelineID: $(pipelineID)"
-        echo "$(Resources.TriggeringAlias) - runID: $(runID)"
-        echo "$(Resources.TriggeringAlias) - runURI: $(runURI)"
-        echo "$(Resources.TriggeringAlias) - sourceBranch: $(sourceBranch)"
-        echo "$(Resources.TriggeringAlias) - sourceCommit: $(sourceCommit)"
+        echo "$(Resources.TriggeringAlias) - projectID: $projectID"
+        echo "$(Resources.TriggeringAlias) - pipelineID: $pipelineID"
+        echo "$(Resources.TriggeringAlias) - runID: $runID"
+        echo "$(Resources.TriggeringAlias) - runURI: $runURI"
+        echo "$(Resources.TriggeringAlias) - sourceBranch: $sourceBranch"
+        echo "$(Resources.TriggeringAlias) - sourceCommit: $sourceCommit"
+
+        tt="resources.pipeline.$(Resources.TriggeringAlias)"
+        echo "tt: $tt"
+        echo "projectID: $($tt.projectID)"
 
         if [[ -z "$dotnet_dotnet_build" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
