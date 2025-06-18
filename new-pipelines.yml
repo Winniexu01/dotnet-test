@@ -37,22 +37,12 @@ stages:
     steps:
 
     - script: |
-        echo "ExampleprojectID: $(resources.pipeline.Example.projectID)"
-        echo "ExamplepipelineID: $(resources.pipeline.Example.pipelineID)"
-        echo "ExamplerunID: $(resources.pipeline.Example.runID)"
-        echo "ExamplerunURI: $(resources.pipeline.Example.runURI)"
-        echo "ExamplesourceBranch: $(resources.pipeline.Example.sourceBranch)"
-        echo "ExamplesourceCommit: $(resources.pipeline.Example.sourceCommit)"
-
-        echo "EEEEEEEEEEEEprojectID: $(resources.pipeline.EEEEEEEEEEEE.projectID)"
-        echo "EEEEEEEEEEEEpipelineID: $(resources.pipeline.EEEEEEEEEEEE.pipelineID)"
-        echo "EEEEEEEEEEEErunID: $(resources.pipeline.EEEEEEEEEEEE.runID)"
-        echo "EEEEEEEEEEEErunURI: $(resources.pipeline.EEEEEEEEEEEE.runURI)"
-        echo "EEEEEEEEEEEEsourceBranch: $(resources.pipeline.EEEEEEEEEEEE.sourceBranch)"
-        echo "EEEEEEEEEEEEsourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)"
-
-        echo "Build Reason: $(Build.Reason)"
-        echo "Triggered name: $(Resources.TriggeringAlias)"
+        echo "$(Resources.TriggeringAlias)projectID: $(resources.pipeline.$(Resources.TriggeringAlias).projectID)"
+        echo "$(Resources.TriggeringAlias)pipelineID: $(resources.pipeline.$(Resources.TriggeringAlias).pipelineID)"
+        echo "$(Resources.TriggeringAlias)runID: $(resources.pipeline.$(Resources.TriggeringAlias).runID)"
+        echo "$(Resources.TriggeringAlias)runURI: $(resources.pipeline.$(Resources.TriggeringAlias).runURI)"
+        echo "$(Resources.TriggeringAlias)sourceBranch: $(resources.pipeline.$(Resources.TriggeringAlias).sourceBranch)"
+        echo "$(Resources.TriggeringAlias)sourceCommit: $(resources.pipeline.$(Resources.TriggeringAlias).sourceCommit)"
 
         echo "$(Build.SourceBranch)"
 
