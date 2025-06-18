@@ -12,6 +12,7 @@ jobs:
   steps:
 
   - script: |
+      echo "Expect111111111 - runID: $(resources.pipeline.Example.runID)"
       echo "Actual - runID: ${{ parameters.runID }}"
       echo "Actual - sourceCommit: ${{ parameters.sourceCommit }}"
 

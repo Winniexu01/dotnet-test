@@ -56,5 +56,5 @@ stages:
         EEEEEEEEEEEE_sourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)
   - template: /new-pipeline.yml@self
     parameters:
-      runID: $runID
-      sourceCommit: $sourceCommit
+      runID: $(runID)
+      sourceCommit: $(sourceCommit)
