@@ -7,10 +7,8 @@ parameters:
 
 stages:
 - stage: Build
-  displayName: Build Stage
   jobs:
   - job: BuildJob
-    displayName: Build Job
     pool:
       vmImage: 'ubuntu-latest'
     steps:
