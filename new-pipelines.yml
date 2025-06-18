@@ -5,8 +5,8 @@
 
 resources:
   pipelines:
-  - pipeline: Example
-    source: Example
+  - pipeline: EEEEEEEEEEEE
+    source: EEEEEEEEEEEE
     # For releases branches only run on internal/release branches because that's where dependencies flow.
     # Previews don't have internal/release branches so they must be run from non-internal release branches.
     trigger:
@@ -14,8 +14,8 @@ resources:
         include:
         - test
 
-  - pipeline: EEEEEEEEEEEE
-    source: EEEEEEEEEEEE
+  - pipeline: Example
+    source: Example
     # For releases branches only run on internal/release branches because that's where dependencies flow.
     # Previews don't have internal/release branches so they must be run from non-internal release branches.
     trigger:
@@ -43,16 +43,17 @@ stages:
         runURI="resources.pipeline.$(Resources.TriggeringAlias).runURI"
         sourceBranch="resources.pipeline.$(Resources.TriggeringAlias).sourceBranch"
         sourceCommit="resources.pipeline.$(Resources.TriggeringAlias).sourceCommit"
-        echo "$(Resources.TriggeringAlias) - projectID: $projectID"
-        echo "$(Resources.TriggeringAlias) - pipelineID: $pipelineID"
-        echo "$(Resources.TriggeringAlias) - runID: $runID"
-        echo "$(Resources.TriggeringAlias) - runURI: $runURI"
-        echo "$(Resources.TriggeringAlias) - sourceBranch: $sourceBranch"
-        echo "$(Resources.TriggeringAlias) - sourceCommit: $sourceCommit"
+        
+        echo "$(Resources.TriggeringAlias) - projectID: $($projectID)"
+        echo "$(Resources.TriggeringAlias) - pipelineID: $($pipelineID)"
+        echo "$(Resources.TriggeringAlias) - runID: $($runID)"
+        echo "$(Resources.TriggeringAlias) - runURI: $($runURI)"
+        echo "$(Resources.TriggeringAlias) - sourceBranch: $($sourceBranch)"
+        echo "$(Resources.TriggeringAlias) - sourceCommit: $($sourceCommit)"
 
         tt="resources.pipeline.$(Resources.TriggeringAlias)"
         echo "tt: $tt"
-        echo "projectID: $($tt.projectID)"
+        echo "pipelineID: $($tt.pipelineID)"
 
         if [[ -z "$dotnet_dotnet_build" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
