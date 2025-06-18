@@ -52,9 +52,7 @@ stages:
         echo "EEEEEEEEEEEEsourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)"
 
         echo "Build Reason: $(Build.Reason)"
-        echo "Triggered name: $(Build.TriggeredBy.BuildPipelineName)"
-        echo "Triggered ID: $(Build.TriggeredBy.BuildPipelineId)"
-        echo "Triggered project: $(Build.TriggeredBy.ProjectId)"
+        echo "Triggered name: $(Resources.TriggeringAlias)"
 
         echo "$(Build.SourceBranch)"
 
