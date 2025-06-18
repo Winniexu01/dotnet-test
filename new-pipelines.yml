@@ -43,6 +43,8 @@ stages:
         echo "alias1: $alias"
         echo "alias2: ${alias}"
 
+        echo "Actual - runID: ${!{alias}_runID}"
+
         if [[ -z "$dotnet_dotnet_build" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
         fi
