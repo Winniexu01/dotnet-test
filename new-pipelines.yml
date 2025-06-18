@@ -29,9 +29,10 @@ trigger: none
 stages:
 - stage: stage
   jobs:
-  - job: 'Get pipeline resources'
+  - job: job
     pool:
       vmImage: 'ubuntu-latest'
+    displayName: 'Get pipeline resources'
     steps:
     - script: |
         echo "Expect - runID: $(resources.pipeline.Example.runID)"
