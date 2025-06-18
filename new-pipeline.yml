@@ -5,20 +5,18 @@ parameters:
 - name: sourceCommit
   type: string
 
-stages:
-- stage: Build
-  jobs:
-  - job: BuildJob
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
+jobs:
+- job: BuildJob
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
 
-    - script: |
-        echo "Actual - runID: $runID"
-        echo "Actual - sourceCommit: $sourceCommit"
+  - script: |
+      echo "Actual - runID: $runID"
+      echo "Actual - sourceCommit: $sourceCommit"
 
-        echo "##vso[build.addbuildtag]dotnet $sourceCommit"
-      workingDirectory: '$(Build.SourcesDirectory)'
-      displayName: Find associated build
-      env:
-        AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
+      echo "##vso[build.addbuildtag]dotnet $sourceCommit"
+    workingDirectory: '$(Build.SourcesDirectory)'
+    displayName: Find associated build
+    env:
+      AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
