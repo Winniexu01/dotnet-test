@@ -12,10 +12,10 @@ jobs:
   steps:
 
   - script: |
-      echo "Actual - runID: $runID"
-      echo "Actual - sourceCommit: $sourceCommit"
+      echo "Actual - runID: ${{ parameters.runID }}"
+      echo "Actual - sourceCommit: ${{ parameters.sourceCommit }}"
 
-      echo "##vso[build.addbuildtag]dotnet $sourceCommit"
+      echo "##vso[build.addbuildtag]dotnet ${{ parameters.sourceCommit }}"
     workingDirectory: '$(Build.SourcesDirectory)'
     displayName: Find associated build
     env:
