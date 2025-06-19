@@ -5,13 +5,13 @@ jobs:
   steps:
 
   - script: |
-        echo "Expect - runID: $(resources.pipeline.Example.runID)"
+      echo "Expect - runID: $(resources.pipeline.Example.runID)"
 
-        runID=$(Resources.TriggeringAlias)_runID
-        sourceCommit=$(Resources.TriggeringAlias)_sourceCommit
+      runID=$(Resources.TriggeringAlias)_runID
+      sourceCommit=$(Resources.TriggeringAlias)_sourceCommit
 
-        echo "Actual - runID: ${!runID}"
-        echo "Actual - sourceCommit: ${!sourceCommit}"
+      echo "Actual - runID: ${!runID}"
+      echo "Actual - sourceCommit: ${!sourceCommit}"
     workingDirectory: '$(Build.SourcesDirectory)'
     displayName: Find associated build
     env:

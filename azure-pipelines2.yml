@@ -6,9 +6,6 @@
 pr: none
 trigger: none
 
-variables:
-  buildConfiguration: 'Release'
-
 stages:
 - stage: Build
   displayName: Build Stage
