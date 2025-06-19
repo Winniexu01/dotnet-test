@@ -1,10 +1,3 @@
-parameters:
-- name: runID
-  type: string
-
-- name: sourceCommit
-  type: string
-
 jobs:
 - job: BuildJob
   pool:
@@ -12,11 +5,7 @@ jobs:
   steps:
 
   - script: |
-      echo "Expect111111111 - runID: $(resources.pipeline.Example.runID)"
-      echo "Actual - runID: ${{ parameters.runID }}"
-      echo "Actual - sourceCommit: ${{ parameters.sourceCommit }}"
-
-      echo "##vso[build.addbuildtag]dotnet ${{ parameters.sourceCommit }}"
+      echo "Expect111111111 - alias: $(Resources.TriggeringAlias)"
     workingDirectory: '$(Build.SourcesDirectory)'
     displayName: Find associated build
     env:
