@@ -12,7 +12,7 @@ resources:
     trigger:
       branches:
         include:
-        - test
+        - 111
 
   - pipeline: Example
     source: Example
@@ -21,7 +21,7 @@ resources:
     trigger:
       branches:
         include:
-        - test
+        - 111
 
 pr: none
 trigger: none
