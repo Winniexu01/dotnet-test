@@ -12,10 +12,10 @@ jobs:
 
       if [[ -z "$dotnet_dotnet_build" ]]; then
         if [[ -z "$(Resources.TriggeringAlias)" ]]; then
+          dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --pipeline-ids '$(DOTNET_DOTNET_CI_PIPELINE_ID)' --status completed --top 1 --query "[].id" --output tsv)
+        else
           runID=$(Resources.TriggeringAlias)_runID
           dotnet_dotnet_build=${!runID}
-        else
-          dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --pipeline-ids '$(DOTNET_DOTNET_CI_PIPELINE_ID)' --status completed --top 1 --query "[].id" --output tsv)
         fi
       fi
 
@@ -26,10 +26,10 @@ jobs:
 
       if [[ -z "$dotnet_dotnet_sha" ]]; then
         if [[ -z "$(Resources.TriggeringAlias)" ]]; then
+          dotnet_dotnet_sha=$(az pipelines build show --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
+        else
           sourceCommit=$(Resources.TriggeringAlias)_sourceCommit
           dotnet_dotnet_sha=${!sourceCommit}
-        else
-          dotnet_dotnet_sha=$(az pipelines build show --organization '$(AZDO_ORG)' --project '$(AZDO_PROJECT)' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
         fi
       fi
 
