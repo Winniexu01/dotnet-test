@@ -6,8 +6,8 @@
 pr: none
 trigger: none
 
-pool:
-  vmImage: 'ubuntu-latest'
+variables:
+  buildConfiguration: 'Release'
 
 stages:
 - stage: Build
@@ -15,6 +15,8 @@ stages:
   jobs:
   - job: BuildJob
     displayName: Build Job
+    pool:
+      vmImage: 'ubuntu-latest'
     steps:
     - script: |
         if [ "$(System.JobAttempt)" -gt 1 ]; then
@@ -30,6 +32,8 @@ stages:
   jobs:
   - job: TestJob
     displayName: Test Job
+    pool:
+      vmImage: 'ubuntu-latest'
     steps:
     - script: |
         echo "This is the Test Job."

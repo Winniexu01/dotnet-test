@@ -1,3 +1,10 @@
+parameters:
+- name: runID
+  type: string
+
+- name: sourceCommit
+  type: string
+
 jobs:
 - job: BuildJob
   pool:
@@ -5,18 +12,12 @@ jobs:
   steps:
 
   - script: |
-      echo "Expect - runID: $(resources.pipeline.Example.runID)"
+      echo "Expect111111111 - runID: $(resources.pipeline.Example.runID)"
+      echo "Actual - runID: ${{ parameters.runID }}"
+      echo "Actual - sourceCommit: ${{ parameters.sourceCommit }}"
 
-      runID=$(Resources.TriggeringAlias)_runID
-      sourceCommit=$(Resources.TriggeringAlias)_sourceCommit
-
-      echo "Actual - runID: ${!runID}"
-      echo "Actual - sourceCommit: ${!sourceCommit}"
+      echo "##vso[build.addbuildtag]dotnet ${{ parameters.sourceCommit }}"
     workingDirectory: '$(Build.SourcesDirectory)'
     displayName: Find associated build
     env:
       AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
-      Example_runID: $(resources.pipeline.Example.runID)
-      Example_sourceCommit: $(resources.pipeline.Example.sourceCommit)
-      EEEEEEEEEEEE_runID: $(resources.pipeline.EEEEEEEEEEEE.runID)
-      EEEEEEEEEEEE_sourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)
