@@ -29,29 +29,4 @@ trigger: none
 stages:
 - stage: stage
   jobs:
-  - job: job
-    pool:
-      vmImage: 'ubuntu-latest'
-    displayName: 'Get pipeline resources'
-    steps:
-    - script: |
-        echo "Expect - runID: $(resources.pipeline.Example.runID)"
-
-        runID=$(Resources.TriggeringAlias)_runID
-        sourceCommit=$(Resources.TriggeringAlias)_sourceCommit
-
-        echo "Actual - runID: ${!runID}"
-        echo "Actual - sourceCommit: ${!sourceCommit}"
-
-        echo "##vso[task.setvariable variable=runID]$runID"
-        echo "##vso[task.setvariable variable=sourceCommit]$sourceCommit"
-      workingDirectory: '$(Build.SourcesDirectory)'
-      displayName: Find associated build
-      name: Get_Build_Id
-      env:
-        AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
-        Example_runID: $(resources.pipeline.Example.runID)
-        Example_sourceCommit: $(resources.pipeline.Example.sourceCommit)
-        EEEEEEEEEEEE_runID: $(resources.pipeline.EEEEEEEEEEEE.runID)
-        EEEEEEEEEEEE_sourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)
   - template: /new-pipeline.yml@self
