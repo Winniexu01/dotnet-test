@@ -6,19 +6,17 @@ jobs:
 
   - script: |
       set -x
-      echo "Expect111111111 - alias: $(Resources.TriggeringAlias)"
       echo "printenv"
       printenv | sort
 
-      dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
-      dotnet_dotnet_sha=''
-      alias=$(Resources.TriggeringAlias)//./_
-      echo "Actual-alias: $alias"
 
-      pipelineAlias=$(echo $(Resources.PipelineAlias) | sed s/\./_/g | tr '[:upper:]' '[:lower:]')
+      pipelineAlias=$(echo "$(Resources.PipelineAlias)" | sed s/\./_/g | tr '[:upper:]' '[:lower:]')
       runID=RESOURCES_PIPELINE_$pipelineAlias_RUNID
+      echo "Actual-runIDstr: $runID"
       echo "Actual-runID: ${!runID}"
 
+      # dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
+      # dotnet_dotnet_sha=''
       # if [[ -z "$dotnet_dotnet_build" ]]; then
       #   if [[ -z "$alias" ]]; then
       #     dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
