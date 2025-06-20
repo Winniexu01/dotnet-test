@@ -6,14 +6,11 @@ jobs:
 
   - script: |
       set -x
-      echo "printenv"
       printenv | sort
 
-      alias=$(Resources.TriggeringAlias)
-      alias_key=$(echo "${alias}" | sed s/\./_/g | tr '[:lower:]' '[:upper:]')
-      runID=RESOURCES_PIPELINE_${alias_key}_RUNID
-      echo "Actual-runIDstr: $runID"
-      echo "Actual-runID: ${!runID}"
+      alias=RESOURCES_PIPELINE_$(Resources.TriggeringAlias)_RUNID
+      alias1 = $(echo "${alias}" | tr '[:lower:]' '[:upper:]')
+      alias2=${alias2//./_}
 
     displayName: Find associated build
     name: Get_Build_Id
