@@ -11,12 +11,13 @@ jobs:
 
       dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
       dotnet_dotnet_sha=''
+      alias=$(Resources.TriggeringAlias//-/_)
 
       if [[ -z "$dotnet_dotnet_build" ]]; then
-        if [[ -z "$(Resources.TriggeringAlias)" ]]; then
+        if [[ -z "$alias" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
         else
-          runID=$(Resources.TriggeringAlias)_runID
+          runID=$alias_runID
           dotnet_dotnet_build=${!runID}
         fi
       fi
@@ -29,10 +30,10 @@ jobs:
       fi
 
       if [[ -z "$dotnet_dotnet_sha" ]]; then
-        if [[ -z "$(Resources.TriggeringAlias)" ]]; then
+        if [[ -z "$alias" ]]; then
           dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
         else
-          sourceCommit=$(Resources.TriggeringAlias)_sourceCommit
+          sourceCommit=$alias_sourceCommit
           dotnet_dotnet_sha=${!sourceCommit}
         fi
       fi
@@ -52,7 +53,7 @@ jobs:
     name: Get_Build_Id
     env:
       AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
-      dotnet-unified-build_runID: $(resources.pipeline.dotnet-unified-build.runID)
-      dotnet-unified-build_sourceCommit: $(resources.pipeline.dotnet-unified-build.sourceCommit)
-      dotnet-source-build-pre10.0_runID: $(resources.pipeline.dotnet-source-build-pre10.0.runID)
-      dotnet-source-build-pre10.0_sourceCommit: $(resources.pipeline.dotnet-source-build-pre10.0.sourceCommit)
+      dotnet_unified_build_runID: $(resources.pipeline.dotnet-unified-build.runID)
+      dotnet_unified_build_sourceCommit: $(resources.pipeline.dotnet-unified-build.sourceCommit)
+      dotnet_source_build_pre10.0_runID: $(resources.pipeline.dotnet-source-build-pre10.0.runID)
+      dotnet_source_build_pre10.0_sourceCommit: $(resources.pipeline.dotnet-source-build-pre10.0.sourceCommit)
