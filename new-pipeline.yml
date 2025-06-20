@@ -7,21 +7,20 @@ jobs:
   - script: |
       set -x
 
-      alias=$(Resources.TriggeringAlias)
-      alias=$(echo $alias | sed 's/\./_/g' | tr '[:lower:]' '[:upper:]')
-
       dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
       dotnet_dotnet_sha=''
+
+      triggering_alias=$(Resources.TriggeringAlias)
+      triggering_alias=$(echo $triggering_alias | sed 's/\./_/g' | tr '[:lower:]' '[:upper:]')
+
       if [[ -z "$dotnet_dotnet_build" ]]; then
-        if [[ -z "$alias" ]]; then
+        if [[ -z "$triggering_alias" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
         else
-          runID=RESOURCES_PIPELINE_${alias}_RUNID
+          runID=RESOURCES_PIPELINE_${triggering_alias}_RUNID
           dotnet_dotnet_build=$(printenv "$runID")
         fi
       fi
-      id=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
-      echo "Latest id: $id"
 
       if [[ -z "$dotnet_dotnet_build" ]]; then
         echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
@@ -29,10 +28,10 @@ jobs:
       fi
 
       if [[ -z "$dotnet_dotnet_sha" ]]; then
-        if [[ -z "$alias" ]]; then
+        if [[ -z "$triggering_alias" ]]; then
           dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
         else
-          sourceCommit=RESOURCES_PIPELINE_${alias}_SOURCECOMMIT
+          sourceCommit=RESOURCES_PIPELINE_${triggering_alias}_SOURCECOMMIT
           dotnet_dotnet_sha=$(printenv "$sourceCommit")
         fi
       fi
@@ -41,14 +40,11 @@ jobs:
         echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
         exit 1
       fi
-      
+
       echo "Dotnet-dotnet build: https://dev.azure.com/v-wexu0720/Test/_build/results?buildId=$dotnet_dotnet_build&view=results"
 
       echo "##vso[build.addbuildtag]dotnet $dotnet_dotnet_sha"
       echo "##vso[task.setvariable variable=DotnetDotnetBuildId]$dotnet_dotnet_build"
-
-      echo $dotnet_dotnet_sha AND $dotnet_dotnet_build
-
     displayName: Find associated build
     name: Get_Build_Id
     env:
