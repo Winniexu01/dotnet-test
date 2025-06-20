@@ -27,6 +27,10 @@ pr: none
 trigger: none
 
 stages:
-- stage: stage
+- stage: stage1
+  jobs:
+  - template: /new-pipeline.yml@self
+
+- stage: stage2
   jobs:
   - template: /new-pipeline.yml@self
