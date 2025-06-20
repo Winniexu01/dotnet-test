@@ -5,9 +5,12 @@ jobs:
   steps:
 
   - script: |
+      set -x
       echo "Expect111111111 - alias: $(Resources.TriggeringAlias)"
       echo "Expect111111111 - runID1: $(resources.pipeline.dotnet-unified-build.runID)"
       echo "Expect111111111 - runID2: $(resources.pipeline.dotnet-source-build-pre10.0.runID)"
+      echo "printenv"
+      printenv | sort
 
       dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
       dotnet_dotnet_sha=''
