@@ -50,7 +50,7 @@ jobs:
     name: Get_Build_Id
     env:
       AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
-      Example_runID: $(resources.pipeline.Example.runID)
-      Example_sourceCommit: $(resources.pipeline.Example.sourceCommit)
-      EEEEEEEEEEEE_runID: $(resources.pipeline.EEEEEEEEEEEE.runID)
-      EEEEEEEEEEEE_sourceCommit: $(resources.pipeline.EEEEEEEEEEEE.sourceCommit)
+      dotnet-unified-build_runID: $(resources.pipeline.dotnet-unified-build.runID)
+      dotnet-unified-build_sourceCommit: $(resources.pipeline.dotnet-unified-build.sourceCommit)
+      dotnet-source-build-pre10.0_runID: $(resources.pipeline.dotnet-source-build-pre10.0.runID)
+      dotnet-source-build-pre10.0_sourceCommit: $(resources.pipeline.dotnet-source-build-pre10.0.sourceCommit)
