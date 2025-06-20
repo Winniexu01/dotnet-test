@@ -7,60 +7,55 @@ jobs:
   - script: |
       set -x
       echo "Expect111111111 - alias: $(Resources.TriggeringAlias)"
-      echo "Expect111111111 - runID1: $(resources.pipeline.dotnet-unified-build.runID)"
-      echo "Expect111111111 - runID2: $(resources.pipeline.dotnet-source-build-pre10.0.runID)"
       echo "printenv"
       printenv | sort
 
       dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
       dotnet_dotnet_sha=''
-      alias=$(Resources.TriggeringAlias)
+      alias=$(Resources.TriggeringAlias)//./_
+      echo "Actual-alias: $alias"
 
-      if [[ -z "$dotnet_dotnet_build" ]]; then
-        if [[ -z "$alias" ]]; then
-          dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
-        else
-          runID=${alias//[-.]/_}_runID
-          echo "Actual - runIDString: $runID"
-          dotnet_dotnet_build=${!runID}
-          echo "Actual - runID: ${!runID}"
-        fi
-      fi
-      id=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
-      echo "Latest id: $id"
+      pipelineAlias=$(echo $(Resources.PipelineAlias) | sed s/\./_/g | tr '[:upper:]' '[:lower:]')
+      runID=RESOURCES_PIPELINE_$pipelineAlias_RUNID
+      echo "Actual-runID: ${!runID}"
+
+      # if [[ -z "$dotnet_dotnet_build" ]]; then
+      #   if [[ -z "$alias" ]]; then
+      #     dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
+      #   else
+      #     runID=${alias//[-.]/_}_runID
+      #     dotnet_dotnet_build=${!runID}
+      #   fi
+      # fi
+      # id=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
+      # echo "Latest id: $id"
         
-      if [[ -z "$dotnet_dotnet_build" ]]; then
-        echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
-        exit 1
-      fi
+      # if [[ -z "$dotnet_dotnet_build" ]]; then
+      #   echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
+      #   exit 1
+      # fi
 
-      if [[ -z "$dotnet_dotnet_sha" ]]; then
-        if [[ -z "$alias" ]]; then
-          dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
-        else
-          sourceCommit=${alias//[-.]/_}_sourceCommit
-          echo "Actual - sourceCommitString: $sourceCommit"
-          dotnet_dotnet_sha=${!sourceCommit}
-          echo "Actual - sourceCommit: ${!sourceCommit}"
-        fi
-      fi
+      # if [[ -z "$dotnet_dotnet_sha" ]]; then
+      #   if [[ -z "$alias" ]]; then
+      #     dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
+      #   else
+      #     sourceCommit=${alias//[-.]/_}_sourceCommit
+      #     dotnet_dotnet_sha=${!sourceCommit}
+      #   fi
+      # fi
 
-      if [[ -z "$dotnet_dotnet_sha" ]]; then
-        echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
-        exit 1
-      fi
+      # if [[ -z "$dotnet_dotnet_sha" ]]; then
+      #   echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
+      #   exit 1
+      # fi
       
-      echo "Dotnet-dotnet build: https://dev.azure.com/v-wexu0720/Test/_build/results?buildId=$dotnet_dotnet_build&view=results"
+      # echo "Dotnet-dotnet build: https://dev.azure.com/v-wexu0720/Test/_build/results?buildId=$dotnet_dotnet_build&view=results"
 
-      echo "##vso[build.addbuildtag]dotnet $dotnet_dotnet_sha"
-      echo "##vso[task.setvariable variable=DotnetDotnetBuildId]$dotnet_dotnet_build"
+      # echo "##vso[build.addbuildtag]dotnet $dotnet_dotnet_sha"
+      # echo "##vso[task.setvariable variable=DotnetDotnetBuildId]$dotnet_dotnet_build"
 
-      echo $dotnet_dotnet_sha AND $dotnet_dotnet_build
+      # echo $dotnet_dotnet_sha AND $dotnet_dotnet_build
     displayName: Find associated build
     name: Get_Build_Id
     env:
       AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
-      dotnet_unified_build_runID: $(resources.pipeline.dotnet-unified-build.runID)
-      dotnet_unified_build_sourceCommit: $(resources.pipeline.dotnet-unified-build.sourceCommit)
-      dotnet_source_build_pre10_0_runID: $(resources.pipeline.dotnet-source-build-pre10.0.runID)
-      dotnet_source_build_pre10_0_sourceCommit: $(resources.pipeline.dotnet-source-build-pre10.0.sourceCommit)
