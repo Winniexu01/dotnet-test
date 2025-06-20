@@ -16,7 +16,7 @@ jobs:
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
         else
-          runID=RESOURCES_PIPELINE_$alias_RUNID
+          runID=RESOURCES_PIPELINE_${alias}_RUNID
           dotnet_dotnet_build=${!runID}
         fi
       fi
@@ -32,7 +32,7 @@ jobs:
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
         else
-          sourceCommit=RESOURCES_PIPELINE_$alias_SOURCECOMMIT
+          sourceCommit=RESOURCES_PIPELINE_${alias}_SOURCECOMMIT
           dotnet_dotnet_sha=${!sourceCommit}
         fi
       fi
