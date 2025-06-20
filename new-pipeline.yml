@@ -7,22 +7,22 @@ jobs:
   - script: |
       set -x
 
-      alias=RESOURCES_PIPELINE_$(Resources.TriggeringAlias)_RUNID
-      alias1=$(echo $alias | sed 's/\./_/g' | tr '[:lower:]' '[:upper:]')
-      
+      alias=$(Resources.TriggeringAlias)
+      alias=$(echo $alias | sed 's/\./_/g' | tr '[:lower:]' '[:upper:]')
+
       dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
       dotnet_dotnet_sha=''
       if [[ -z "$dotnet_dotnet_build" ]]; then
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
         else
-          runID=${alias//[-.]/_}_runID
+          runID=RESOURCES_PIPELINE_$alias_RUNID
           dotnet_dotnet_build=${!runID}
         fi
       fi
       id=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
       echo "Latest id: $id"
-        
+
       if [[ -z "$dotnet_dotnet_build" ]]; then
         echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
         exit 1
@@ -32,7 +32,7 @@ jobs:
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
         else
-          sourceCommit=${alias//[-.]/_}_sourceCommit
+          sourceCommit=RESOURCES_PIPELINE_$alias_SOURCECOMMIT
           dotnet_dotnet_sha=${!sourceCommit}
         fi
       fi
