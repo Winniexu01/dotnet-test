@@ -10,7 +10,7 @@ jobs:
       printenv | sort
 
       alias=$(Resources.TriggeringAlias)
-      alias_key=$(echo "$alias" | sed s/\./_/g | tr '[:lower:]' '[:upper:]')
+      alias_key=$(echo "${alias}" | sed s/\./_/g | tr '[:lower:]' '[:upper:]')
       runID=RESOURCES_PIPELINE_${alias_key}_RUNID
       echo "Actual-runIDstr: $runID"
       echo "Actual-runID: ${!runID}"
