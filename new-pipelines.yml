@@ -23,6 +23,15 @@ resources:
         include:
         - test
 
+  - pipeline: Example
+    source: Example
+    # For releases branches only run on internal/release branches because that's where dependencies flow.
+    # Previews don't have internal/release branches so they must be run from non-internal release branches.
+    trigger:
+      branches:
+        include:
+        - test
+
 pr: none
 trigger: none
 

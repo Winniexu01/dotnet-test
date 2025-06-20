@@ -4,7 +4,8 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 pr: none
-trigger: none
+trigger: 
+- test
 
 pool:
   vmImage: 'ubuntu-latest'
