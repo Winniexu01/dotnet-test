@@ -17,7 +17,7 @@ jobs:
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
         else
-          runID=${alias//-/_}_runID
+          runID=${alias//[-.]/_}_runID
           echo "Actual - runIDString: $runID"
           dotnet_dotnet_build=${!runID}
           echo "Actual - runID: ${!runID}"
@@ -35,7 +35,7 @@ jobs:
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
         else
-          sourceCommit=${alias//-/_}_sourceCommit
+          sourceCommit=${alias//[-.]/_}_sourceCommit
           echo "Actual - sourceCommitString: $sourceCommit"
           dotnet_dotnet_sha=${!sourceCommit}
           echo "Actual - sourceCommit: ${!sourceCommit}"
@@ -59,5 +59,5 @@ jobs:
       AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
       dotnet_unified_build_runID: $(resources.pipeline.dotnet-unified-build.runID)
       dotnet_unified_build_sourceCommit: $(resources.pipeline.dotnet-unified-build.sourceCommit)
-      dotnet_source_build_pre10.0_runID: $(resources.pipeline.dotnet-source-build-pre10.0.runID)
-      dotnet_source_build_pre10.0_sourceCommit: $(resources.pipeline.dotnet-source-build-pre10.0.sourceCommit)
+      dotnet_source_build_pre10_0_runID: $(resources.pipeline.dotnet-source-build-pre10.0.runID)
+      dotnet_source_build_pre10_0_sourceCommit: $(resources.pipeline.dotnet-source-build-pre10.0.sourceCommit)
