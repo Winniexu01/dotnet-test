@@ -11,14 +11,16 @@ jobs:
 
       dotnet_dotnet_build='${{ replace(parameters.dotnetDotnetRunId, ' ', '') }}'
       dotnet_dotnet_sha=''
-      alias=$(Resources.TriggeringAlias//-/_)
+      alias=$(Resources.TriggeringAlias)
 
       if [[ -z "$dotnet_dotnet_build" ]]; then
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_build=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
         else
-          runID=$alias_runID
+          runID=${alias//-/_}_runID
+          echo "Actual - runIDString: $runID"
           dotnet_dotnet_build=${!runID}
+          echo "Actual - runID: ${!runID}"
         fi
       fi
       id=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
@@ -33,8 +35,10 @@ jobs:
         if [[ -z "$alias" ]]; then
           dotnet_dotnet_sha=$(az pipelines build show --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --id "$dotnet_dotnet_build" --query "sourceVersion" --output tsv)
         else
-          sourceCommit=$alias_sourceCommit
+          sourceCommit=${alias//-/_}_sourceCommit
+          echo "Actual - sourceCommitString: $sourceCommit"
           dotnet_dotnet_sha=${!sourceCommit}
+          echo "Actual - sourceCommit: ${!sourceCommit}"
         fi
       fi
 
