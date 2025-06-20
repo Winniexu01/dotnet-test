@@ -18,7 +18,9 @@ jobs:
           dotnet_dotnet_build=${!runID}
         fi
       fi
-
+      id=$(az pipelines runs list --branch '$(Build.SourceBranch)' --organization 'https://dev.azure.com/v-wexu0720' --project 'Test' --pipeline-ids '1' --status completed --top 1 --query "[].id" --output tsv)
+      echo "Latest id: $id"
+        
       if [[ -z "$dotnet_dotnet_build" ]]; then
         echo "Could not find a completed dotnet-dotnet build for branch '$(Build.SourceBranch)'"
         exit 1
