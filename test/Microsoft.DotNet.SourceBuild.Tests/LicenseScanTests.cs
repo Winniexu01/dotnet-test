@@ -126,7 +126,7 @@ public class LicenseScanTests : TestBase
     {
         Assert.NotNull(Config.LicenseScanPath);
         _targetRepo = new DirectoryInfo(Config.LicenseScanPath).Name;
-
+        
         Match relativeRepoPathMatch = Regex.Match(Config.LicenseScanPath, @"(src/)[^/]+");
         Assert.True(relativeRepoPathMatch.Success);
         _relativeRepoPath = relativeRepoPathMatch.Value;
