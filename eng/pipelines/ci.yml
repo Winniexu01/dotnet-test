@@ -64,18 +64,18 @@ stages:
         CleanTargetFolder: true
       condition: failed()
       continueOnError: true
-    - takes: PublishBuildArtifacts@1
+    - task: PublishBuildArtifacts@1
       inputs:
         targetPath: $(Build.ArtifactStagingDirectory)/BuildLogs
         artifactName: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
       displayName: Publish BuildLogs
-    - takes: PublishBuildArtifacts@1
+    - task: PublishBuildArtifacts@1
       inputs:
         targetPath: $(Build.ArtifactStagingDirectory)/artifacts
         artifactName: $(Agent.JobName)_Artifacts_Success_Attempt$(System.JobAttempt)
       displayName: Publish Artifacts (On Success)
       condition: succeeded()
-    - takes: PublishBuildArtifacts@1
+    - task: PublishBuildArtifacts@1
       inputs:
         targetPath: $(Build.ArtifactStagingDirectory)/prepublish
         artifactName: $(Agent.JobName)_Artifacts_Failure_Attempt$(System.JobAttempt)
