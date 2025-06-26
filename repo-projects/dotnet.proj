@@ -11,7 +11,7 @@
 
   <ItemGroup Condition="'$(DotNetBuildPass)' == '' or '$(DotNetBuildPass)' == '1'">
     <!-- Short stack builds stop at runtime, not the whole SDK -->
-    <RepositoryReference Include="sdk" Condition="'$(ShortStack)' != 'true'" />
+    <RepositoryReference Include="arcade" Condition="'$(ShortStack)' != 'true'" />
     <RepositoryReference Include="runtime" Condition="'$(ShortStack)' == 'true'" />
   </ItemGroup>
 
