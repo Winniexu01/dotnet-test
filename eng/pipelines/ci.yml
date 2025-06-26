@@ -9,14 +9,75 @@ pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-- template: /eng/pipelines/templates/stages/source-build-and-validate.yml@self
-  parameters:
-    legs:
-      - buildNameFormat: '{0}_Online_MsftSdk'
-        distro: centos
-        targetArchitecture: x64
-        buildFromArchive: false            # 🚫
-        enablePoison: false                # 🚫
-        runOnline: true                    # ✅
-        useMonoRuntime: false              # 🚫
-        withPreviousSDK: false             # 🚫
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: BuildJob
+    displayName: Build Job
+    container:
+      image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-10-amd64
+    steps:
+    - script: |
+        set -ex
+        ./prep-source-build.sh
+      displayName: Prep the Build
+      workingDirectory: $(Build.SourcesDirectory)
+    - script: |
+          set -ex
+          df -h
+
+          customEnvVars=""
+          customPreBuildArgs=""
+          customBuildArgs="--ci --clean-while-building --prepareMachine -c Release "
+          extraBuildProperties="/p:OfficialBuildId=20250625.6  /p:VerticalName=CentOSStream10_Online_MsftSdk_x64 /p:ArtifactsStagingDir=$(Build.ArtifactStagingDirectory) -arch x64   "
+          customBuildArgs="$customBuildArgs --online"
+          customBuildArgs="$customBuildArgs --source-only"
+          extraBuildProperties="$extraBuildProperties /p:ReportSbrpUsage=true /p:SkipDetectBinaries=true"
+          buildArgs="$(additionalBuildArgs) $customBuildArgs $extraBuildProperties"
+          ./build.sh $buildArgs
+      displayName: Build
+      workingDirectory: $(Build.SourcesDirectory)
+    - task: CopyFiles@2
+      displayName: Prepare BuildLogs staging directory
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        Contents: |
+          artifacts/log/**
+          artifacts/TestResults/**/*.binlog
+          artifacts/TestResults/**/*.diff
+          artifacts/TestResults/**/Updated*.txt
+          artifacts/TestResults/**/*.trx
+          artifacts/TestResults/**/*.xml
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/BuildLogs'
+        CleanTargetFolder: true
+      continueOnError: true
+      condition: succeededOrFailed()
+    - task: CopyFiles@2
+      displayName: Copy unmerged artifacts to staging directory
+      inputs:
+        SourceFolder: '$(sourcesPath)/artifacts'
+        Contents: |
+          packages/**/*
+          assets/**/*
+          obj/manifests/**/*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/prepublish'
+        CleanTargetFolder: true
+      condition: failed()
+      continueOnError: true
+    - takes: PublishBuildArtifacts@1
+      inputs:
+        targetPath: $(Build.ArtifactStagingDirectory)/BuildLogs
+        artifactName: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
+      displayName: Publish BuildLogs
+    - takes: PublishBuildArtifacts@1
+      inputs:
+        targetPath: $(Build.ArtifactStagingDirectory)/artifacts
+        artifactName: $(Agent.JobName)_Artifacts_Success_Attempt$(System.JobAttempt)
+      displayName: Publish Artifacts (On Success)
+      condition: succeeded()
+    - takes: PublishBuildArtifacts@1
+      inputs:
+        targetPath: $(Build.ArtifactStagingDirectory)/prepublish
+        artifactName: $(Agent.JobName)_Artifacts_Failure_Attempt$(System.JobAttempt)
+      displayName: Publish Artifacts (On Failure)
+      condition: failed()

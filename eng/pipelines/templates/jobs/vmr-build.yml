@@ -27,6 +27,9 @@ parameters:
   type: string
   default: ''
 
+- name: pool
+  type: object
+
 - name: targetOS
   type: string
   default: ''
@@ -119,8 +122,8 @@ parameters:
 
 jobs:
 - job: ${{ parameters.buildName }}_${{ parameters.targetArchitecture }}${{ replace(format('_BuildPass{0}', coalesce(parameters.buildPass, '1')), '_BuildPass1', '') }}
-  pool: 
-    vmImage: 'ubuntu-latest'
+  pool: ${{ parameters.pool }}
+
   # 1ES pipeline template requires that the container is specified in the job level.
   # If we are using a container image, we set the container to correct name.
   # Otherwise, we set the container to host so that the job runs on the host agent.
@@ -192,6 +195,11 @@ jobs:
   - name: failedJobArtifactName
     value: $(successfulJobArtifactName)_Attempt$(System.JobAttempt)
 
+  # manually disable CodeQL until https://dev.azure.com/mseng/1ES/_workitems/edit/2211548 is implemented
+  # CodeQL doesn't work on arm64 macOS, see https://portal.microsofticm.com/imp/v5/incidents/details/532165079/summary
+  - ${{ if eq(parameters.pool.os, 'macOS') }}:
+    - name: ONEES_ENFORCED_CODEQL_ENABLED
+      value: false
 
   # Build up the command line variables. We avoid doing this in the script sections below
   # because AzDO will not echo command lines if they are more than a single line.
@@ -509,7 +517,7 @@ jobs:
 
           if [[ '${{ parameters.buildSourceOnly }}' == 'True' ]]; then
             customBuildArgs="$customBuildArgs --source-only"
-            extraBuildProperties="$extraBuildProperties /p:ReportSbrpUsage=true /p:SkipDetectBinaries=true"
+            extraBuildProperties="$extraBuildProperties /p:ReportSbrpUsage=true"
           fi
 
           if [[ '${{ parameters.useMonoRuntime }}' == 'True' ]]; then
