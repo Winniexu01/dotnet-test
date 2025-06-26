@@ -27,9 +27,6 @@ parameters:
   type: string
   default: ''
 
-- name: pool
-  type: object
-
 - name: targetOS
   type: string
   default: ''
@@ -195,11 +192,6 @@ jobs:
   - name: failedJobArtifactName
     value: $(successfulJobArtifactName)_Attempt$(System.JobAttempt)
 
-  # manually disable CodeQL until https://dev.azure.com/mseng/1ES/_workitems/edit/2211548 is implemented
-  # CodeQL doesn't work on arm64 macOS, see https://portal.microsofticm.com/imp/v5/incidents/details/532165079/summary
-  - ${{ if eq(parameters.pool.os, 'macOS') }}:
-    - name: ONEES_ENFORCED_CODEQL_ENABLED
-      value: false
 
   # Build up the command line variables. We avoid doing this in the script sections below
   # because AzDO will not echo command lines if they are more than a single line.
