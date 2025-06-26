@@ -29,7 +29,6 @@ stages:
   parameters:
     scope: ${{ parameters.scope }}
     isBuiltFromVmr: ${{ parameters.isBuiltFromVmr }}
-    verifications: ${{ parameters.verifications }}
     ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
       # For PR builds, we don't rely on Microsoft build assets for testing because not all of the required assets
       # are available from the subset of jobs that get build in PRs compared to the full build. Instead, we run

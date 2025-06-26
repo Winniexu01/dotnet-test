@@ -18,11 +18,6 @@ parameters:
   type: boolean
   default: true
 
-# List of verifications to run during PRs.
-- name: verifications
-  type: object
-  default: []
-
 stages:
   - template: source-build-and-validate.yml
     parameters:
