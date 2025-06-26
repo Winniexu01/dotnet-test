@@ -1,4 +1,4 @@
-FROM pandoc/core:2.18.0
+FROM mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-10-amd64
 
 ENTRYPOINT ["/usr/bin/env"]
 
