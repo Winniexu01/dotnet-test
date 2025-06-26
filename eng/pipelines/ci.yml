@@ -9,8 +9,14 @@ pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-- template: /eng/pipelines/templates/stages/vmr-build.yml@self
+- template: /eng/pipelines/templates/stages/source-build-and-validate.yml@self
   parameters:
-    desiredSigning: Unsigned
-    desiredIBC: Disabled
-    scope: lite
+    legs:
+      - buildNameFormat: '{0}_Online_MsftSdk'
+        distro: centos
+        targetArchitecture: x64
+        buildFromArchive: false            # 🚫
+        enablePoison: false                # 🚫
+        runOnline: true                    # ✅
+        useMonoRuntime: false              # 🚫
+        withPreviousSDK: false             # 🚫
