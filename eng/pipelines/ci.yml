@@ -5,51 +5,14 @@
 trigger: none
 pr: none
 
-parameters:
-- name: desiredSigning
-  displayName: 'Sign?'
-  type: string
-  default: 'Default (unsigned for non release-branch builds)'
-  values:
-    - Signed
-    - Unsigned
-    - Default (unsigned for non release-branch builds)
-
-- name: desiredIBC
-  displayName: 'Enable IBC?'
-  type: string
-  default: 'Default (disabled for non-release branch builds)'
-  values:
-    - Enabled
-    - Disabled
-    - Default (disabled for non-release branch builds)
-
-variables:
-- name: isScheduleTrigger
-  value: ${{ eq(variables['Build.Reason'], 'Schedule') }}
-
-- name: isPRTrigger
-  value: true
-
-- ${{ if eq(variables['System.TeamProject'], 'public') }}:
-  - name: skipComponentGovernanceDetection  # we run CG on internal builds only
-    value: true
-
-  - name: Codeql.Enabled  # we run CodeQL on internal builds only
-    value: false
-
 pool:
   vmImage: 'ubuntu-latest'
 
 stages:
 - template: /eng/pipelines/templates/stages/vmr-build.yml@self
   parameters:
-    ${{ if and(eq(variables.isScheduleTrigger, 'true'), eq(variables['Build.CronSchedule.DisplayName'], 'Signed main build on weekends')) }}:
-      desiredSigning: Signed
-    ${{ else }}:
-      desiredSigning: ${{ parameters.desiredSigning }}
-    desiredIBC: ${{ parameters.desiredIBC }}
-    ${{ if eq(variables.isPRTrigger, 'true') }}:
-      scope: lite
-    ${{ else }}:
-      scope: full
+    pool: 
+      vmImage: 'ubuntu-latest'
+    desiredSigning: Unsigned
+    desiredIBC: Disabled
+    scope: lite
