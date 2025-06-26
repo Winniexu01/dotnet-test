@@ -29,7 +29,7 @@ variables:
   value: ${{ eq(variables['Build.Reason'], 'Schedule') }}
 
 - name: isPRTrigger
-  value: ${{ eq(variables['Build.Reason'], 'PullRequest') }}
+  value: true
 
 - ${{ if eq(variables['System.TeamProject'], 'public') }}:
   - name: skipComponentGovernanceDetection  # we run CG on internal builds only
