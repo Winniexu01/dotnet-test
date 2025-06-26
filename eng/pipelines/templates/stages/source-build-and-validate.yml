@@ -19,9 +19,6 @@ parameters:
   type: boolean
   default: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-10-amd64
 
-pool:
-  vmImage: 'ubuntu-latest'
-
 stages:
 - stage: VMR_SourceOnly_Build
   displayName: VMR Source-Only Build
