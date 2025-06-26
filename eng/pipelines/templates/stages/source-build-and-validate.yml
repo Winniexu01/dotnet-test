@@ -12,11 +12,11 @@ parameters:
   default: true
 
 - name: centOSStreamContainerName
-  type: boolean
+  type: string
   default: centOSStreamContainer
 
 - name: centOSStreamContainerImage
-  type: boolean
+  type: string
   default: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-10-amd64
 
 stages:
