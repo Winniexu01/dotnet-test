@@ -122,7 +122,6 @@ parameters:
 
 jobs:
 - job: ${{ parameters.buildName }}_${{ parameters.targetArchitecture }}${{ replace(format('_BuildPass{0}', coalesce(parameters.buildPass, '1')), '_BuildPass1', '') }}
-  pool: ${{ parameters.pool }}
 
   # 1ES pipeline template requires that the container is specified in the job level.
   # If we are using a container image, we set the container to correct name.
@@ -517,7 +516,7 @@ jobs:
 
           if [[ '${{ parameters.buildSourceOnly }}' == 'True' ]]; then
             customBuildArgs="$customBuildArgs --source-only"
-            extraBuildProperties="$extraBuildProperties /p:ReportSbrpUsage=true"
+            extraBuildProperties="$extraBuildProperties /p:ReportSbrpUsage=true /p:SkipDetectBinaries=true"
           fi
 
           if [[ '${{ parameters.useMonoRuntime }}' == 'True' ]]; then
