@@ -42,9 +42,6 @@ pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-- ${{ if and(ne(variables.isPRTrigger, 'true'), eq(variables['System.TeamProject'], 'internal')) }}:
-  - template: /eng/pipelines/templates/stages/vmr-scan.yml@self
-
 - template: /eng/pipelines/templates/stages/vmr-build.yml@self
   parameters:
     ${{ if and(eq(variables.isScheduleTrigger, 'true'), eq(variables['Build.CronSchedule.DisplayName'], 'Signed main build on weekends')) }}:
