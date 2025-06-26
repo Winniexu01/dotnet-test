@@ -2,6 +2,3 @@
 ### If run in a PR, new changes are applied to a local copy of the VMR, then it is built and tested
 stages:
 - template: source-build-stages.yml
-  parameters:
-    scope: lite
-    isBuiltFromVmr: true

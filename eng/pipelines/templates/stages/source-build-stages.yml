@@ -1,7 +1,6 @@
 stages:
   - template: source-build-and-validate.yml
     parameters:
-      isBuiltFromVmr: true
       legs:
         - buildNameFormat: '{0}_Online_MsftSdk'
           distro: centos
