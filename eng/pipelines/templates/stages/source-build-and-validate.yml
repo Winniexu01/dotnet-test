@@ -11,9 +11,13 @@ parameters:
   type: string
   default: centos.10-x64
 
+- name: legs
+  type: object
+
 stages:
 - stage: VMR_SourceOnly_Build
   displayName: VMR Source-Only Build
+  dependsOn: []
   jobs:
   - ${{ each leg in parameters.legs }}:
     - template: ../jobs/vmr-build.yml
