@@ -11,6 +11,10 @@ parameters:
   type: string
   default: centos.10-x64
 
+- name: centOSStreamName
+  type: string
+  default: CentOSStream10
+
 - name: legs
   type: object
 
@@ -30,7 +34,7 @@ stages:
             image: ${{ parameters.centOSStreamContainerImage }}
           ${{ if ne(leg.reuseBuildArtifactsFrom, '') }}:
             reuseBuildArtifactsFrom:
-            - ${{ format(leg.reuseBuildArtifactsFrom, variables.centOSStreamName) }}
+            - ${{ format(leg.reuseBuildArtifactsFrom, parameters.centOSStreamName) }}
           ${{ if and(contains(leg.buildNameFormat, 'Previous'), eq(leg.targetArchitecture, 'x64')) }}:
             artifactsRid: ${{ parameters.centOSStreamX64Rid }}
         
