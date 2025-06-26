@@ -1,36 +1,7 @@
 ### This stage builds https://github.com/dotnet/dotnet with varying parameters
 ### If run in a PR, new changes are applied to a local copy of the VMR, then it is built and tested
-
-parameters:
-- name: desiredSigning
-  type: string
-  default: ''
-
-- name: desiredIbc
-  type: string
-  default: ''
-
-# Scope of jobs which are executed
-- name: scope
-  type: string
-  values:
-  # run several legs e.g. win/linux/mac for basic testing
-  - lite
-  # run everything
-  - full
-
-# True when build is running from dotnet/dotnet directly
-- name: isBuiltFromVmr
-  type: boolean
-  default: true
-
 stages:
 - template: source-build-stages.yml
   parameters:
-    scope: ${{ parameters.scope }}
-    isBuiltFromVmr: ${{ parameters.isBuiltFromVmr }}
-    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-      # For PR builds, we don't rely on Microsoft build assets for testing because not all of the required assets
-      # are available from the subset of jobs that get build in PRs compared to the full build. Instead, we run
-      # the tests in the same job as the build and filter out some of the tests that can't be executed in this state.
-      useMicrosoftBuildAssetsForTests: false
+    scope: lite
+    isBuiltFromVmr: true

@@ -1,42 +1,8 @@
-parameters:
-
-# Scope of jobs which are executed
-- name: scope
-  type: string
-  values:
-  # run several legs e.g. stage1/stage2 for basic testing
-  - lite
-  # run everything
-  - full
-
-- name: useMicrosoftBuildAssetsForTests
-  type: boolean
-  default: true
-
-# True when build is running from dotnet/dotnet directly
-- name: isBuiltFromVmr
-  type: boolean
-  default: true
-
 stages:
   - template: source-build-and-validate.yml
     parameters:
-      useMicrosoftBuildAssetsForTests: ${{ parameters.useMicrosoftBuildAssetsForTests }}
-      isBuiltFromVmr: ${{ parameters.isBuiltFromVmr }}
-      
-      # Description of the source build legs to run.
-      # This is described here as a parameter to allow two separate stages to be produced from this list (one for building
-      # and one for validation). Because this template is not directly within a pipeline, stage, or job, we can't reference
-      # variables as template expressions. So we can't do things like '${{ format('{0}_Online_MsftSdk', variables.centOSStreamName) }}'.
-      # The variable value will be empty in that case. Instead, each leg defines a distro name that source-build-and-validate.yml uses
-      # to determine which variable to use for determining the various parameter values which are based on variables.
-      #
-      # Changing the build name requires updating the referenced name in the source-build-sdk-diff-tests.yml pipeline
+      isBuiltFromVmr: true
       legs:
-
-        ### Source-build verification legs ###
-
-        # Stage 1 leg is built in full scope, or lite when any of the `source-build-` verifications are requested.
         - buildNameFormat: '{0}_Online_MsftSdk'
           distro: centos
           targetArchitecture: x64

@@ -1,16 +1,4 @@
 parameters:
-
-- name: useMicrosoftBuildAssetsForTests
-  type: boolean
-
-- name: legs
-  type: object
-
-# True when build is running from dotnet/dotnet directly
-- name: isBuiltFromVmr
-  type: boolean
-  default: true
-
 - name: centOSStreamContainerName
   type: string
   default: centOSStreamContainer
@@ -18,6 +6,10 @@ parameters:
 - name: centOSStreamContainerImage
   type: string
   default: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-10-amd64
+
+- name: centOSStreamX64Rid
+  type: string
+  default: centos.10-x64
 
 stages:
 - stage: VMR_SourceOnly_Build
@@ -36,13 +28,12 @@ stages:
             reuseBuildArtifactsFrom:
             - ${{ format(leg.reuseBuildArtifactsFrom, variables.centOSStreamName) }}
           ${{ if and(contains(leg.buildNameFormat, 'Previous'), eq(leg.targetArchitecture, 'x64')) }}:
-            artifactsRid: ${{ variables.centOSStreamX64Rid }}
+            artifactsRid: ${{ parameters.centOSStreamX64Rid }}
         
         targetArchitecture: ${{ leg.targetArchitecture }}
-        isBuiltFromVmr: ${{ parameters.isBuiltFromVmr }}
+        isBuiltFromVmr: true
         buildSourceOnly: true
-        ${{ if eq(parameters.useMicrosoftBuildAssetsForTests, true) }}:
-          runTests: false
+        runTests : false
         enablePoison: ${{ leg.enablePoison }}
         buildFromArchive: ${{ leg.buildFromArchive }}
         runOnline: ${{ leg.runOnline }}

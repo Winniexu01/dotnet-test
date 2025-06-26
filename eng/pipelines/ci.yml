@@ -11,8 +11,6 @@ pool:
 stages:
 - template: /eng/pipelines/templates/stages/vmr-build.yml@self
   parameters:
-    pool: 
-      vmImage: 'ubuntu-latest'
     desiredSigning: Unsigned
     desiredIBC: Disabled
     scope: lite
