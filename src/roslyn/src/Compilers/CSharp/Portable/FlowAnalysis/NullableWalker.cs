@@ -3850,53 +3850,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             var (collectionKind, targetElementType) = getCollectionDetails(node, node.Type);
 
             var resultBuilder = ArrayBuilder<VisitResult>.GetInstance(node.Elements.Length);
-            var elementConversionCompletions = ArrayBuilder<Func<TypeWithAnnotations, TypeWithState>>.GetInstance();
+            var elementConversionCompletions = ArrayBuilder<Func<TypeWithAnnotations /*targetElementType*/, TypeSymbol /*targetCollectionType*/, TypeWithState>>.GetInstance();
             foreach (var element in node.Elements)
             {
-                switch (element)
-                {
-                    case BoundCollectionElementInitializer initializer:
-                        // We don't visit the Add methods
-                        // But we should check conversion to the iteration type
-                        // Tracked by https://github.com/dotnet/roslyn/issues/68786
-                        SetUnknownResultNullability(initializer);
-                        Debug.Assert(node.Placeholder is { });
-                        SetUnknownResultNullability(node.Placeholder);
-                        VisitRvalue(initializer.Arguments[0]);
-                        break;
-                    case BoundCollectionExpressionSpreadElement spread:
-                        Visit(spread);
-                        if (targetElementType.HasType &&
-                            spread.ElementPlaceholder is { } elementPlaceholder &&
-                            spread.IteratorBody is { })
-                        {
-                            var itemResult = spread.EnumeratorInfoOpt == null ? default : _visitResult;
-                            var iteratorBody = ((BoundExpressionStatement)spread.IteratorBody).Expression;
-                            AddPlaceholderReplacement(elementPlaceholder, expression: elementPlaceholder, itemResult);
-                            var completion = VisitOptionalImplicitConversion(iteratorBody, targetElementType,
-                                useLegacyWarnings: false, trackMembers: false, AssignmentKind.Assignment, delayCompletionForTargetType: true).completion;
-                            Debug.Assert(completion is not null);
-                            elementConversionCompletions.Add(completion);
-                            RemovePlaceholderReplacement(elementPlaceholder);
-                        }
-                        break;
-                    default:
-                        var elementExpr = (BoundExpression)element;
-                        if (!targetElementType.HasType)
-                        {
-                            VisitRvalueWithState(elementExpr);
-                        }
-                        else
-                        {
-                            var completion = VisitOptionalImplicitConversion(elementExpr, targetElementType,
-                                useLegacyWarnings: false, trackMembers: false, AssignmentKind.Assignment, delayCompletionForTargetType: true).completion;
-
-                            Debug.Assert(completion is not null);
-                            elementConversionCompletions.Add(completion);
-                        }
-                        break;
-                }
-
+                visitElement(element, node, targetElementType, elementConversionCompletions);
                 resultBuilder.Add(_visitResult);
             }
 
@@ -3921,7 +3878,99 @@ namespace Microsoft.CodeAnalysis.CSharp
             SetResult(node, visitResult, updateAnalyzedNullability: !node.WasTargetTyped, isLvalue: false);
             return null;
 
-            TypeWithState convertCollection(BoundCollectionExpression node, TypeWithAnnotations targetCollectionType, ArrayBuilder<Func<TypeWithAnnotations, TypeWithState>> completions)
+            void visitElement(BoundNode element, BoundCollectionExpression node, TypeWithAnnotations targetElementType, ArrayBuilder<Func<TypeWithAnnotations, TypeSymbol, TypeWithState>> elementConversionCompletions)
+            {
+                switch (element)
+                {
+                    case BoundCollectionElementInitializer initializer:
+                        // The initializer generally represents a call to an Add method.
+                        // We do not analyze the full call or all the arguments.
+                        // We only analyze the single argument that represents the collection-expression element.
+                        SetUnknownResultNullability(initializer);
+                        Debug.Assert(node.Placeholder is { });
+                        SetUnknownResultNullability(node.Placeholder);
+
+                        var argIndex = initializer.AddMethod.IsExtensionMethod ? 1 : 0;
+                        Debug.Assert(initializer.ArgsToParamsOpt.IsDefault);
+                        var addArgument = initializer.Arguments[argIndex];
+                        VisitRvalue(addArgument);
+                        var addArgumentResult = _visitResult;
+
+                        elementConversionCompletions.Add((_, targetCollectionType) =>
+                        {
+                            // Reinfer the addMethod signature and convert the argument to parameter type
+                            var addMethod = initializer.AddMethod;
+                            MethodSymbol reinferredAddMethod;
+                            if (!addMethod.IsExtensionMethod)
+                            {
+                                reinferredAddMethod = (MethodSymbol)AsMemberOfType(targetCollectionType, addMethod);
+                            }
+                            else
+                            {
+                                // https://github.com/dotnet/roslyn/issues/68786: reinfer type arguments of a generic extension Add method
+                                reinferredAddMethod = addMethod;
+                            }
+
+                            var reinferredParameter = reinferredAddMethod.Parameters[argIndex];
+                            var resultType = VisitConversion(
+                                conversionOpt: null,
+                                addArgument,
+                                Conversion.Identity, // as only a nullable reinference is being done we expect an identity conversion
+                                reinferredParameter.TypeWithAnnotations,
+                                addArgumentResult.RValueType,
+                                checkConversion: true,
+                                fromExplicitCast: false,
+                                useLegacyWarnings: false,
+                                parameterOpt: reinferredParameter,
+                                assignmentKind: AssignmentKind.Argument,
+                                reportTopLevelWarnings: true,
+                                reportRemainingWarnings: true,
+                                trackMembers: false);
+                            return resultType;
+                        });
+
+                        break;
+                    case BoundCollectionExpressionSpreadElement spread:
+                        Visit(spread);
+                        if (targetElementType.HasType &&
+                            spread.ElementPlaceholder is { } elementPlaceholder &&
+                            spread.IteratorBody is { })
+                        {
+                            var itemResult = spread.EnumeratorInfoOpt == null ? default : _visitResult;
+                            var iteratorBody = ((BoundExpressionStatement)spread.IteratorBody).Expression;
+
+                            // Consider a collection expression like List<TElem> x = [y, ..z]
+                            // Lowering is comparable to the following:
+                            // List<TElem> __tmp = new(...);
+                            // __tmp.Add(y);
+                            // foreach (var z1 in z)
+                            //     __tmp.Add(z1);
+                            //
+                            // In other words, the spread contains a BoundCollectionElementInitializer which needs to be further deconstructed and 'z1' converted to 'TElem'.
+                            AddPlaceholderReplacement(elementPlaceholder, expression: elementPlaceholder, itemResult);
+                            visitElement(iteratorBody, node, targetElementType, elementConversionCompletions);
+                            RemovePlaceholderReplacement(elementPlaceholder);
+                        }
+                        break;
+                    default:
+                        var elementExpr = (BoundExpression)element;
+                        if (!targetElementType.HasType)
+                        {
+                            VisitRvalueWithState(elementExpr);
+                        }
+                        else
+                        {
+                            var completion = VisitOptionalImplicitConversion(elementExpr, targetElementType,
+                                useLegacyWarnings: false, trackMembers: false, AssignmentKind.Assignment, delayCompletionForTargetType: true).completion;
+
+                            Debug.Assert(completion is not null);
+                            elementConversionCompletions.Add((elementType, _) => completion(elementType));
+                        }
+                        break;
+                }
+            }
+
+            TypeWithState convertCollection(BoundCollectionExpression node, TypeWithAnnotations targetCollectionType, ArrayBuilder<Func<TypeWithAnnotations, TypeSymbol, TypeWithState>> completions)
             {
                 var strippedTargetCollectionType = targetCollectionType.Type.StrippedType();
                 Debug.Assert(TypeSymbol.Equals(strippedTargetCollectionType, node.Type, TypeCompareKind.IgnoreNullableModifiersForReferenceTypes));
@@ -3937,7 +3986,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 foreach (var completion in completions)
                 {
-                    _ = completion(targetElementType);
+                    _ = completion(targetElementType, strippedTargetCollectionType);
                 }
                 completions.Free();
 
@@ -3974,6 +4023,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var foundIterationType = _binder.TryGetCollectionIterationType((ExpressionSyntax)node.Syntax, collectionType, out targetElementType);
                         Debug.Assert(foundIterationType);
                     }
+                }
+                else if (collectionKind is CollectionExpressionTypeKind.ImplementsIEnumerable)
+                {
+                    Debug.Assert(!targetElementType.HasType);
+                    _binder.TryGetCollectionIterationType(node.Syntax, collectionType, out targetElementType);
                 }
 
                 return (collectionKind, targetElementType);
@@ -4510,7 +4564,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(reinferredMethod is object);
                 if (node.ImplicitReceiverOpt != null)
                 {
-                    //Debug.Assert(node.ImplicitReceiverOpt.Kind == BoundKind.ObjectOrCollectionValuePlaceholder); // Tracked by https://github.com/dotnet/roslyn/issues/76130 : the receiver may be converted now
+                    //Debug.Assert(node.ImplicitReceiverOpt.Kind == BoundKind.ObjectOrCollectionValuePlaceholder); // Tracked by https://github.com/dotnet/roslyn/issues/78828 : the receiver may be converted now
                     SetAnalyzedNullability(node.ImplicitReceiverOpt, new VisitResult(node.ImplicitReceiverOpt.Type, NullableAnnotation.NotAnnotated, NullableFlowState.NotNull));
                 }
                 SetUnknownResultNullability(node);
@@ -4559,7 +4613,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else
                 {
-                    // Tracked by https://github.com/dotnet/roslyn/issues/76130: Do we need to do anything special for new extensions here?
+                    // Tracked by https://github.com/dotnet/roslyn/issues/78828: Do we need to do anything special for new extensions here?
                     method = (MethodSymbol)AsMemberOfType(containingType, method);
                 }
 
@@ -7441,7 +7495,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(receiverSlot >= 0);
             if (method.GetIsNewExtensionMember())
             {
-                // Tracked by https://github.com/dotnet/roslyn/issues/76130 : should we extend member post-conditions to work with extension members?
+                // Tracked by https://github.com/dotnet/roslyn/issues/78828 : should we extend member post-conditions to work with extension members?
                 return;
             }
 
@@ -11124,7 +11178,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var receiverType = VisitRvalueWithState(receiverOpt).Type;
             // https://github.com/dotnet/roslyn/issues/30598: Mark receiver as not null
             // after indices have been visited, and only if the receiver has not changed.
-            // Tracked by https://github.com/dotnet/roslyn/issues/76130: Test this code path with new extensions
+            // Tracked by https://github.com/dotnet/roslyn/issues/78829: add support for indexers
             _ = CheckPossibleNullReceiver(receiverOpt);
 
             var indexer = node.Indexer;
@@ -11332,7 +11386,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             MethodSymbol? reinferredGetEnumeratorMethod = null;
 
-            if (enumeratorInfoOpt?.GetEnumeratorInfo is { Method: { IsExtensionMethod: true, Parameters: var parameters } } enumeratorMethodInfo) // Tracked by https://github.com/dotnet/roslyn/issues/76130: Test this code path with new extensions
+            if (enumeratorInfoOpt?.GetEnumeratorInfo is { Method: { IsExtensionMethod: true, Parameters: var parameters } } enumeratorMethodInfo) // Tracked by https://github.com/dotnet/roslyn/issues/78828: Test this code path with new extensions
             {
                 // this is case 7
                 // We do not need to do this same analysis for non-extension methods because they do not have generic parameters that
@@ -11399,7 +11453,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 useLegacyWarnings: false,
                 AssignmentKind.Assignment);
 
-            bool reportedDiagnostic = enumeratorInfoOpt?.GetEnumeratorInfo.Method is { IsExtensionMethod: true } // Tracked by https://github.com/dotnet/roslyn/issues/76130: Test this code path with new extensions
+            bool reportedDiagnostic = enumeratorInfoOpt?.GetEnumeratorInfo.Method is { IsExtensionMethod: true } // Tracked by https://github.com/dotnet/roslyn/issues/78828: Test this code path with new extensions
                 ? false
                 : CheckPossibleNullReceiver(expr);
 

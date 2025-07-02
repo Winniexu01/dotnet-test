@@ -63,7 +63,7 @@ internal abstract partial class SyntaxRewriter : SyntaxVisitor<SyntaxNode>
                 // add the items we've seen so far.
                 builder.SetCapacityIfLarger(count);
 
-                builder.AddRange(list, index: 0, count: i);
+                builder.AddRange(list, startIndex: 0, count: i);
 
                 isUpdating = true;
             }
@@ -85,7 +85,7 @@ internal abstract partial class SyntaxRewriter : SyntaxVisitor<SyntaxNode>
         return (TNode?)Visit(node);
     }
 
-    public virtual SyntaxList<SyntaxToken> VisitList(SyntaxList<SyntaxToken> list)
+    public virtual SyntaxTokenList VisitList(SyntaxTokenList list)
     {
         var count = list.Count;
         if (count == 0)
@@ -109,12 +109,12 @@ internal abstract partial class SyntaxRewriter : SyntaxVisitor<SyntaxNode>
                 // add the items we've seen so far.
                 builder.SetCapacityIfLarger(count);
 
-                builder.AddRange(list, index: 0, count: i);
+                builder.AddRange(list, startIndex: 0, count: i);
 
                 isUpdating = true;
             }
 
-            if (isUpdating && visited != null && visited.Kind != SyntaxKind.None)
+            if (isUpdating && visited.Kind != SyntaxKind.None)
             {
                 builder.Add(visited);
             }

@@ -6,6 +6,10 @@ parameters:
 - name: desiredIbc
   type: string
   default: ''
+
+- name: desiredFinalVersionKind
+  type: string
+  default: ''
   
 # These are not expected to be passed it but rather just object variables reused below
 - name: pool_Linux
@@ -43,11 +47,14 @@ parameters:
 stages:
 - stage: VMR_Validation
   displayName: VMR Validation
+  dependsOn:
+  - VMR_Vertical_Build
   variables:
   - template: ../variables/vmr-build.yml
     parameters:
       desiredSigning: ${{ parameters.desiredSigning }}
       desiredIbc: ${{ parameters.desiredIbc }}
+      desiredFinalVersionKind: ${{ parameters.desiredFinalVersionKind }}
   - group: Release-Pipeline
   - group: DotNetBot-GitHub-AllBranches
   jobs:

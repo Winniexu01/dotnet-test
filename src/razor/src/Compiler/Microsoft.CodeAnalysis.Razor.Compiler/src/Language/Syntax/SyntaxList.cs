@@ -3,17 +3,60 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Razor.PooledObjects;
 
 namespace Microsoft.AspNetCore.Razor.Language.Syntax;
 
-internal abstract class SyntaxList : SyntaxNode
+internal abstract class SyntaxList(InternalSyntax.SyntaxList green, SyntaxNode parent, int position) : SyntaxNode(green, parent, position)
 {
-    protected SyntaxList(InternalSyntax.SyntaxList green, SyntaxNode parent, int position)
-        : base(green, parent, position)
+    public static SyntaxList<TNode> Create<TNode>(params ReadOnlySpan<TNode> nodes)
+        where TNode : SyntaxNode
     {
+        if (nodes.Length == 0)
+        {
+            return default;
+        }
+
+        using var builder = new PooledArrayBuilder<TNode>(nodes.Length);
+        builder.AddRange(nodes);
+
+        return builder.ToList();
     }
 
-    internal override string SerializedValue => $"List: {SlotCount} slots";
+    public static SyntaxList<TNode> Create<TNode>(IEnumerable<TNode> nodes)
+        where TNode : SyntaxNode
+    {
+        using var builder = new PooledArrayBuilder<TNode>();
+        builder.AddRange(nodes);
+
+        return builder.ToList();
+    }
+
+    public static SyntaxTokenList Create(params ReadOnlySpan<SyntaxToken> tokens)
+    {
+        if (tokens.Length == 0)
+        {
+            return default;
+        }
+
+        using var builder = new PooledArrayBuilder<SyntaxToken>(tokens.Length);
+        builder.AddRange(tokens);
+
+        return builder.ToList();
+    }
+
+    public static SyntaxTokenList Create(IEnumerable<SyntaxToken> tokens)
+    {
+        using var builder = new PooledArrayBuilder<SyntaxToken>();
+        builder.AddRange(tokens);
+
+        return builder.ToList();
+    }
+
+    // For debugging
+#pragma warning disable IDE0051 // Remove unused private members
+    private string SerializedValue => $"List: {SlotCount} slots";
+#pragma warning restore IDE0051 // Remove unused private members
 
     protected internal override SyntaxNode ReplaceCore<TNode>(
         IEnumerable<TNode>? nodes = null,

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Microsoft.AspNetCore.Razor.Language.Components;
 using Microsoft.AspNetCore.Razor.Language.Legacy;
@@ -21,8 +22,7 @@ internal sealed partial class DefaultRazorTagHelperContextDiscoveryPhase : Razor
         var syntaxTree = codeDocument.GetPreTagHelperSyntaxTree() ?? codeDocument.GetSyntaxTree();
         ThrowForMissingDocumentDependency(syntaxTree);
 
-        var tagHelpers = codeDocument.GetTagHelpers();
-        if (tagHelpers == null)
+        if (!codeDocument.TryGetTagHelpers(out var tagHelpers))
         {
             if (!Engine.TryGetFeature(out ITagHelperFeature? tagHelperFeature))
             {
@@ -40,7 +40,7 @@ internal sealed partial class DefaultRazorTagHelperContextDiscoveryPhase : Razor
         // The imports come logically before the main razor file and are in the order they
         // should be processed.
 
-        if (codeDocument.GetImportSyntaxTrees() is { IsDefault: false } imports)
+        if (codeDocument.TryGetImportSyntaxTrees(out var imports))
         {
             foreach (var import in imports)
             {
@@ -217,8 +217,7 @@ internal sealed partial class DefaultRazorTagHelperContextDiscoveryPhase : Razor
 
         public override void VisitRazorDirective(RazorDirectiveSyntax node)
         {
-            var descendantLiterals = node.DescendantNodes();
-            foreach (var child in descendantLiterals)
+            foreach (var child in node.DescendantNodes())
             {
                 if (child is not CSharpStatementLiteralSyntax literal)
                 {

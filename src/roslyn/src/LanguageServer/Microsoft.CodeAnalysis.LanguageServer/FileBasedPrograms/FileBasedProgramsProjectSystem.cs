@@ -132,11 +132,13 @@ internal sealed class FileBasedProgramsProjectSystem : LanguageServerProjectLoad
     protected override async Task<RemoteProjectLoadResult?> TryLoadProjectInMSBuildHostAsync(
         BuildHostProcessManager buildHostProcessManager, string documentPath, CancellationToken cancellationToken)
     {
-        var content = await _projectXmlProvider.GetVirtualProjectContentAsync(documentPath, cancellationToken);
+        var content = await _projectXmlProvider.GetVirtualProjectContentAsync(documentPath, _logger, cancellationToken);
         if (content is not var (virtualProjectContent, diagnostics))
         {
-            // 'GetVirtualProjectContentAsync' will log errors when it fails
-            return null;
+            // https://github.com/dotnet/roslyn/issues/78618: falling back to this until dotnet run-api is more widely available
+            _logger.LogInformation($"Failed to obtain virtual project for '{documentPath}' using dotnet run-api. Falling back to directly creating the virtual project.");
+            virtualProjectContent = VirtualProjectXmlProvider.MakeVirtualProjectContent_DirectFallback(documentPath);
+            diagnostics = [];
         }
 
         foreach (var diagnostic in diagnostics)
