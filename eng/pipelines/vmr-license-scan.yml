@@ -47,10 +47,10 @@ stages:
             fi
             repoName=$(basename $dir)
             matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
-            if [ "$count" != "0" ]; then
-                count=$((count+1))
-            else
-                break
+            # if [ "$count" != "0" ]; then
+            #     count=$((count+1))
+            # else
+            #     break
             fi
           done
         fi
