@@ -12,10 +12,16 @@ parameters:
   default: " " # Set it to an empty string to allow it be an optional parameter
 
 # Provides a way to scan repos. If not provided, all repos of the VMR will be scanned.
-- name: RepoRange
+- name: startIndex
   type: number
-  displayName: "The repo range. If empty, scans all repos of the VMR."
-  default: 0 # Set it to 0 to allow it be an optional parameter
+  displayName: "Specific the first repo index to scan."
+  default: 0
+
+# Provides a way to scan repos. If not provided, all repos of the VMR will be scanned.
+- name: endIndex
+  type: number
+  displayName: "Specific the last repo index to scan."
+  default: 27
 
 variables:
   # GH access token for SB bot - BotAccount-dotnet-sb-bot-pat
@@ -26,184 +32,179 @@ stages:
   jobs:
   - job: Setup
     steps:
+    # - script: |
+    #     count=9
+    #     if [[ $count -gt 0 && $count -lt 10 ]]; then
+    #       echo "Grater than zero, Less than Ten"
+    #     else
+    #       echo "$count"
+    #     fi
+
+    #     echo "Check dir"
+    #     vmrSrcDir="$(Build.SourcesDirectory)/src"
+    #     for dir in $(ls -d "$vmrSrcDir"/*/ | sort)
+    #     do
+    #       echo "Found dir: $dir"
+    #     done
+
+    #     echo "Check dir"
+    #     for dir2 in $(ls -d "$vmrSrcDir"/*/ | sort)
+    #     do
+    #       echo "Found dir2: $dir2"
+    #     done
+    #   displayName: Template Test
+
     - script: |
-        count=9
-        if [[ $count -gt 0 && $count -lt 10 ]]; then
-          echo "Grater than zero, Less than Ten"
+        vmrSrcDir="$(Build.SourcesDirectory)/src"
+        # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
+        # allowing a job to be run for each src repo.
+        matrix=""
+        count=${{ parameters.startIndex }}
+        range=${{ parameters.endIndex }}
+
+        # Trim leading/trailing spaces from the repo name
+        specificRepoName=$(echo "${{ parameters.specificRepoName }}" | awk '{$1=$1};1')
+
+        # If the repo name is provided, only scan that repo.
+        if [ ! -z "$specificRepoName" ]; then
+          matrix="\"$specificRepoName\": { \"repoPath\": \"$vmrSrcDir/$specificRepoName\" }"
         else
-          echo "$count"
+          for dir in $(ls -d "$vmrSrcDir"/*/ | sort)
+          do
+            if [[ $count -ge 0 && $count -lt $range ]]; then
+                count=$((count+1))
+            else
+                break
+            fi
+            if [ ! -z "$matrix" ]; then
+              matrix="$matrix,"
+            fi
+            repoName=$(basename $dir)
+            matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
+          done
         fi
 
-        echo "Check dir"
-        vmrSrcDir="$(Build.SourcesDirectory)/src"
-        for dir in $(ls -d "$vmrSrcDir"/*/ | sort)
-        do
-          echo "Found dir: $dir"
-        done
+        matrix="{ $matrix }"
 
-        echo "Check dir"
-        for dir2 in $(ls -d "$vmrSrcDir"/*/ | sort)
-        do
-          echo "Found dir2: $dir2"
-        done
-      displayName: Template Test
+        echo "##vso[task.setvariable variable=matrix;isOutput=true]$matrix"
+      name: GetMatrix
+      displayName: Get Matrix
 
-  #   - script: |
-  #       vmrSrcDir="$(Build.SourcesDirectory)/src"
-  #       # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
-  #       # allowing a job to be run for each src repo.
-  #       matrix=""
-  #       count=0
+  - job: LicenseScan
+    pool:
+      vmImage: ubuntu-latest
+    container:
+      image: wenwen01/prereqs:azurelinux-3.0-net10.0-source-build-test-amd64
+      options: '--memory=6g'
+    dependsOn: Setup
+    timeoutInMinutes: 420
+    strategy:
+      matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
+    steps:
 
-  #       # Trim leading/trailing spaces from the repo name
-  #       if [[ "${{ parameters.specificRepoName }}" == " " ]]; then
-  #         repo=" "
-  #       else
-  #         repo=${{ parameters.specificRepoName }}
-  #       fi
+    - script: >
+        dotnet test
+        $(Build.SourcesDirectory)/test/Microsoft.DotNet.SourceBuild.Tests/Microsoft.DotNet.SourceBuild.Tests.csproj
+        --filter "FullyQualifiedName=Microsoft.DotNet.SourceBuild.Tests.LicenseScanTests.ScanForLicenses"
+        --logger:'trx;LogFileName=$(Agent.JobName)_LicenseScan.trx'
+        --logger:'console;verbosity=detailed'
+        -c Release
+        -bl:$(Build.SourcesDirectory)/artifacts/log/Debug/BuildTests_$(date +"%m%d%H%M%S").binlog
+        -flp:LogFile=$(Build.SourcesDirectory)/artifacts/logs/BuildTests_$(date +"%m%d%H%M%S").log
+        -clp:v=m
+        /p:SourceBuildTestsLicenseScanPath=$(repoPath)
+        /p:TargetRid=linux-x64
+        /p:PortableRid=linux-x64
+        /p:SkipPrepareSdkArchive=true
+      displayName: Run Tests
+      workingDirectory: $(Build.SourcesDirectory)
 
-  #       specificRepoName=$(echo "$repo" | awk '{$1=$1};1')
+    - task: CopyFiles@2
+      displayName: Prepare BuildLogs staging directory
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        Contents: |
+          artifacts/log/**
+          artifacts/TestResults/**
+          ls -R $(Build.StagingDirectory)/BuildLogs
+        TargetFolder: '$(Build.StagingDirectory)/BuildLogs'
+        CleanTargetFolder: true
+      continueOnError: true
+      condition: succeededOrFailed()
 
-  #       # If the repo name is provided, only scan that repo.
-  #       if [ ! -z "$specificRepoName" ]; then
-  #         matrix="\"$specificRepoName\": { \"repoPath\": \"$vmrSrcDir/$specificRepoName\" }"
-  #       else
-  #         for dir in $(ls -d "$vmrSrcDir"/*/ | sort)
-  #         do
-  #           if [ ! -z "$matrix" ]; then
-  #             matrix="$matrix,"
-  #           fi
-  #           repoName=$(basename $dir)
-  #           matrix="$matrix \"$repoName\": { \"repoPath\": \"$dir\" }"
-  #           if [ "$count" != "0" ]; then
-  #               count=$((count+1))
-  #           else
-  #               break
-  #           fi
-  #         done
-  #       fi
+    # - script: |
+    #     set -x
+    #     targetFolder=$(Build.StagingDirectory)/BuildLogs/
+    #     mkdir -p ${targetFolder}
+    #     cd "$(Build.SourcesDirectory)"
+    #     find artifacts/log/ -type f -name "BuildTests*.binlog" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/log/ -type f -name "BuildTests*.log" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "*.binlog" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "*.log" -exec cp {} --parents -t ${targetFolder} \;
+    #     echo "Updated:"
+    #     find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt"
+    #     find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt" -exec cp {} --parents -t ${targetFolder} \;
+    #     find artifacts/TestResults/ -type f -name "Updated*.json"
+    #     find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
+    #     echo "Results:"
+    #     find artifacts/TestResults/ -type f -name "scancode-results*.json" -exec cp {} --parents -t ${targetFolder} \;
+    #     echo "All:"
+    #     ls -R artifacts/TestResults/
+    #     echo "BuildLogs:"
+    #     ls -R ${targetFolder}
+    #   displayName: Prepare BuildLogs staging directory
+    #   continueOnError: true
+    #   condition: succeededOrFailed()
 
-  #       matrix="{ $matrix }"
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish BuildLogs'
+      condition: succeededOrFailed()
+      inputs:
+        targetPath: '$(Build.StagingDirectory)/BuildLogs'
+        artifactName: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
 
-  #       echo "##vso[task.setvariable variable=matrix;isOutput=true]$matrix"
-  #     name: GetMatrix
-  #     displayName: Get Matrix
+    # - task: PublishTestResults@2
+    #   displayName: Publish Test Results
+    #   condition: succeededOrFailed()
+    #   continueOnError: true
+    #   inputs:
+    #     testRunner: vSTest
+    #     testResultsFiles: '**/*.trx'
+    #     searchFolder: $(Build.SourcesDirectory)/artifacts/TestResults
+    #     mergeTestResults: true
+    #     publishRunAttachments: true
+    #     testRunTitle: $(Agent.JobName)
 
-  # - job: LicenseScan
-  #   pool:
-  #     vmImage: ubuntu-latest
-  #   container:
-  #     image: wenwen01/prereqs:azurelinux-3.0-net10.0-source-build-test-amd64
-  #     options: '--memory=6g'
-  #   dependsOn: Setup
-  #   timeoutInMinutes: 420
-  #   strategy:
-  #     matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
-  #   steps:
+  - job: Publish_Test_Results_PR
+    dependsOn: LicenseScan
+    condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/dotnet-main-license'), startsWith(variables['Build.SourceBranch'], 'refs/heads/dotnet-main-license'))
+    variables:
+    - template: /eng/pipelines/templates/variables/pipelines.yml@self
+    steps:
+    - script: |
+        source ./eng/common/tools.sh
+        InitializeDotNetCli true
+      displayName: Install .NET SDK
+      workingDirectory: $(Build.SourcesDirectory)
 
-  #   - script: >
-  #       dotnet test
-  #       $(Build.SourcesDirectory)/test/Microsoft.DotNet.SourceBuild.Tests/Microsoft.DotNet.SourceBuild.Tests.csproj
-  #       --filter "FullyQualifiedName=Microsoft.DotNet.SourceBuild.Tests.LicenseScanTests.ScanForLicenses"
-  #       --logger:'trx;LogFileName=$(Agent.JobName)_LicenseScan.trx'
-  #       --logger:'console;verbosity=detailed'
-  #       -c Release
-  #       -bl:$(Build.SourcesDirectory)/artifacts/log/Debug/BuildTests_$(date +"%m%d%H%M%S").binlog
-  #       -flp:LogFile=$(Build.SourcesDirectory)/artifacts/logs/BuildTests_$(date +"%m%d%H%M%S").log
-  #       -clp:v=m
-  #       /p:SourceBuildTestsLicenseScanPath=$(repoPath)
-  #       /p:TargetRid=linux-x64
-  #       /p:PortableRid=linux-x64
-  #       /p:SkipPrepareSdkArchive=true
-  #     displayName: Run Tests
-  #     workingDirectory: $(Build.SourcesDirectory)
+    - template: /eng/pipelines/templates/steps/download-pipeline-artifact.yml@self
+      parameters:
+        pipeline: $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
+        buildId: $(Build.BuildId)
+        artifact: ''
+        patterns: '**/Updated*'
+        displayName: Download Test Files
 
-  #   - task: CopyFiles@2
-  #     displayName: Prepare BuildLogs staging directory
-  #     inputs:
-  #       SourceFolder: '$(Build.SourcesDirectory)'
-  #       Contents: |
-  #         artifacts/log/**
-  #         artifacts/TestResults/**
-  #         ls -R $(Build.StagingDirectory)/BuildLogs
-  #       TargetFolder: '$(Build.StagingDirectory)/BuildLogs'
-  #       CleanTargetFolder: true
-  #     continueOnError: true
-  #     condition: succeededOrFailed()
+    - script: |
+        set -x
+        find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
+        ls -R $(Pipeline.Workspace)/Artifacts
+      displayName: Move Artifacts to root
 
-  #   # - script: |
-  #   #     set -x
-  #   #     targetFolder=$(Build.StagingDirectory)/BuildLogs/
-  #   #     mkdir -p ${targetFolder}
-  #   #     cd "$(Build.SourcesDirectory)"
-  #   #     find artifacts/log/ -type f -name "BuildTests*.binlog" -exec cp {} --parents -t ${targetFolder} \;
-  #   #     find artifacts/log/ -type f -name "BuildTests*.log" -exec cp {} --parents -t ${targetFolder} \;
-  #   #     find artifacts/TestResults/ -type f -name "*.binlog" -exec cp {} --parents -t ${targetFolder} \;
-  #   #     find artifacts/TestResults/ -type f -name "*.log" -exec cp {} --parents -t ${targetFolder} \;
-  #   #     echo "Updated:"
-  #   #     find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt"
-  #   #     find artifacts/TestResults/ -type f -name "UpdatedLicenseExclusions*.txt" -exec cp {} --parents -t ${targetFolder} \;
-  #   #     find artifacts/TestResults/ -type f -name "Updated*.json"
-  #   #     find artifacts/TestResults/ -type f -name "Updated*.json" -exec cp {} --parents -t ${targetFolder} \;
-  #   #     echo "Results:"
-  #   #     find artifacts/TestResults/ -type f -name "scancode-results*.json" -exec cp {} --parents -t ${targetFolder} \;
-  #   #     echo "All:"
-  #   #     ls -R artifacts/TestResults/
-  #   #     echo "BuildLogs:"
-  #   #     ls -R ${targetFolder}
-  #   #   displayName: Prepare BuildLogs staging directory
-  #   #   continueOnError: true
-  #   #   condition: succeededOrFailed()
-
-  #   - task: PublishPipelineArtifact@1
-  #     displayName: 'Publish BuildLogs'
-  #     condition: succeededOrFailed()
-  #     inputs:
-  #       targetPath: '$(Build.StagingDirectory)/BuildLogs'
-  #       artifactName: $(Agent.JobName)_BuildLogs_Attempt$(System.JobAttempt)
-
-  #   # - task: PublishTestResults@2
-  #   #   displayName: Publish Test Results
-  #   #   condition: succeededOrFailed()
-  #   #   continueOnError: true
-  #   #   inputs:
-  #   #     testRunner: vSTest
-  #   #     testResultsFiles: '**/*.trx'
-  #   #     searchFolder: $(Build.SourcesDirectory)/artifacts/TestResults
-  #   #     mergeTestResults: true
-  #   #     publishRunAttachments: true
-  #   #     testRunTitle: $(Agent.JobName)
-
-  # - job: Publish_Test_Results_PR
-  #   dependsOn: LicenseScan
-  #   condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/dotnet-main-license'), startsWith(variables['Build.SourceBranch'], 'refs/heads/dotnet-main-license'))
-  #   variables:
-  #   - template: /eng/pipelines/templates/variables/pipelines.yml@self
-  #   steps:
-  #   - script: |
-  #       source ./eng/common/tools.sh
-  #       InitializeDotNetCli true
-  #     displayName: Install .NET SDK
-  #     workingDirectory: $(Build.SourcesDirectory)
-
-  #   - template: /eng/pipelines/templates/steps/download-pipeline-artifact.yml@self
-  #     parameters:
-  #       pipeline: $(SOURCE_BUILD_LICENSE_SCAN_PIPELINE_ID)
-  #       buildId: $(Build.BuildId)
-  #       artifact: ''
-  #       patterns: '**/Updated*'
-  #       displayName: Download Test Files
-
-  #   - script: |
-  #       set -x
-  #       find $(Pipeline.Workspace)/Artifacts -type f -exec mv {} $(Pipeline.Workspace)/Artifacts \;
-  #       ls -R $(Pipeline.Workspace)/Artifacts
-  #     displayName: Move Artifacts to root
-
-  #   - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
-  #     parameters:
-  #       pipeline: license
-  #       repo: Winniexu01/dotnet-test
-  #       originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
-  #       updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
-  #       pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
+    - template: /eng/pipelines/templates/steps/create-baseline-update-pr.yml@self
+      parameters:
+        pipeline: license
+        repo: Winniexu01/dotnet-test
+        originalFilesDirectory: test/Microsoft.DotNet.SourceBuild.Tests/assets/LicenseScanTests
+        updatedFilesDirectory: $(Pipeline.Workspace)/Artifacts
+        pullRequestTitle: Update Source-Build License Scan Baselines and Exclusions
