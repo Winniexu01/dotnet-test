@@ -55,6 +55,7 @@ stages:
     #   displayName: Template Test
 
     - script: |
+        set -x
         vmrSrcDir="$(Build.SourcesDirectory)/src"
         # Builds an Azure DevOps matrix definition. Each entry in the matrix is a path,
         # allowing a job to be run for each src repo.
@@ -101,6 +102,11 @@ stages:
     strategy:
       matrix: $[ dependencies.Setup.outputs['GetMatrix.matrix'] ]
     steps:
+
+    - script: |
+        echo "Scancode version: $(scancode --version)"
+      displayName: Get scancode version
+      workingDirectory: $(Build.SourcesDirectory)
 
     - script: >
         dotnet test
