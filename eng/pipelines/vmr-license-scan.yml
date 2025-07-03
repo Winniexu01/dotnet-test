@@ -12,10 +12,10 @@ parameters:
   default: " " # Set it to an empty string to allow it be an optional parameter
 
 # Provides a way to scan repos. If not provided, all repos of the VMR will be scanned.
-- name: specificRepoName
-  type: string
-  displayName: "Specific repo name to scan (e.g. runtime, sdk). If empty, scans all repos of the VMR."
-  default: " " # Set it to an empty string to allow it be an optional parameter
+- name: RepoRange
+  type: integer
+  displayName: "The repo range. If empty, scans all repos of the VMR."
+  default: 0 # Set it to 0 to allow it be an optional parameter
 
 variables:
   # GH access token for SB bot - BotAccount-dotnet-sb-bot-pat
