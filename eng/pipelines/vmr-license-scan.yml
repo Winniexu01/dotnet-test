@@ -36,6 +36,19 @@ stages:
         else
           echo "$count"
         fi
+
+        echo "Check dir"
+        vmrSrcDir="$(Build.SourcesDirectory)/src"
+        for dir in $(ls -d "$vmrSrcDir"/*/ | sort)
+        do
+          echo "Found dir: $dir"
+        done
+
+        echo "Check dir"
+        for dir2 in $(ls -d "$vmrSrcDir"/*/ | sort)
+        do
+          echo "Found dir2: $dir2"
+        done
       displayName: Template Test
 
   #   - script: |
@@ -58,7 +71,7 @@ stages:
   #       if [ ! -z "$specificRepoName" ]; then
   #         matrix="\"$specificRepoName\": { \"repoPath\": \"$vmrSrcDir/$specificRepoName\" }"
   #       else
-  #         for dir in $vmrSrcDir/*/
+  #         for dir in $(ls -d "$vmrSrcDir"/*/ | sort)
   #         do
   #           if [ ! -z "$matrix" ]; then
   #             matrix="$matrix,"
