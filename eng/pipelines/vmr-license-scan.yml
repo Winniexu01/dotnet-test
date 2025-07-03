@@ -27,12 +27,9 @@ stages:
   - job: Setup
     steps:
     - script: |
-        set -x
         count=9
-        if [ $count -gt 0 ]; then
-          echo "Grater than zero"
-        elif [ $count -lt 10 ]; then
-          echo "Less than Ten"
+        if [ and(($count -gt 0), ($count -lt 10)) ]; then
+          echo "Grater than zero, Less than Ten"
         else
           echo "$count"
         fi
