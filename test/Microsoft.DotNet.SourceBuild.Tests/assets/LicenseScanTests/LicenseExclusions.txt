@@ -22,6 +22,8 @@ src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/Licenses/*
 
 # Applies to installer, not source
 src/arcade/src/Microsoft.DotNet.Build.Tasks.Installers/build/wix/eula.rtf
+src/arcade/src/Microsoft.DotNet.Build.Tasks.Installers/build/deb-package-tool/templates/debian/copyright
+src/arcade/src/Microsoft.DotNet.Build.Tasks.Installers/build/rpm_templates/copyright
 
 #
 # aspnetcore
