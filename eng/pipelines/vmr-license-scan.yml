@@ -28,7 +28,7 @@ stages:
     steps:
     - script: |
         count=9
-        if [ and(($count -gt 0), ($count -lt 10)) ]; then
+        if [[ $count -gt 0 && $count -lt 10 ]]; then
           echo "Grater than zero, Less than Ten"
         else
           echo "$count"
