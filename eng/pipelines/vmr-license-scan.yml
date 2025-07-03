@@ -13,7 +13,7 @@ parameters:
 
 # Provides a way to scan repos. If not provided, all repos of the VMR will be scanned.
 - name: RepoRange
-  type: integer
+  type: number
   displayName: "The repo range. If empty, scans all repos of the VMR."
   default: 0 # Set it to 0 to allow it be an optional parameter
 
